@@ -34,9 +34,9 @@ Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-k
 | Stitch folder | Compose screen | Status |
 |---|---|---|
 | trackr_login | ui/screens/auth/LoginScreen (+ UsernameScreen, same language) | [x] (no fake stats/email/guest: not real features) |
-| trackr_home_discover | ui/screens/home/HomeScreen | [ ] |
-| trackr_search | ui/screens/search/SearchScreen | [ ] |
-| trackr_media_details_rating_sheet | ui/screens/detail/DetailScreen + TrackSheet | [ ] |
+| trackr_home_discover | ui/screens/home/HomeScreen | [x] (notification bell omitted: no feature) |
+| trackr_search | ui/screens/search/SearchScreen | [x] ("People" chip + niche-syntax promo omitted) |
+| trackr_media_details_rating_sheet | ui/screens/detail/DetailScreen + components/TrackSheet | [x] (favourite/custom-collection buttons omitted; "Rewatch count" replaced by episode stepper per brief) |
 | trackr_my_list | ui/screens/mylist/MyListScreen | [ ] |
 | trackr_friends_activity | ui/screens/friends/FriendsScreen | [ ] |
 | trackr_friend_profile | ui/screens/friends/FriendProfileScreen | [ ] |
@@ -48,7 +48,7 @@ Screens absent from export (Settings, About, username setup, add-friend dialog) 
 - [x] M1 SDK + skeleton + theme + bottom-nav navigation builds
 - [x] M2 Supabase schema + RLS + tests (project ref xxmosmbtgojzhvzgnxuf, applied via MCP; SQL in supabase/migrations, test in supabase/tests/rls_test.sql — passes, ends with intentional exception RLS_TESTS_PASSED to roll back)
 - [~] M3 Google login: code done (Credential Manager + hashed nonce -> Supabase signInWithIdToken, session persisted/auto-refresh, username setup, sign-out hook). BLOCKED on user: GOOGLE_WEB_CLIENT_ID + Google Cloud Android OAuth client (SHA-1 DA:E5:D0:52:C0:24:25:DF:A8:14:DD:B9:E8:FC:45:78:8F:5F:E1:40) + Supabase Google provider. End-to-end can't be verified on this headless VPS; verify on device.
-- [ ] M4 TMDB + AniList, Home, Search, Detail
+- [x] M4 TMDB (Retrofit) + AniList (Apollo, 80/min rate limiter, 429 retry) clients, mappers → unified MediaItem, MediaRepository (5-min TtlCache + stale fallback, partial search results), Home, Search (debounce, recents in DataStore, trending when blank), Detail + TrackSheet. Room ListRepository + ListSyncer (LWW) + WorkManager already in place (needed by the sheet). 16 unit tests.
 - [ ] M5 My List + Room + sync
 - [ ] M6 Friends, activity, profile, settings
 - [ ] M7 Polish, tests, release

@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.apollo)
 }
 
 fun loadProps(file: File) = Properties().apply { if (file.exists()) file.inputStream().use { load(it) } }
@@ -79,7 +80,14 @@ androidComponents {
     }
 }
 
+apollo {
+    service("anilist") {
+        packageName.set("com.trackr.app.anilist")
+    }
+}
+
 dependencies {
+    implementation(libs.apollo.runtime)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime)

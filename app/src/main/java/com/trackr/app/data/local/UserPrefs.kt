@@ -1,0 +1,47 @@
+package com.trackr.app.data.local
+
+import android.content.Context
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import com.trackr.app.ui.theme.ThemeMode
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
+
+private val Context.dataStore by preferencesDataStore("trackr_prefs")
+
+@Singleton
+class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context) {
+    private val recentKey = stringPreferencesKey("recent_searches")
+    private val themeKey = stringPreferencesKey("theme_mode")
+    private val sep = "\u001F"
+
+    val recentSearches: Flow<List<String>> = ctx.dataStore.data.map { p ->
+        p[recentKey]?.split(sep)?.filter { it.isNotBlank() }.orEmpty()
+    }
+
+    val themeMode: Flow<ThemeMode> = ctx.dataStore.data.map { p ->
+        p[themeKey]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.DARK
+    }
+
+    suspend fun addRecent(query: String, max: Int = 8) {
+        val q = query.trim().takeIf { it.length >= 2 } ?: return
+        ctx.dataStore.edit { p ->
+            val cur = p[recentKey]?.split(sep).orEmpty().filter { it.isNotBlank() && !it.equals(q, true) }
+            p[recentKey] = (listOf(q) + cur).take(max).joinToString(sep)
+        }
+    }
+
+    suspend fun removeRecent(query: String) {
+        ctx.dataStore.edit { p ->
+            p[recentKey] = p[recentKey]?.split(sep).orEmpty().filter { it != query }.joinToString(sep)
+        }
+    }
+
+    suspend fun clearRecent() = ctx.dataStore.edit { it.remove(recentKey) }
+
+    suspend fun setThemeMode(mode: ThemeMode) = ctx.dataStore.edit { it[themeKey] = mode.name }
+}

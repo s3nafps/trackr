@@ -1,0 +1,53 @@
+fragment MediaFields on Media {
+  id
+  format
+  status
+  isAdult
+  title { romaji english }
+  coverImage { extraLarge large }
+  bannerImage
+  averageScore
+  episodes
+  duration
+  seasonYear
+  startDate { year }
+  genres
+  studios(isMain: true) { nodes { name } }
+  nextAiringEpisode { episode airingAt }
+}
+
+query TrendingAnime($page: Int = 1, $perPage: Int = 20) {
+  Page(page: $page, perPage: $perPage) {
+    media(type: ANIME, sort: TRENDING_DESC, isAdult: false) { ...MediaFields }
+  }
+}
+
+query AiringThisWeek($from: Int!, $to: Int!, $perPage: Int = 30) {
+  Page(page: 1, perPage: $perPage) {
+    airingSchedules(airingAt_greater: $from, airingAt_lesser: $to, sort: TIME) {
+      airingAt
+      episode
+      media { ...MediaFields }
+    }
+  }
+}
+
+query SearchAnime($search: String!, $page: Int = 1, $perPage: Int = 20) {
+  Page(page: $page, perPage: $perPage) {
+    media(type: ANIME, search: $search, sort: SEARCH_MATCH, isAdult: false) { ...MediaFields }
+  }
+}
+
+query AnimeDetail($id: Int!) {
+  Media(id: $id, type: ANIME) {
+    ...MediaFields
+    description(asHtml: false)
+    season
+    characters(sort: ROLE, perPage: 12) {
+      edges {
+        role
+        node { name { full } image { medium } }
+      }
+    }
+  }
+}

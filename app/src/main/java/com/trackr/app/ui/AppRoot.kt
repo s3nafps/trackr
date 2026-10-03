@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import com.trackr.app.ui.components.LocalProfile
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +24,8 @@ fun AppRoot(vm: AuthViewModel = hiltViewModel()) {
         AppState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         AppState.SignedOut -> LoginScreen(state, onGoogle = vm::signInWithGoogle)
         is AppState.NeedsUsername -> UsernameScreen(state, app.profile.username, vm::submitUsername)
-        is AppState.Ready -> TrackrNavHost(onSignOut = vm::signOut)
+        is AppState.Ready -> CompositionLocalProvider(LocalProfile provides app.profile) {
+            TrackrNavHost(onSignOut = vm::signOut)
+        }
     }
 }
