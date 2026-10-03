@@ -3,6 +3,8 @@ package com.trackr.app.ui.screens.mylist
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trackr.app.data.local.AiringEntity
+import com.trackr.app.data.repository.AiringRepository
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
@@ -18,7 +20,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class ListSort(val label: String) {
-    RECENT("Recently Updated"), TITLE("Title A–Z"), RATING("Highest Rated"), PROGRESS("Progress")
+    RECENT("Recently Updated"), TITLE("Title A–Z"), RATING("Highest Rated"), PROGRESS("Progress"), UPCOMING("Upcoming")
 }
 
 data class MyListUiState(
@@ -27,6 +29,8 @@ data class MyListUiState(
     val sort: ListSort = ListSort.RECENT,
     val grid: Boolean = false,
     val items: List<ListEntry> = emptyList(),
+    /** "Airs in 2d" per entry key, only for titles with a scheduled next drop. */
+    val airsIn: Map<String, String> = emptyMap(),
     val statusCounts: Map<ListStatus, Int> = emptyMap(),
     val typeCounts: Map<MediaType?, Int> = emptyMap(),
     val total: Int = 0,
@@ -35,13 +39,27 @@ data class MyListUiState(
 )
 
 /** Pure filter/sort so it can be unit-tested. */
-fun applyListView(all: List<ListEntry>, status: ListStatus, type: MediaType?, sort: ListSort): List<ListEntry> {
+fun applyListView(
+    all: List<ListEntry>, status: ListStatus, type: MediaType?, sort: ListSort,
+    airAt: Map<String, Long> = emptyMap(),
+): List<ListEntry> {
     val filtered = all.filter { it.status == status && (type == null || it.mediaType == type) }
     return when (sort) {
         ListSort.RECENT -> filtered.sortedByDescending { it.updatedAt }
         ListSort.TITLE -> filtered.sortedBy { it.title.lowercase() }
         ListSort.RATING -> filtered.sortedWith(compareByDescending<ListEntry> { it.rating ?: 0 }.thenBy { it.title.lowercase() })
         ListSort.PROGRESS -> filtered.sortedByDescending { it.fraction }
+        ListSort.UPCOMING -> filtered.sortedWith(compareBy<ListEntry> { airAt[it.key] ?: Long.MAX_VALUE }.thenBy { it.title.lowercase() })
+    }
+}
+
+fun airsInLabel(airAtMillis: Long, nowMillis: Long): String? {
+    val delta = airAtMillis - nowMillis
+    return when {
+        delta <= 0 -> null
+        delta < 3_600_000 -> "Airs in ${(delta / 60_000).coerceAtLeast(1)}m"
+        delta < 86_400_000 -> "Airs in ${delta / 3_600_000}h"
+        else -> "Airs in ${delta / 86_400_000}d"
     }
 }
 
@@ -49,6 +67,7 @@ fun applyListView(all: List<ListEntry>, status: ListStatus, type: MediaType?, so
 class MyListViewModel @Inject constructor(
     private val saved: SavedStateHandle,
     private val repo: ListRepository,
+    airing: AiringRepository,
 ) : ViewModel() {
     private val status = MutableStateFlow(
         saved.get<String>("status")?.let { ListStatus.fromKey(it) } ?: ListStatus.WATCHING,
@@ -58,11 +77,14 @@ class MyListViewModel @Inject constructor(
     private val grid = MutableStateFlow(saved.get<Boolean>("g") ?: false)
     private val sync = MutableStateFlow<Pair<Boolean, String?>>(false to null)
 
-    val state: StateFlow<MyListUiState> = combine(repo.entries, status, type, sort, combine(grid, sync) { g, s -> g to s }) { all, st, ty, so, (g, sy) ->
+    val state: StateFlow<MyListUiState> = combine(repo.entries, status, type, sort, combine(grid, sync, airing.upcoming) { g, s, up -> Triple(g, s, up) }) { all, st, ty, so, (g, sy, up) ->
+        val airAt = up.associate { "${it.source}:${it.externalId}" to it.airAt }
+        val now = System.currentTimeMillis()
         val inStatus = all.filter { it.status == st }
         MyListUiState(
             status = st, type = ty, sort = so, grid = g,
-            items = applyListView(all, st, ty, so),
+            items = applyListView(all, st, ty, so, airAt),
+            airsIn = airAt.mapNotNull { (k, at) -> airsInLabel(at, now)?.let { k to it } }.toMap(),
             statusCounts = ListStatus.entries.associateWith { s -> all.count { it.status == s } },
             typeCounts = buildMap {
                 put(null, inStatus.size)

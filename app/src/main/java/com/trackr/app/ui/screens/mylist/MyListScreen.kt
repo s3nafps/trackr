@@ -198,7 +198,7 @@ fun MyListContent(
                     items(state.items, key = { it.key }) { e ->
                         ListEntryCard(
                             e, Modifier.padding(horizontal = 16.dp), onClick = { onOpenEntry(e) }, onPlusOne = { onPlusOne(e) },
-                            onEdit = { editing = e.key }, onRemove = { onRemove(e) },
+                            onEdit = { editing = e.key }, onRemove = { onRemove(e) }, airsIn = state.airsIn[e.key],
                         )
                     }
                 }
@@ -245,6 +245,7 @@ fun ListEntryCard(
     onPlusOne: () -> Unit,
     onEdit: () -> Unit,
     onRemove: () -> Unit,
+    airsIn: String? = null,
 ) {
     var menu by remember { mutableStateOf(false) }
     Row(
@@ -259,7 +260,15 @@ fun ListEntryCard(
         }
         Column(Modifier.weight(1f).height(132.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(e.title, Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(e.title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    airsIn?.let {
+                        Text(
+                            it, Modifier.clip(PillShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)).padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
                 e.rating?.let { RatingBadge(it.toDouble(), Modifier.padding(start = 8.dp), outOfTen = false, scrim = false) }
                 Box {
                     Icon(Icons.Filled.MoreVert, "More", Modifier.size(28.dp).clip(CircleShape).clickable { menu = true }.padding(4.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)

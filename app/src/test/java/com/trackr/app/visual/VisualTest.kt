@@ -141,6 +141,7 @@ class VisualTest {
         shot(if (grid) "mylist_grid" else "mylist") {
             MyListContent(
                 MyListUiState(status = status, grid = grid, items = items, total = 142, sort = ListSort.RECENT,
+                    airsIn = mapOf("tmdb:2" to "Airs in 5h", "tmdb:3" to "Airs in 2d"),
                     statusCounts = mapOf(ListStatus.WATCHING to 8, ListStatus.COMPLETED to 84, ListStatus.PLAN_TO_WATCH to 30, ListStatus.DROPPED to 20),
                     typeCounts = mapOf(null to 8, MediaType.MOVIE to 2, MediaType.TV to 3, MediaType.ANIME to 3)),
                 null, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, { _, _, _, _ -> },

@@ -1,7 +1,11 @@
 package com.trackr.app.ui.screens.profile
 
+import android.app.AlarmManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,10 +22,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.BuildConfig
 import com.trackr.app.ui.components.BrandLogo
@@ -58,6 +66,9 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAbout: () -> Unit, onSignOut: () ->
                     }
                 }
             }
+
+            Text("Notifications", style = MaterialTheme.typography.headlineSmall)
+            NotificationSettings(state.airingEnabled, vm::setAiringEnabled)
 
             Text("Sync", style = MaterialTheme.typography.headlineSmall)
             Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -105,3 +116,40 @@ fun AboutScreen(onBack: () -> Unit) {
         }
     }
 }
+
+@Composable
+private fun NotificationSettings(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    val context = LocalContext.current
+    var canExact by remember { mutableStateOf(canScheduleExact(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { canExact = canScheduleExact(context) }
+    Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("New episode alerts", style = MaterialTheme.typography.bodyLarge)
+                Text("Get notified when a title you're watching drops", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked = enabled, onCheckedChange = onToggle)
+        }
+        SettingsLink("System notification settings") {
+            context.startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+            )
+        }
+        if (!canExact) SettingsLink("Allow exact timing") {
+            if (Build.VERSION.SDK_INT >= 31) {
+                context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsLink(label: String, onClick: () -> Unit) {
+    Text(
+        label, Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
+        style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary,
+    )
+}
+
+private fun canScheduleExact(context: Context): Boolean =
+    Build.VERSION.SDK_INT < 31 || (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()

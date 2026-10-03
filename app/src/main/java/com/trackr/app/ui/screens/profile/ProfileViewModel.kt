@@ -2,6 +2,7 @@ package com.trackr.app.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trackr.app.data.airing.AiringRefreshScheduler
 import com.trackr.app.data.local.UserPrefs
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.ProfileRepository
@@ -26,6 +27,7 @@ data class ProfileUiState(
     val editBusy: Boolean = false,
     val editError: String? = null,
     val editDone: Boolean = false,
+    val airingEnabled: Boolean = true,
     val syncing: Boolean = false,
     val syncMessage: String? = null,
 )
@@ -35,14 +37,22 @@ class ProfileViewModel @Inject constructor(
     private val profiles: ProfileRepository,
     private val lists: ListRepository,
     private val prefs: UserPrefs,
+    private val airingRefresh: AiringRefreshScheduler,
 ) : ViewModel() {
     private val local = MutableStateFlow(ProfileUiState())
 
-    val state: StateFlow<ProfileUiState> = combine(local, profiles.me, lists.entries, prefs.themeMode) { l, me, entries, theme ->
-        l.copy(me = me, stats = StatsCalculator.compute(entries), theme = theme)
+    val state: StateFlow<ProfileUiState> = combine(local, profiles.me, lists.entries, prefs.themeMode, prefs.airingEnabled) { l, me, entries, theme, airing ->
+        l.copy(me = me, stats = StatsCalculator.compute(entries), theme = theme, airingEnabled = airing)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileUiState())
 
     fun setTheme(mode: ThemeMode) { viewModelScope.launch { prefs.setThemeMode(mode) } }
+
+    fun setAiringEnabled(on: Boolean) {
+        viewModelScope.launch {
+            prefs.setAiringEnabled(on)
+            airingRefresh.refreshNow()
+        }
+    }
 
     fun editUsername(name: String) {
         val id = profiles.me.value?.id ?: return
