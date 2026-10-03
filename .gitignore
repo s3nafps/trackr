@@ -12,3 +12,4 @@ captures/
 /stitch/
 *.zip
 /sdk/
+google-services.json
