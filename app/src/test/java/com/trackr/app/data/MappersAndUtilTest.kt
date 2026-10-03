@@ -1,6 +1,11 @@
 package com.trackr.app.data
 
+import com.trackr.app.data.local.ListEntryEntity
 import com.trackr.app.data.mapper.AniListMapper
+import com.trackr.app.data.mapper.ListEntryMapper.toDomain
+import com.trackr.app.data.mapper.ListEntryMapper.toDto
+import com.trackr.app.data.mapper.ListEntryMapper.toEntity
+import com.trackr.app.data.remote.supabase.ListEntryDto
 import com.trackr.app.data.mapper.TmdbMapper
 import com.trackr.app.data.remote.anilist.AniListRateLimiter
 import com.trackr.app.data.remote.tmdb.TmdbDetail
@@ -87,5 +92,18 @@ class UtilTest {
 
     @Test fun `anilist description html is stripped`() {
         assertEquals("Line1\nLine2 \"q\"", AniListMapper.cleanDescription("<i>Line1</i><br>Line2 &quot;q&quot;"))
+    }
+}
+
+class ListEntryMapperNotifyTest {
+    @Test fun `mapper roundtrips notify`() {
+        val e = ListEntryEntity("tmdb", "1", "tv", "T", null, null, "plan", null, 0, null, 5L, notify = true)
+        val domain = e.toDomain()
+        assertTrue(domain.notify)
+        assertTrue(domain.toEntity(dirty = true).notify)
+        val dto = e.toDto("u")
+        assertTrue(dto.notify)
+        assertTrue(dto.toEntity().notify)
+        assertTrue(ListEntryDto("u", "tmdb", "1", "tv", "T", status = "plan", updatedAt = "1970-01-01T00:00:00Z", notify = false).toEntity().notify.not())
     }
 }

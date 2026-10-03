@@ -38,13 +38,24 @@ class FakeRemote(initial: List<ListEntryDto> = emptyList()) : ListRemote {
     override suspend fun delete(userId: String, source: String, externalId: String) { data.remove(source to externalId); deletes += externalId }
 }
 
-private fun entity(id: String, status: String = "watching", at: Long, dirty: Boolean = false, deleted: Boolean = false, progress: Int = 0) =
-    ListEntryEntity("tmdb", id, "movie", "T$id", null, null, status, null, progress, null, at, dirty, deleted)
+private fun entity(id: String, status: String = "watching", at: Long, dirty: Boolean = false, deleted: Boolean = false, progress: Int = 0, notify: Boolean = false) =
+    ListEntryEntity("tmdb", id, "movie", "T$id", null, null, status, null, progress, null, at, dirty, deleted, notify)
 
-private fun dto(id: String, status: String = "watching", at: Long, progress: Int = 0) =
-    ListEntryDto("u", "tmdb", id, "movie", "T$id", null, null, status, null, progress, null, Instant.ofEpochMilli(at).toString())
+private fun dto(id: String, status: String = "watching", at: Long, progress: Int = 0, notify: Boolean = false) =
+    ListEntryDto("u", "tmdb", id, "movie", "T$id", null, null, status, null, progress, null, Instant.ofEpochMilli(at).toString(), notify)
 
 class ListSyncerTest {
+    @Test fun `syncer pushes and pulls notify`() = runTest {
+        val dao = FakeDao().also {
+            it.upsert(entity("1", at = 2000, dirty = true, notify = true))
+            it.upsert(entity("2", at = 1000))
+        }
+        val remote = FakeRemote(listOf(dto("2", at = 5000, notify = true)))
+        ListSyncer(dao, remote).sync("u")
+        assertTrue(remote.data["tmdb" to "1"]!!.notify)
+        assertTrue(dao.get("tmdb", "2")!!.notify)
+    }
+
     @Test fun `dirty local newer than remote is pushed and marked clean`() = runTest {
         val dao = FakeDao().also { it.upsert(entity("1", "completed", at = 2000, dirty = true)) }
         val remote = FakeRemote(listOf(dto("1", "watching", at = 1000)))

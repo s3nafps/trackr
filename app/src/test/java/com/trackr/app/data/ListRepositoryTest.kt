@@ -38,6 +38,17 @@ class ListRepositoryTest {
         verify { scheduler.syncNow() }
     }
 
+    @Test fun `setNotify marks entry dirty and persists`() = runTest {
+        repo.save(show, ListStatus.PLAN_TO_WATCH, null, 0)
+        dao.upsert(dao.get("tmdb", "1")!!.copy(dirty = false))
+        repo.setNotify(repo.entry(show).first()!!, true)
+        val row = dao.get("tmdb", "1")!!
+        assertTrue(row.notify); assertTrue(row.dirty)
+        assertTrue(repo.entry(show).first()!!.notify)
+        repo.setNotify(repo.entry(show).first()!!, false)
+        assertFalse(dao.get("tmdb", "1")!!.notify)
+    }
+
     @Test fun `completed status fills progress to total`() = runTest {
         repo.save(show, ListStatus.COMPLETED, null, 0)
         assertEquals(3, dao.get("tmdb", "1")!!.progress)

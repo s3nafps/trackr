@@ -12,6 +12,7 @@ data class ListEntry(
     val progress: Int,
     val totalEpisodes: Int?,
     val updatedAt: Long,
+    val notify: Boolean = false,
 ) {
     val key: String get() = "${source.key}:$externalId"
     val fraction: Float

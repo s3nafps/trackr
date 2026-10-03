@@ -71,6 +71,8 @@ class ListRepository @Inject constructor(
         write(entry.copy(status = status, rating = rating?.coerceIn(1, 10), progress = p))
     }
 
+    suspend fun setNotify(entry: ListEntry, on: Boolean) = write(entry.copy(notify = on))
+
     /** "+1 episode": auto-completes at the last episode, and moves Plan/Dropped to Watching. */
     suspend fun incrementProgress(entry: ListEntry) {
         val total = entry.totalEpisodes
