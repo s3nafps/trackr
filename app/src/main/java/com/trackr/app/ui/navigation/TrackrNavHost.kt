@@ -11,6 +11,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,9 +45,15 @@ private fun NavHostController.goTop(route: String, restore: Boolean = true) = na
     restoreState = restore
 }
 
+/** A title to open straight on its Detail screen (from a notification tap). */
+data class DetailTarget(val source: String, val type: String, val id: String)
+
 @Composable
-fun TrackrNavHost(onSignOut: () -> Unit = {}) {
+fun TrackrNavHost(onSignOut: () -> Unit = {}, openTarget: DetailTarget? = null, onTargetOpened: () -> Unit = {}) {
     val nav = rememberNavController()
+    LaunchedEffect(openTarget) {
+        openTarget?.let { nav.navigate(Routes.detail(it.source, it.type, it.id)); onTargetOpened() }
+    }
     val entry by nav.currentBackStackEntryAsState()
     val dest = entry?.destination
     val showBar = TopLevel.entries.any { t -> dest?.hierarchy?.any { it.route == t.pattern } == true }
