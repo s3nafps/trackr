@@ -21,4 +21,6 @@ data class ListEntryEntity(
     val dirty: Boolean = false,
     /** Tombstone: removed locally, delete must still be pushed. */
     val deleted: Boolean = false,
+    /** Plan-to-Watch opt-in for airing notifications. */
+    val notify: Boolean = false,
 )
