@@ -37,10 +37,11 @@ import com.trackr.app.ui.screens.profile.ProfileScreen
 import com.trackr.app.ui.screens.profile.SettingsScreen
 import com.trackr.app.ui.screens.search.SearchScreen
 
-private fun NavHostController.goTop(route: String) = navigate(route) {
+/** Switch top-level tab. [restore] = false when the destination must honour fresh arguments (Explore / See all). */
+private fun NavHostController.goTop(route: String, restore: Boolean = true) = navigate(route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }
     launchSingleTop = true
-    restoreState = true
+    restoreState = restore
 }
 
 @Composable
@@ -80,9 +81,9 @@ fun TrackrNavHost(onSignOut: () -> Unit = {}) {
                 HomeScreen(
                     onOpenDetail = ::openDetail,
                     onOpenEntry = { s, t, id -> nav.navigate(Routes.detail(s, t, id)) },
-                    onSeeAllWatching = { nav.goTop(Routes.myList("watching")) },
+                    onSeeAllWatching = { nav.goTop(Routes.myList("watching"), restore = false) },
                     onExplore = { type ->
-                        nav.goTop(Routes.search(when (type) { MediaType.MOVIE -> SearchFilter.MOVIES; MediaType.TV -> SearchFilter.TV; MediaType.ANIME -> SearchFilter.ANIME; null -> SearchFilter.ALL }.name))
+                        nav.goTop(Routes.search(when (type) { MediaType.MOVIE -> SearchFilter.MOVIES; MediaType.TV -> SearchFilter.TV; MediaType.ANIME -> SearchFilter.ANIME; null -> SearchFilter.ALL }.name), restore = false)
                     },
                     onOpenProfile = { nav.goTop(Routes.PROFILE) },
                 )
