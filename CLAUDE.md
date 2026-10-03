@@ -21,9 +21,13 @@ Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-k
 - Inter variable font bundled in res/font (no GMS font provider).
 - Release APK renamed to `trackr-release.apk`.
 
+## Supabase
+- Tables: profiles (extra col `username_set` = false until user picks a username), list_entries, friendships; view `friend_activity` (security_invoker). `are_friends(a,b)` security-definer helper only answers for the caller.
+- Signup trigger builds profile from Google name/avatar. Anon role has no table access.
+
 ## Progress
 - [x] M1 SDK + skeleton + theme + bottom-nav navigation builds
-- [ ] M2 Supabase schema + RLS + tests
+- [x] M2 Supabase schema + RLS + tests (project ref xxmosmbtgojzhvzgnxuf, applied via MCP; SQL in supabase/migrations, test in supabase/tests/rls_test.sql — passes, ends with intentional exception RLS_TESTS_PASSED to roll back)
 - [ ] M3 Google login
 - [ ] M4 TMDB + AniList, Home, Search, Detail
 - [ ] M5 My List + Room + sync
