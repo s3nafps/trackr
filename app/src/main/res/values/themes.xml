@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.Trackr.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/trackr_canvas</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Trackr</item>
+    </style>
+    <style name="Theme.Trackr" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/trackr_canvas</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

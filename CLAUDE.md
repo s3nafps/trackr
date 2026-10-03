@@ -1,0 +1,31 @@
+# Trackr – CLAUDE.md
+
+Android app (Kotlin/Compose/M3) for tracking movies, TV and anime with friends. Package `com.trackr.app`, minSdk 26, target/compile 35.
+
+## Environment (headless VPS)
+- JDK 17, Android SDK at `/opt/android-sdk` (platform 35, build-tools 35.0.0 + 34), Gradle wrapper 8.10.2.
+- `export ANDROID_HOME=/opt/android-sdk` (also in ~/.bashrc). `local.properties` has `sdk.dir` + secrets.
+- Secrets live in `local.properties` (gitignored): TMDB_READ_TOKEN, SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_WEB_CLIENT_ID → BuildConfig. Never print/commit them.
+- Single keystore `trackr.keystore` + `keystore.properties` (both gitignored) signs debug AND release so SHA-1 is stable.
+- Stitch design export is unzipped in `stitch/` (gitignored); tokens in `stitch/**/cinematic_dark/DESIGN.md`.
+- AniList needs no auth (public GraphQL); the AniList client id/secret are not used.
+
+## Stack
+Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-kt (auth, postgrest), Retrofit+kotlinx.serialization (TMDB v3, Bearer v4 token), Apollo Kotlin (AniList), Coil, Room, WorkManager, Credential Manager.
+
+## Layout
+`app/src/main/java/com/trackr/app/{data(remote,local,repository),domain,ui(theme,navigation,components,screens)}`
+
+## Decisions
+- Dark default (Cinematic Dark palette), light + system supported via `ThemeMode`.
+- Inter variable font bundled in res/font (no GMS font provider).
+- Release APK renamed to `trackr-release.apk`.
+
+## Progress
+- [x] M1 SDK + skeleton + theme + bottom-nav navigation builds
+- [ ] M2 Supabase schema + RLS + tests
+- [ ] M3 Google login
+- [ ] M4 TMDB + AniList, Home, Search, Detail
+- [ ] M5 My List + Room + sync
+- [ ] M6 Friends, activity, profile, settings
+- [ ] M7 Polish, tests, release
