@@ -34,7 +34,10 @@ data class AuthUiState(
 class AuthViewModel @Inject constructor(
     private val auth: AuthRepository,
     private val profiles: ProfileRepository,
+    private val lists: com.trackr.app.data.repository.ListRepository,
 ) : ViewModel() {
+    val me: StateFlow<Profile?> = profiles.me
+
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
 
@@ -98,7 +101,13 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signOut() {
-        viewModelScope.launch { runCatching { auth.signOut() } }
+        viewModelScope.launch {
+            // Best effort: push pending edits first so nothing is lost, then wipe local data of this account.
+            runCatching { lists.sync() }
+            runCatching { auth.signOut() }
+            runCatching { lists.clearLocal() }
+            profiles.clearMe()
+        }
     }
 
     fun dismissError() = _state.update { it.copy(error = null) }

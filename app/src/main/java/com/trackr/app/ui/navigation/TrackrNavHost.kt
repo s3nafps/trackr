@@ -29,7 +29,12 @@ import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.ui.screens.detail.DetailScreen
 import com.trackr.app.ui.screens.home.HomeScreen
+import com.trackr.app.ui.screens.friends.FriendProfileScreen
+import com.trackr.app.ui.screens.friends.FriendsScreen
 import com.trackr.app.ui.screens.mylist.MyListScreen
+import com.trackr.app.ui.screens.profile.AboutScreen
+import com.trackr.app.ui.screens.profile.ProfileScreen
+import com.trackr.app.ui.screens.profile.SettingsScreen
 import com.trackr.app.ui.screens.search.SearchScreen
 
 private fun NavHostController.goTop(route: String) = navigate(route) {
@@ -107,8 +112,31 @@ fun TrackrNavHost(onSignOut: () -> Unit = {}) {
                     onDiscover = { nav.goTop(Routes.SEARCH) },
                 )
             }
-            composable(Routes.FRIENDS) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Friends") } }
-            composable(Routes.PROFILE) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Profile") } }
+            composable(Routes.FRIENDS) {
+                FriendsScreen(
+                    onOpenFriend = { nav.navigate(Routes.friend(it)) },
+                    onOpenDetail = { a -> nav.navigate(Routes.detail(a.source.key, a.mediaType.key, a.externalId)) },
+                    onOpenProfile = { nav.goTop(Routes.PROFILE) },
+                )
+            }
+            composable(
+                Routes.FRIEND_PROFILE,
+                arguments = listOf(navArgument("userId") { type = NavType.StringType }),
+            ) {
+                FriendProfileScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenEntry = { e -> nav.navigate(Routes.detail(e.source.key, e.mediaType.key, e.externalId)) },
+                )
+            }
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    onOpenSettings = { nav.navigate(Routes.SETTINGS) },
+                    onOpenAbout = { nav.navigate(Routes.ABOUT) },
+                    onSignOut = onSignOut,
+                )
+            }
+            composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }, onOpenAbout = { nav.navigate(Routes.ABOUT) }, onSignOut = onSignOut) }
+            composable(Routes.ABOUT) { AboutScreen(onBack = { nav.popBackStack() }) }
         }
     }
 }

@@ -2,7 +2,11 @@ package com.trackr.app.data.repository
 
 import com.trackr.app.domain.model.Profile
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -16,8 +20,20 @@ class InvalidUsernameException : Exception("Use 3–24 letters, numbers, dots or
 class ProfileRepository @Inject constructor(private val supabase: SupabaseClient) {
     private val usernameRegex = Regex("^[A-Za-z0-9_.]{3,24}$")
 
+    private val _me = MutableStateFlow<Profile?>(null)
+    /** The signed-in user's profile; single source of truth for greeting, avatar and profile screens. */
+    val me: StateFlow<Profile?> = _me.asStateFlow()
+
+    fun clearMe() { _me.value = null }
+
     suspend fun getProfile(userId: String): Profile =
-        supabase.from("profiles").select { filter { eq("id", userId) } }.decodeSingle()
+        supabase.from("profiles").select { filter { eq("id", userId) } }.decodeSingle<Profile>().also {
+            if (supabase.auth.currentUserOrNull()?.id == userId) _me.value = it
+        }
+
+    suspend fun getProfiles(ids: Collection<String>): List<Profile> =
+        if (ids.isEmpty()) emptyList()
+        else supabase.from("profiles").select { filter { isIn("id", ids.toList()) } }.decodeList()
 
     suspend fun findByUsernameOrCode(query: String): Profile? {
         val q = query.trim().removePrefix("@")
@@ -41,7 +57,7 @@ class ProfileRepository @Inject constructor(private val supabase: SupabaseClient
             ) {
                 filter { eq("id", userId) }
                 select(Columns.ALL)
-            }.decodeSingle()
+            }.decodeSingle<Profile>().also { _me.value = it }
         } catch (e: Exception) {
             val msg = e.message.orEmpty()
             if (msg.contains("duplicate", true) || msg.contains("23505")) throw UsernameTakenException()

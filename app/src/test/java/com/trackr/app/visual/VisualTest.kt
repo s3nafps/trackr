@@ -26,6 +26,19 @@ import com.trackr.app.ui.screens.detail.DetailUiState
 import com.trackr.app.ui.screens.home.HomeContent
 import com.trackr.app.ui.screens.home.HomeSection
 import com.trackr.app.ui.screens.home.HomeUiState
+import com.trackr.app.domain.model.ActivityEntry
+import com.trackr.app.domain.model.Friend
+import com.trackr.app.domain.model.FriendRequest
+import com.trackr.app.domain.model.Profile
+import com.trackr.app.domain.model.StatsCalculator
+import com.trackr.app.ui.screens.friends.FriendData
+import com.trackr.app.ui.screens.friends.FriendProfileContent
+import com.trackr.app.ui.screens.friends.FriendProfileUiState
+import com.trackr.app.ui.screens.friends.FriendsActions
+import com.trackr.app.ui.screens.friends.FriendsContent
+import com.trackr.app.ui.screens.friends.FriendsUiState
+import com.trackr.app.ui.screens.profile.ProfileContent
+import com.trackr.app.ui.screens.profile.ProfileUiState
 import com.trackr.app.ui.screens.mylist.ListSort
 import com.trackr.app.ui.screens.mylist.MyListContent
 import com.trackr.app.ui.screens.mylist.MyListUiState
@@ -125,5 +138,48 @@ class VisualTest {
     @Test fun myListGrid() = myList(true)
     @Test fun myListEmpty() = shot("mylist_empty") {
         MyListContent(MyListUiState(status = ListStatus.DROPPED, total = 0), null, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, { _, _, _, _ -> })
+    }
+
+    private fun act(id: String, user: String, title: String, type: MediaType, status: ListStatus, rating: Int?, p: Int = 0, total: Int? = null, minutesAgo: Int = 15) =
+        ActivityEntry(id, "u$user", user, null, MediaSource.TMDB, id, type, title, null, status, rating, p, total, System.currentTimeMillis() - minutesAgo * 60_000L)
+
+    private val noActions = FriendsActions({}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {})
+
+    @Test fun friends() = shot("friends") {
+        val sara = Profile("us", "sara"); val julian = Profile("uj", "julian_films")
+        FriendsContent(
+            FriendsUiState(
+                activity = Load.Success(listOf(
+                    act("1", "sara", "Attack on Titan: The Final Chapters", MediaType.ANIME, ListStatus.COMPLETED, 10),
+                    act("2", "marcus", "Severance", MediaType.TV, ListStatus.WATCHING, null, 1, 10, 240),
+                )),
+                friends = Load.Success(listOf(Friend("f1", sara, listOf(act("2", "sara", "Shōgun", MediaType.TV, ListStatus.WATCHING, null, 3, 10))))),
+                pending = listOf(FriendRequest("r1", julian), FriendRequest("r2", Profile("um", "minht"))),
+            ),
+            null, {}, {}, {}, noActions,
+        )
+    }
+
+    @Test fun friendProfile() = shot("friend_profile") {
+        val theirs = listOf(
+            entry("1", "Interstellar", MediaType.MOVIE, ListStatus.WATCHING, 0, 1), entry("2", "Spirited Away", MediaType.MOVIE, ListStatus.COMPLETED, 1, 1),
+            entry("3", "Pluto", MediaType.ANIME, ListStatus.PLAN_TO_WATCH, 0, 8),
+        )
+        val mine = listOf(entry("3", "Pluto", MediaType.ANIME, ListStatus.PLAN_TO_WATCH, 0, 8))
+        FriendProfileContent(
+            FriendProfileUiState(Load.Success(FriendData(Profile("us", "sara"), theirs, "f1")), StatsCalculator.compute(theirs), StatsCalculator.overlap(mine, theirs)),
+            {}, {}, {}, {},
+        )
+    }
+
+    @Test fun profile() = shot("profile") {
+        val entries = listOf(
+            entry("1", "A", MediaType.MOVIE, ListStatus.COMPLETED, 1, 1), entry("2", "B", MediaType.TV, ListStatus.WATCHING, 8, 10),
+            entry("3", "C", MediaType.ANIME, ListStatus.COMPLETED, 12, 12), entry("4", "D", MediaType.ANIME, ListStatus.PLAN_TO_WATCH, 0, 12),
+        ).mapIndexed { i, e -> e.copy(rating = listOf(8, 9, 9, 10)[i]) }
+        ProfileContent(
+            ProfileUiState(me = Profile("me", "alexrivera", true, null, "TRACKR-ALEX"), stats = StatsCalculator.compute(entries)),
+            {}, {}, {}, {}, {},
+        )
     }
 }

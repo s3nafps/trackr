@@ -20,11 +20,12 @@ import com.trackr.app.ui.screens.auth.UsernameScreen
 @Composable
 fun AppRoot(vm: AuthViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val me by vm.me.collectAsStateWithLifecycle()
     when (val app = state.app) {
         AppState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         AppState.SignedOut -> LoginScreen(state, onGoogle = vm::signInWithGoogle)
         is AppState.NeedsUsername -> UsernameScreen(state, app.profile.username, vm::submitUsername)
-        is AppState.Ready -> CompositionLocalProvider(LocalProfile provides app.profile) {
+        is AppState.Ready -> CompositionLocalProvider(LocalProfile provides (me ?: app.profile)) {
             TrackrNavHost(onSignOut = vm::signOut)
         }
     }

@@ -38,9 +38,9 @@ Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-k
 | trackr_search | ui/screens/search/SearchScreen | [x] ("People" chip + niche-syntax promo omitted) |
 | trackr_media_details_rating_sheet | ui/screens/detail/DetailScreen + components/TrackSheet | [x] (favourite/custom-collection buttons omitted; "Rewatch count" replaced by episode stepper per brief) |
 | trackr_my_list | ui/screens/mylist/MyListScreen | [x] ("Import Watchlists" promo omitted: not a feature) |
-| trackr_friends_activity | ui/screens/friends/FriendsScreen | [ ] |
-| trackr_friend_profile | ui/screens/friends/FriendProfileScreen | [ ] |
-| trackr_profile_stats | ui/screens/profile/ProfileScreen (+ Settings, About) | [ ] |
+| trackr_friends_activity | ui/screens/friends/FriendsScreen | [x] (likes/comments/reactions omitted: no backing feature) |
+| trackr_friend_profile | ui/screens/friends/FriendProfileScreen | [x] (followers/bio/location/'Plan Watch Party' omitted) |
+| trackr_profile_stats | ui/screens/profile/ProfileScreen (+ SettingsScreens.kt) | [x] (genre chart → status breakdown, since genres aren't stored; notifications row omitted) |
 | trackr_app_icon | res/drawable/ic_launcher_foreground + BrandLogo | [x] |
 Screens absent from export (Settings, About, username setup, add-friend dialog) follow the same language.
 
@@ -54,5 +54,5 @@ Screens absent from export (Settings, About, username setup, add-friend dialog) 
 - [~] M3 Google login: code done (Credential Manager + hashed nonce -> Supabase signInWithIdToken, session persisted/auto-refresh, username setup, sign-out hook). BLOCKED on user: GOOGLE_WEB_CLIENT_ID + Google Cloud Android OAuth client (SHA-1 DA:E5:D0:52:C0:24:25:DF:A8:14:DD:B9:E8:FC:45:78:8F:5F:E1:40) + Supabase Google provider. End-to-end can't be verified on this headless VPS; verify on device.
 - [x] M4 TMDB (Retrofit) + AniList (Apollo, 80/min rate limiter, 429 retry) clients, mappers → unified MediaItem, MediaRepository (5-min TtlCache + stale fallback, partial search results), Home, Search (debounce, recents in DataStore, trending when blank), Detail + TrackSheet. Room ListRepository + ListSyncer (LWW) + WorkManager already in place (needed by the sheet). 16 unit tests.
 - [x] M5 My List (tabs w/ counts, type filter, sort, grid/list, +1 Ep, edit sheet, remove, empty states, pull-to-refresh sync). Offline-first Room → Supabase, LWW by updated_at, tombstones, WorkManager (on-change + 6h periodic). 34 unit tests incl. sync merge rules.
-- [ ] M6 Friends, activity, profile, settings
+- [x] M6 Friends (add by username/invite code, pending accept/decline, friends list w/ what they watch, activity feed from friend_activity, friend profile + Watch Together = Plan-to-Watch overlap), Profile (stats, status breakdown + rating distribution charts, edit username, invite code copy/share, theme, sign out), Settings, About (TMDB + AniList attribution). Sign-out syncs, signs out, wipes local Room. `ProfileRepository.me` is the single source for the signed-in profile.
 - [ ] M7 Polish, tests, release
