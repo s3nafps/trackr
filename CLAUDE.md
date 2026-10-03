@@ -25,6 +25,25 @@ Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-k
 - Tables: profiles (extra col `username_set` = false until user picks a username), list_entries, friendships; view `friend_activity` (security_invoker). `are_friends(a,b)` security-definer helper only answers for the caller.
 - Signup trigger builds profile from Google name/avatar. Anon role has no table access.
 
+## Design system (Stitch = visual source of truth)
+- Tokens: the real design uses the **frontmatter/Tailwind M3 tokens** (surface #111317, primary #CABEFF, primary-container #947DFF, ...) in `ui/theme/Color.kt`; DESIGN.md prose gives status colours (watching sky, completed emerald, plan violet, dropped rose), rating amber #FFB547 and brand violet #7C5CFF. Type = Inter (`Type.kt`), radii in `Shape.kt` (cards 16, sheets 24, pills full). Screens never hardcode colours.
+- Reusable components in `ui/components`: TrackrChip, MediaTypePill, StatusBadge, RatingBadge/ScorePill, TrackrProgressBar, PosterImage/PosterCard, ShimmerBox + skeletons, EmptyState/ErrorState, TrackrTopBar, UserAvatar, SectionHeader, SegmentedControl, StatTile, BrandLogo.
+- Bottom nav: container surface-container-lowest, 20% primary indicator pill.
+
+## Stitch screen → Compose mapping
+| Stitch folder | Compose screen | Status |
+|---|---|---|
+| trackr_login | ui/screens/auth/LoginScreen (+ UsernameScreen, same language) | [x] (no fake stats/email/guest: not real features) |
+| trackr_home_discover | ui/screens/home/HomeScreen | [ ] |
+| trackr_search | ui/screens/search/SearchScreen | [ ] |
+| trackr_media_details_rating_sheet | ui/screens/detail/DetailScreen + TrackSheet | [ ] |
+| trackr_my_list | ui/screens/mylist/MyListScreen | [ ] |
+| trackr_friends_activity | ui/screens/friends/FriendsScreen | [ ] |
+| trackr_friend_profile | ui/screens/friends/FriendProfileScreen | [ ] |
+| trackr_profile_stats | ui/screens/profile/ProfileScreen (+ Settings, About) | [ ] |
+| trackr_app_icon | res/drawable/ic_launcher_foreground + BrandLogo | [x] |
+Screens absent from export (Settings, About, username setup, add-friend dialog) follow the same language.
+
 ## Progress
 - [x] M1 SDK + skeleton + theme + bottom-nav navigation builds
 - [x] M2 Supabase schema + RLS + tests (project ref xxmosmbtgojzhvzgnxuf, applied via MCP; SQL in supabase/migrations, test in supabase/tests/rls_test.sql — passes, ends with intentional exception RLS_TESTS_PASSED to roll back)

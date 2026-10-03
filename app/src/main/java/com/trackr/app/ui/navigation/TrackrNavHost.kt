@@ -28,7 +28,7 @@ fun TrackrNavHost(onSignOut: () -> Unit = {}) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = androidx.compose.ui.unit.Dp.Hairline) {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest, tonalElevation = androidx.compose.ui.unit.Dp.Hairline) {
                 TopLevel.entries.forEach { item ->
                     val selected = dest?.hierarchy?.any { it.route == item.route } == true
                     NavigationBarItem(

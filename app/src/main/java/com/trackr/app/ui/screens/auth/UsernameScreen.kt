@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.trackr.app.ui.components.BrandLogo
-import com.trackr.app.ui.theme.TextSecondary
 
 @Composable
 fun UsernameScreen(state: AuthUiState, suggested: String, onSubmit: (String) -> Unit) {
@@ -42,7 +41,7 @@ fun UsernameScreen(state: AuthUiState, suggested: String, onSubmit: (String) -> 
         Spacer(Modifier.height(8.dp))
         Text(
             "Friends find you by this name. You can change it later in your profile.",
-            style = MaterialTheme.typography.bodyMedium, color = TextSecondary,
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(24.dp))
         OutlinedTextField(
