@@ -94,7 +94,7 @@ fun MediaResultCard(
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Icon(Icons.Outlined.BookmarkAdd, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Text("Add", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text("Add to List", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 } else {
                     StatusBadge(

@@ -37,18 +37,22 @@ Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-k
 | trackr_home_discover | ui/screens/home/HomeScreen | [x] (notification bell omitted: no feature) |
 | trackr_search | ui/screens/search/SearchScreen | [x] ("People" chip + niche-syntax promo omitted) |
 | trackr_media_details_rating_sheet | ui/screens/detail/DetailScreen + components/TrackSheet | [x] (favourite/custom-collection buttons omitted; "Rewatch count" replaced by episode stepper per brief) |
-| trackr_my_list | ui/screens/mylist/MyListScreen | [ ] |
+| trackr_my_list | ui/screens/mylist/MyListScreen | [x] ("Import Watchlists" promo omitted: not a feature) |
 | trackr_friends_activity | ui/screens/friends/FriendsScreen | [ ] |
 | trackr_friend_profile | ui/screens/friends/FriendProfileScreen | [ ] |
 | trackr_profile_stats | ui/screens/profile/ProfileScreen (+ Settings, About) | [ ] |
 | trackr_app_icon | res/drawable/ic_launcher_foreground + BrandLogo | [x] |
 Screens absent from export (Settings, About, username setup, add-friend dialog) follow the same language.
 
+## Visual verification (no emulator)
+`app/src/test/.../visual/VisualTest.kt` renders stateless `*Content` composables with fake data via Robolectric+Roborazzi to `app/build/outputs/roborazzi/*.png`:
+`./gradlew testDebugUnitTest -Proborazzi.test.record=true`, then compare PNGs with `stitch/**/screen.png`. Network images show as placeholders there.
+
 ## Progress
 - [x] M1 SDK + skeleton + theme + bottom-nav navigation builds
 - [x] M2 Supabase schema + RLS + tests (project ref xxmosmbtgojzhvzgnxuf, applied via MCP; SQL in supabase/migrations, test in supabase/tests/rls_test.sql — passes, ends with intentional exception RLS_TESTS_PASSED to roll back)
 - [~] M3 Google login: code done (Credential Manager + hashed nonce -> Supabase signInWithIdToken, session persisted/auto-refresh, username setup, sign-out hook). BLOCKED on user: GOOGLE_WEB_CLIENT_ID + Google Cloud Android OAuth client (SHA-1 DA:E5:D0:52:C0:24:25:DF:A8:14:DD:B9:E8:FC:45:78:8F:5F:E1:40) + Supabase Google provider. End-to-end can't be verified on this headless VPS; verify on device.
 - [x] M4 TMDB (Retrofit) + AniList (Apollo, 80/min rate limiter, 429 retry) clients, mappers → unified MediaItem, MediaRepository (5-min TtlCache + stale fallback, partial search results), Home, Search (debounce, recents in DataStore, trending when blank), Detail + TrackSheet. Room ListRepository + ListSyncer (LWW) + WorkManager already in place (needed by the sheet). 16 unit tests.
-- [ ] M5 My List + Room + sync
+- [x] M5 My List (tabs w/ counts, type filter, sort, grid/list, +1 Ep, edit sheet, remove, empty states, pull-to-refresh sync). Offline-first Room → Supabase, LWW by updated_at, tombstones, WorkManager (on-change + 6h periodic). 34 unit tests incl. sync merge rules.
 - [ ] M6 Friends, activity, profile, settings
 - [ ] M7 Polish, tests, release

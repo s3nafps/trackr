@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.apollo)
+    alias(libs.plugins.roborazzi.plugin)
 }
 
 fun loadProps(file: File) = Properties().apply { if (file.exists()) file.inputStream().use { load(it) } }
@@ -68,7 +69,7 @@ android {
         buildConfig = true
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
-    testOptions { unitTests.isReturnDefaultValues = true }
+    testOptions { unitTests { isReturnDefaultValues = true; isIncludeAndroidResources = true } }
     lint { abortOnError = true; warningsAsErrors = false }
 }
 
@@ -136,4 +137,10 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

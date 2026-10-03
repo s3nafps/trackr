@@ -29,6 +29,7 @@ import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.ui.screens.detail.DetailScreen
 import com.trackr.app.ui.screens.home.HomeScreen
+import com.trackr.app.ui.screens.mylist.MyListScreen
 import com.trackr.app.ui.screens.search.SearchScreen
 
 private fun NavHostController.goTop(route: String) = navigate(route) {
@@ -99,7 +100,13 @@ fun TrackrNavHost(onSignOut: () -> Unit = {}) {
             composable(
                 Routes.MY_LIST,
                 arguments = listOf(navArgument("status") { type = NavType.StringType; nullable = true; defaultValue = null }),
-            ) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("My List") } }
+            ) {
+                MyListScreen(
+                    onOpenEntry = { e -> nav.navigate(Routes.detail(e.source.key, e.mediaType.key, e.externalId)) },
+                    onOpenProfile = { nav.goTop(Routes.PROFILE) },
+                    onDiscover = { nav.goTop(Routes.SEARCH) },
+                )
+            }
             composable(Routes.FRIENDS) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Friends") } }
             composable(Routes.PROFILE) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Profile") } }
         }

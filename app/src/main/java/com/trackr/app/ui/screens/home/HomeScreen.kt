@@ -67,17 +67,39 @@ fun HomeScreen(
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
-    val profile = LocalProfile.current
+    HomeContent(
+        state, LocalProfile.current?.avatarUrl, LocalProfile.current?.username,
+        onRefresh = vm::refresh, onRetry = vm::retry, onQuickAdd = vm::quickAdd, onPlusOne = vm::plusOne,
+        onOpenDetail = onOpenDetail, onOpenEntry = onOpenEntry, onSeeAllWatching = onSeeAllWatching,
+        onExplore = onExplore, onOpenProfile = onOpenProfile,
+    )
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeContent(
+    state: HomeUiState,
+    avatarUrl: String?,
+    username: String?,
+    onRefresh: () -> Unit,
+    onRetry: (HomeSection) -> Unit,
+    onQuickAdd: (MediaItem) -> Unit,
+    onPlusOne: (com.trackr.app.domain.model.ListEntry) -> Unit,
+    onOpenDetail: (MediaItem) -> Unit,
+    onOpenEntry: (source: String, type: String, id: String) -> Unit,
+    onSeeAllWatching: () -> Unit,
+    onExplore: (MediaType?) -> Unit,
+    onOpenProfile: () -> Unit,
+) {
     Column(Modifier.fillMaxSize()) {
-        TrackrTopBar("Home", profile?.avatarUrl, onOpenProfile)
-        PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = vm::refresh, modifier = Modifier.fillMaxSize()) {
+        TrackrTopBar("Home", avatarUrl, onOpenProfile)
+        PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("WELCOME BACK", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                         Text(
-                            buildString { append(greeting()); profile?.username?.let { append(", $it") }; append(" 👋") },
+                            buildString { append(greeting()); username?.let { append(", $it") }; append(" 👋") },
                             style = MaterialTheme.typography.headlineMedium, maxLines = 1,
                         )
                     }
@@ -97,15 +119,15 @@ fun HomeScreen(
                         SectionHeader("Continue Watching", icon = Icons.Outlined.PlayCircle, actionLabel = "See all (${state.continueWatching.size})", onAction = onSeeAllWatching)
                         LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(state.continueWatching, key = { it.key }) { e ->
-                                ContinueWatchingCard(e, onClick = { onOpenEntry(e.source.key, e.mediaType.key, e.externalId) }, onPlusOne = { vm.plusOne(e) })
+                                ContinueWatchingCard(e, onClick = { onOpenEntry(e.source.key, e.mediaType.key, e.externalId) }, onPlusOne = { onPlusOne(e) })
                             }
                         }
                     }
                 }
 
-                PosterSection("Trending Movies", Icons.Outlined.Movie, "Explore", { onExplore(MediaType.MOVIE) }, state.section(HomeSection.MOVIES), state.listKeys, { vm.retry(HomeSection.MOVIES) }, onOpenDetail, vm::quickAdd)
-                PosterSection("Trending TV Shows", Icons.Outlined.Tv, "See all", { onExplore(MediaType.TV) }, state.section(HomeSection.TV), state.listKeys, { vm.retry(HomeSection.TV) }, onOpenDetail, vm::quickAdd)
-                PosterSection("Trending Anime", Icons.Outlined.AutoAwesome, "See ranking", { onExplore(MediaType.ANIME) }, state.section(HomeSection.ANIME), state.listKeys, { vm.retry(HomeSection.ANIME) }, onOpenDetail, vm::quickAdd)
+                PosterSection("Trending Movies", Icons.Outlined.Movie, "Explore", { onExplore(MediaType.MOVIE) }, state.section(HomeSection.MOVIES), state.listKeys, { onRetry(HomeSection.MOVIES) }, onOpenDetail, onQuickAdd)
+                PosterSection("Trending TV Shows", Icons.Outlined.Tv, "See all", { onExplore(MediaType.TV) }, state.section(HomeSection.TV), state.listKeys, { onRetry(HomeSection.TV) }, onOpenDetail, onQuickAdd)
+                PosterSection("Trending Anime", Icons.Outlined.AutoAwesome, "See ranking", { onExplore(MediaType.ANIME) }, state.section(HomeSection.ANIME), state.listKeys, { onRetry(HomeSection.ANIME) }, onOpenDetail, onQuickAdd)
 
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(Modifier.fillMaxWidth().padding(end = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -117,7 +139,7 @@ fun HomeScreen(
                     }
                     when (val a = state.section(HomeSection.AIRING)) {
                         Load.Loading -> PosterCarouselSkeleton(count = 2)
-                        is Load.Failure -> ErrorState(a.message, { vm.retry(HomeSection.AIRING) })
+                        is Load.Failure -> ErrorState(a.message, { onRetry(HomeSection.AIRING) })
                         is Load.Success -> if (a.data.isEmpty()) {
                             Text("Nothing scheduled this week.", Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

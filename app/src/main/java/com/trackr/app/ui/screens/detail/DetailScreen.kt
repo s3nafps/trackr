@@ -116,7 +116,7 @@ fun DetailScreen(onBack: () -> Unit, vm: DetailViewModel = hiltViewModel()) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DetailContent(detail: MediaDetail, state: DetailUiState, showSheetClick: () -> Unit, onShare: () -> Unit) {
+fun DetailContent(detail: MediaDetail, state: DetailUiState, showSheetClick: () -> Unit, onShare: () -> Unit) {
     val item = detail.item
     var expanded by rememberSaveable { mutableStateOf(false) }
     val entry = state.entry

@@ -66,13 +66,39 @@ fun SearchScreen(
     vm: SearchViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
-    val focus = LocalFocusManager.current
     LaunchedEffect(initialFilter) { initialFilter?.let(vm::setFilter) }
+    SearchContent(
+        state,
+        SearchActions(vm::setQuery, vm::setFilter, vm::applyRecent, vm::removeRecent, vm::clearRecents, vm::quickAdd, vm::markCompleted, vm::retry),
+        onOpenDetail, onOpenProfile,
+    )
+}
 
+class SearchActions(
+    val setQuery: (String) -> Unit,
+    val setFilter: (SearchFilter) -> Unit,
+    val applyRecent: (String) -> Unit,
+    val removeRecent: (String) -> Unit,
+    val clearRecents: () -> Unit,
+    val quickAdd: (MediaItem) -> Unit,
+    val markCompleted: (MediaItem, com.trackr.app.domain.model.ListEntry) -> Unit,
+    val retry: () -> Unit,
+)
+
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun SearchContent(
+    state: SearchUiState,
+    vm: SearchActions,
+    onOpenDetail: (MediaItem) -> Unit,
+    onOpenProfile: () -> Unit,
+    avatarUrl: String? = LocalProfile.current?.avatarUrl,
+) {
+    val focus = LocalFocusManager.current
     Column(Modifier.fillMaxSize().imePadding()) {
-        TrackrTopBar("Search", LocalProfile.current?.avatarUrl, onOpenProfile)
+        TrackrTopBar("Search", avatarUrl, onOpenProfile)
         TextField(
-            value = state.query, onValueChange = vm::setQuery,
+            value = state.query, onValueChange = vm.setQuery,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(PillShape)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, PillShape),
             placeholder = { Text("Search movies, shows, anime") }, singleLine = true,
@@ -143,12 +169,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.resultItems(
     load: Load<List<MediaItem>>,
     state: SearchUiState,
     onOpen: (MediaItem) -> Unit,
-    vm: SearchViewModel,
+    vm: SearchActions,
     emptyText: String,
 ) {
     when (load) {
         Load.Loading -> items(4, key = { "sk$it" }) { ListRowSkeleton(Modifier.padding(vertical = 4.dp)) }
-        is Load.Failure -> item("err") { ErrorState(load.message, onRetry = vm::retry) }
+        is Load.Failure -> item("err") { ErrorState(load.message, onRetry = vm.retry) }
         is Load.Success -> if (load.data.isEmpty()) item("empty") {
             EmptyState(Icons.Outlined.SearchOff, "Nothing found", emptyText)
         } else items(load.data, key = { it.key }) { item ->
