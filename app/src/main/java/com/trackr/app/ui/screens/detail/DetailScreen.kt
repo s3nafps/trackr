@@ -27,7 +27,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -56,6 +58,7 @@ import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.ui.components.ErrorState
 import com.trackr.app.ui.components.PosterImage
+import com.trackr.app.ui.components.rememberNotificationPermission
 import com.trackr.app.ui.components.ScorePill
 import com.trackr.app.ui.components.ShimmerBox
 import com.trackr.app.ui.components.StatusBadge
@@ -69,6 +72,8 @@ import com.trackr.app.ui.theme.color
 @Composable
 fun DetailScreen(onBack: () -> Unit, vm: DetailViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val bell by vm.bellState.collectAsStateWithLifecycle()
+    val ensureNotifications = rememberNotificationPermission(vm::onPermissionResult)
     var showSheet by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -80,6 +85,8 @@ fun DetailScreen(onBack: () -> Unit, vm: DetailViewModel = hiltViewModel()) {
             }
             is Load.Success -> DetailContent(
                 detail = d.data, state = state, showSheetClick = { showSheet = true },
+                bell = bell,
+                onBell = { if (bell == BellState.Off) ensureNotifications(vm::toggleBell) else vm.toggleBell() },
                 onShare = {
                     val url = when (d.data.item.source) {
                         MediaSource.TMDB -> "https://www.themoviedb.org/${if (d.data.item.type == MediaType.MOVIE) "movie" else "tv"}/${d.data.item.externalId}"
@@ -108,7 +115,10 @@ fun DetailScreen(onBack: () -> Unit, vm: DetailViewModel = hiltViewModel()) {
             title = detail.item.title, initial = state.entry, totalEpisodes = detail.item.totalEpisodes,
             showProgress = detail.item.type != MediaType.MOVIE,
             onDismiss = { showSheet = false },
-            onSave = { s, r, p -> vm.save(s, r, p); showSheet = false },
+            onSave = { s, r, p ->
+                vm.save(s, r, p); showSheet = false
+                if (s == ListStatus.WATCHING) ensureNotifications {}
+            },
             onRemove = state.entry?.let { { vm.remove(); showSheet = false } },
         )
     }
@@ -116,7 +126,10 @@ fun DetailScreen(onBack: () -> Unit, vm: DetailViewModel = hiltViewModel()) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DetailContent(detail: MediaDetail, state: DetailUiState, showSheetClick: () -> Unit, onShare: () -> Unit) {
+fun DetailContent(
+    detail: MediaDetail, state: DetailUiState, showSheetClick: () -> Unit, onShare: () -> Unit,
+    bell: BellState = BellState.Hidden, onBell: () -> Unit = {}, nowMillis: Long = System.currentTimeMillis(),
+) {
     val item = detail.item
     var expanded by rememberSaveable { mutableStateOf(false) }
     val entry = state.entry
@@ -192,6 +205,24 @@ fun DetailContent(detail: MediaDetail, state: DetailUiState, showSheetClick: () 
                     Modifier.size(48.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onShare),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.Share, "Share", Modifier.size(20.dp)) }
+                if (bell != BellState.Hidden) {
+                    val on = bell == BellState.On
+                    Box(
+                        Modifier.size(48.dp).clip(MaterialTheme.shapes.medium)
+                            .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .clickable(onClick = onBell),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            if (on) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone,
+                            if (on) "Notifications on" else "Notify me",
+                            Modifier.size(20.dp), tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+            airingLine(item, nowMillis)?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
             if (entry != null && item.type != MediaType.MOVIE) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -119,6 +119,20 @@ class VisualTest {
         DetailContent(d, DetailUiState(Load.Success(d), entry("2", "Dune", MediaType.MOVIE, ListStatus.PLAN_TO_WATCH, 0, 1), emptyList()), {}, {})
     }
 
+    @Test fun detailAiring() = shot("detail_airing") {
+        val now = 1_792_000_000_000L
+        val d = MediaDetail(
+            item("3", "Frieren: Beyond Journey's End", MediaType.ANIME, 2023, 9.1, "Fantasy").copy(
+                genres = listOf("Fantasy", "Adventure"), airingEpisode = 12, airingAtEpoch = now / 1000 + 2 * 86_400 + 4 * 3_600,
+                overview = "The adventure is over but life goes on for an elf mage."),
+            status = "Releasing",
+        )
+        DetailContent(
+            d, DetailUiState(Load.Success(d), entry("3", "Frieren", MediaType.ANIME, ListStatus.WATCHING, 11, 28), emptyList()), {}, {},
+            bell = com.trackr.app.ui.screens.detail.BellState.On, nowMillis = now,
+        )
+    }
+
     private fun myList(grid: Boolean, status: ListStatus = ListStatus.WATCHING) {
         val items = listOf(
             entry("1", "Arcane", MediaType.TV, ListStatus.WATCHING, 4, 9), entry("2", "Severance", MediaType.TV, ListStatus.WATCHING, 4, 10),

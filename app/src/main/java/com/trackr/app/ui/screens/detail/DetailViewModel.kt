@@ -3,6 +3,7 @@ package com.trackr.app.ui.screens.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trackr.app.data.local.UserPrefs
 import com.trackr.app.data.remote.supabase.ActivityDto
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.MediaRepository
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -37,6 +39,7 @@ class DetailViewModel @Inject constructor(
     private val media: MediaRepository,
     private val lists: ListRepository,
     private val social: SocialRepository,
+    prefs: UserPrefs,
 ) : ViewModel() {
     val source: MediaSource = MediaSource.fromKey(saved.get<String>("source").orEmpty())
     val type: MediaType = MediaType.fromKey(saved.get<String>("type").orEmpty())
@@ -49,7 +52,29 @@ class DetailViewModel @Inject constructor(
         DetailUiState(d, e, f)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DetailUiState())
 
+    private val permissionDenied = MutableStateFlow(false)
+
+    /** Watching titles always notify; Plan to Watch needs the bell. Hidden when it cannot work. */
+    val bellState: StateFlow<BellState> = combine(lists.entry(source.key, id), prefs.airingEnabled, permissionDenied) { e, enabled, denied ->
+        when {
+            !enabled || denied || e == null -> BellState.Hidden
+            e.status == ListStatus.WATCHING -> BellState.On
+            e.status == ListStatus.PLAN_TO_WATCH -> if (e.notify) BellState.On else BellState.Off
+            else -> BellState.Hidden
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BellState.Hidden)
+
     init { load() }
+
+    fun onPermissionResult(granted: Boolean) { permissionDenied.value = !granted }
+
+    /** Only Plan to Watch is toggleable; Watching is always on. */
+    fun toggleBell() {
+        viewModelScope.launch {
+            val e = lists.entry(source.key, id).first() ?: return@launch
+            if (e.status == ListStatus.PLAN_TO_WATCH) lists.setNotify(e, !e.notify)
+        }
+    }
 
     fun load(force: Boolean = false) {
         detail.value = Load.Loading
