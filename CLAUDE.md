@@ -28,7 +28,7 @@ Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-k
 ## Progress
 - [x] M1 SDK + skeleton + theme + bottom-nav navigation builds
 - [x] M2 Supabase schema + RLS + tests (project ref xxmosmbtgojzhvzgnxuf, applied via MCP; SQL in supabase/migrations, test in supabase/tests/rls_test.sql — passes, ends with intentional exception RLS_TESTS_PASSED to roll back)
-- [ ] M3 Google login
+- [~] M3 Google login: code done (Credential Manager + hashed nonce -> Supabase signInWithIdToken, session persisted/auto-refresh, username setup, sign-out hook). BLOCKED on user: GOOGLE_WEB_CLIENT_ID + Google Cloud Android OAuth client (SHA-1 DA:E5:D0:52:C0:24:25:DF:A8:14:DD:B9:E8:FC:45:78:8F:5F:E1:40) + Supabase Google provider. End-to-end can't be verified on this headless VPS; verify on device.
 - [ ] M4 TMDB + AniList, Home, Search, Detail
 - [ ] M5 My List + Room + sync
 - [ ] M6 Friends, activity, profile, settings

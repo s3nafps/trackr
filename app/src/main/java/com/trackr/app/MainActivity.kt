@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.trackr.app.ui.navigation.TrackrNavHost
+import com.trackr.app.ui.AppRoot
 import com.trackr.app.ui.theme.TrackrTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -15,6 +15,6 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { TrackrTheme { TrackrNavHost() } }
+        setContent { TrackrTheme { AppRoot() } }
     }
 }
