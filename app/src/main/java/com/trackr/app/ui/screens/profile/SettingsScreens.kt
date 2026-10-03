@@ -77,6 +77,8 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAbout: () -> Unit, onSignOut: () ->
                 state.syncMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
 
+            DebugSection()
+
             Text("About", style = MaterialTheme.typography.headlineSmall)
             OutlinedButton(onClick = onOpenAbout, modifier = Modifier.fillMaxWidth()) { Text("About & attribution") }
 
