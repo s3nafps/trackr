@@ -9,6 +9,7 @@ import com.trackr.app.data.remote.supabase.ListEntryDto
 import com.trackr.app.data.mapper.TmdbMapper
 import com.trackr.app.data.remote.anilist.AniListRateLimiter
 import com.trackr.app.data.remote.tmdb.TmdbDetail
+import com.trackr.app.data.remote.tmdb.TmdbEpisodeStub
 import com.trackr.app.data.remote.tmdb.TmdbGenre
 import com.trackr.app.data.remote.tmdb.TmdbResult
 import com.trackr.app.data.remote.tmdb.TmdbSeasonDto
@@ -21,6 +22,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 class TmdbMapperTest {
     @Test fun `movie result maps to unified item`() {
@@ -105,5 +109,57 @@ class ListEntryMapperNotifyTest {
         assertTrue(dto.notify)
         assertTrue(dto.toEntity().notify)
         assertTrue(ListEntryDto("u", "tmdb", "1", "tv", "T", status = "plan", updatedAt = "1970-01-01T00:00:00Z", notify = false).toEntity().notify.not())
+    }
+}
+
+class TmdbAiringMappingTest {
+    private val today = LocalDate.of(2026, 10, 3)
+
+    @Test fun `nineAm is 0900 in given zone`() {
+        val zone = ZoneId.of("Europe/Berlin")
+        val secs = TmdbMapper.localNineAm("2026-10-24", zone)!!
+        assertEquals(ZonedDateTime.parse("2026-10-24T09:00:00+02:00[Europe/Berlin]").toEpochSecond(), secs)
+    }
+
+    @Test fun `unparsable date returns null`() {
+        assertNull(TmdbMapper.localNineAm("soon"))
+        assertNull(TmdbMapper.localNineAm(""))
+    }
+
+    @Test fun `tv detail maps next episode`() {
+        val item = TmdbMapper.toDetail(
+            TmdbDetail(id = 1, name = "Show", nextEpisodeToAir = TmdbEpisodeStub("2026-10-24", 5)), MediaType.TV, today,
+        ).item
+        assertEquals(5, item.airingEpisode)
+        assertEquals(TmdbMapper.localNineAm("2026-10-24"), item.airingAtEpoch)
+        assertTrue(item.airingDateOnly)
+    }
+
+    @Test fun `movie in future maps release date`() {
+        val item = TmdbMapper.toDetail(TmdbDetail(id = 2, title = "Dune 3", releaseDate = "2026-12-18"), MediaType.MOVIE, today).item
+        assertNull(item.airingEpisode)
+        assertEquals(TmdbMapper.localNineAm("2026-12-18"), item.airingAtEpoch)
+        assertTrue(item.airingDateOnly)
+    }
+
+    @Test fun `movie releasing today still maps`() {
+        val item = TmdbMapper.toDetail(TmdbDetail(id = 2, title = "M", releaseDate = "2026-10-03"), MediaType.MOVIE, today).item
+        assertEquals(TmdbMapper.localNineAm("2026-10-03"), item.airingAtEpoch)
+    }
+
+    @Test fun `movie in past has no airing`() {
+        val item = TmdbMapper.toDetail(TmdbDetail(id = 3, title = "Old", releaseDate = "2021-10-22"), MediaType.MOVIE, today).item
+        assertNull(item.airingAtEpoch)
+        assertEquals(false, item.airingDateOnly)
+    }
+
+    @Test fun `tv without next episode has no airing`() {
+        val item = TmdbMapper.toDetail(TmdbDetail(id = 4, name = "Ended"), MediaType.TV, today).item
+        assertNull(item.airingAtEpoch); assertNull(item.airingEpisode)
+    }
+
+    @Test fun `tv next episode with unparsable date has no airing`() {
+        val item = TmdbMapper.toDetail(TmdbDetail(id = 5, name = "X", nextEpisodeToAir = TmdbEpisodeStub(null, 2)), MediaType.TV, today).item
+        assertNull(item.airingAtEpoch)
     }
 }

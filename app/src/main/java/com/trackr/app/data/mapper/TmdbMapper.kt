@@ -8,6 +8,9 @@ import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.model.SeasonInfo
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 
 object TmdbMapper {
     const val IMG = "https://image.tmdb.org/t/p/"
@@ -54,7 +57,11 @@ object TmdbMapper {
         )
     }
 
-    fun toDetail(d: TmdbDetail, type: MediaType): MediaDetail {
+    /** Epoch seconds of 09:00 on the ISO [date] in [zone]; null if unparsable. */
+    fun localNineAm(date: String, zone: ZoneId = ZoneId.systemDefault()): Long? =
+        runCatching { LocalDate.parse(date).atTime(LocalTime.of(9, 0)).atZone(zone).toEpochSecond() }.getOrNull()
+
+    fun toDetail(d: TmdbDetail, type: MediaType, today: LocalDate = LocalDate.now()): MediaDetail {
         val isMovie = type == MediaType.MOVIE
         val runtime = if (isMovie) d.runtime else d.episodeRunTime.firstOrNull()
         val seasons = d.seasons.filter { it.seasonNumber > 0 }.map {
@@ -64,6 +71,12 @@ object TmdbMapper {
             d.releaseDates?.results?.firstOrNull { it.country == "US" }?.releaseDates
                 ?.firstOrNull { it.certification.isNotBlank() }?.certification
         } else d.contentRatings?.results?.firstOrNull { it.country == "US" }?.rating?.takeIf { it.isNotBlank() }
+        val (airingEpisode, airingAt) = if (isMovie) {
+            val date = d.releaseDate?.takeIf { r -> runCatching { !LocalDate.parse(r).isBefore(today) }.getOrDefault(false) }
+            null to date?.let { localNineAm(it) }
+        } else {
+            d.nextEpisodeToAir?.let { n -> n.episodeNumber to n.airDate?.let { localNineAm(it) } } ?: (null to null)
+        }
         val item = MediaItem(
             source = MediaSource.TMDB,
             externalId = d.id.toString(),
@@ -78,6 +91,9 @@ object TmdbMapper {
             totalEpisodes = if (isMovie) 1 else d.numberOfEpisodes,
             runtimeMinutes = runtime?.takeIf { it > 0 },
             subtitle = d.networks.firstOrNull()?.name,
+            airingEpisode = airingEpisode.takeIf { airingAt != null },
+            airingAtEpoch = airingAt,
+            airingDateOnly = airingAt != null,
         )
         return MediaDetail(
             item = item,

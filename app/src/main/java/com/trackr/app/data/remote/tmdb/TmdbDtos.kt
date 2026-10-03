@@ -92,4 +92,11 @@ data class TmdbDetail(
     val credits: TmdbCredits? = null,
     @SerialName("release_dates") val releaseDates: TmdbReleaseDates? = null,
     @SerialName("content_ratings") val contentRatings: TmdbContentRatings? = null,
+    @SerialName("next_episode_to_air") val nextEpisodeToAir: TmdbEpisodeStub? = null,
+)
+
+@Serializable
+data class TmdbEpisodeStub(
+    @SerialName("air_date") val airDate: String? = null,
+    @SerialName("episode_number") val episodeNumber: Int? = null,
 )

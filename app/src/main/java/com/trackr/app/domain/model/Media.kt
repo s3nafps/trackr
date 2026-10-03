@@ -18,7 +18,10 @@ data class MediaItem(
     /** Extra line: studio, network, "3 Seasons", ... */
     val subtitle: String? = null,
     val airingEpisode: Int? = null,
+    /** Epoch seconds. */
     val airingAtEpoch: Long? = null,
+    /** True when only the date is known (TMDB); the time is a 09:00 local stand-in. */
+    val airingDateOnly: Boolean = false,
 ) {
     val key: String get() = "${source.key}:$externalId"
 }
