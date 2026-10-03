@@ -35,6 +35,7 @@ class AuthViewModel @Inject constructor(
     private val auth: AuthRepository,
     private val profiles: ProfileRepository,
     private val lists: com.trackr.app.data.repository.ListRepository,
+    private val airing: com.trackr.app.data.repository.AiringRepository,
 ) : ViewModel() {
     val me: StateFlow<Profile?> = profiles.me
 
@@ -106,6 +107,7 @@ class AuthViewModel @Inject constructor(
             runCatching { lists.sync() }
             runCatching { auth.signOut() }
             runCatching { lists.clearLocal() }
+            runCatching { airing.clearAll() }
             profiles.clearMe()
         }
     }

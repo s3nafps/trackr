@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.trackr.app.data.airing.AiringNotifier
+import com.trackr.app.data.airing.AiringRefreshScheduler
 import com.trackr.app.data.sync.SyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -13,6 +14,7 @@ class TrackrApp : Application(), Configuration.Provider {
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var syncScheduler: SyncScheduler
     @Inject lateinit var airingNotifier: AiringNotifier
+    @Inject lateinit var airingRefresh: AiringRefreshScheduler
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -21,5 +23,6 @@ class TrackrApp : Application(), Configuration.Provider {
         super.onCreate()
         airingNotifier.createChannel()
         syncScheduler.schedulePeriodic()
+        airingRefresh.schedulePeriodic()
     }
 }

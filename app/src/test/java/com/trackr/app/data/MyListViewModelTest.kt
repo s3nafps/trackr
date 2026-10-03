@@ -29,7 +29,7 @@ import org.junit.Test
 class MyListViewModelTest {
     private val dao = FakeDao()
     private val auth = mockk<AuthRepository>(relaxed = true)
-    private val repo = ListRepository(dao, mockk<SupabaseListRemote>(relaxed = true), auth, mockk<SyncScheduler>(relaxed = true))
+    private val repo = ListRepository(dao, mockk<SupabaseListRemote>(relaxed = true), auth, mockk<SyncScheduler>(relaxed = true), mockk(relaxed = true))
 
     @Before fun setUp() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
     @After fun tearDown() { Dispatchers.resetMain() }
@@ -64,7 +64,7 @@ class MyListViewModelTest {
         coEvery { auth.currentUserId } returns "u"
         val remote = mockk<SupabaseListRemote>()
         coEvery { remote.fetchAll(any()) } throws java.io.IOException("offline")
-        val r = ListRepository(dao, remote, auth, mockk(relaxed = true))
+        val r = ListRepository(dao, remote, auth, mockk(relaxed = true), mockk(relaxed = true))
         val vm = MyListViewModel(SavedStateHandle(), r)
         vm.refresh(silent = false)
         vm.state.test {

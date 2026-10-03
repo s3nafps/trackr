@@ -16,9 +16,11 @@ import javax.inject.Inject
 class BootReceiver : BroadcastReceiver() {
     @Inject lateinit var dao: AiringDao
     @Inject lateinit var scheduler: AiringScheduler
+    @Inject lateinit var refresh: AiringRefreshScheduler
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        refresh.refreshNow()
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {

@@ -1,5 +1,6 @@
 package com.trackr.app.data
 
+import com.trackr.app.data.airing.AiringRefreshScheduler
 import com.trackr.app.data.repository.AuthRepository
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.SupabaseListRemote
@@ -27,7 +28,8 @@ import java.time.ZoneId
 class ListRepositoryTest {
     private val dao = FakeDao()
     private val scheduler = mockk<SyncScheduler>(relaxed = true)
-    private val repo = ListRepository(dao, mockk<SupabaseListRemote>(relaxed = true), mockk<AuthRepository>(relaxed = true), scheduler)
+    private val airingRefresh = mockk<AiringRefreshScheduler>(relaxed = true)
+    private val repo = ListRepository(dao, mockk<SupabaseListRemote>(relaxed = true), mockk<AuthRepository>(relaxed = true), scheduler, airingRefresh)
     private val show = MediaItem(MediaSource.TMDB, "1", MediaType.TV, "Show", null, totalEpisodes = 3)
     private val movie = MediaItem(MediaSource.TMDB, "2", MediaType.MOVIE, "Film", null, totalEpisodes = 1)
 
@@ -47,6 +49,13 @@ class ListRepositoryTest {
         assertTrue(repo.entry(show).first()!!.notify)
         repo.setNotify(repo.entry(show).first()!!, false)
         assertFalse(dao.get("tmdb", "1")!!.notify)
+    }
+
+    @Test fun `writes and removals trigger airing refresh`() = runTest {
+        repo.save(show, ListStatus.WATCHING, null, 0)
+        verify(exactly = 1) { airingRefresh.refreshNow() }
+        repo.remove(repo.entry(show).first()!!)
+        verify(exactly = 2) { airingRefresh.refreshNow() }
     }
 
     @Test fun `completed status fills progress to total`() = runTest {

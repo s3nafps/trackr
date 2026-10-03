@@ -1,5 +1,6 @@
 package com.trackr.app.data.repository
 
+import com.trackr.app.data.airing.AiringRefreshScheduler
 import com.trackr.app.data.local.ListEntryDao
 import com.trackr.app.data.mapper.ListEntryMapper.toDomain
 import com.trackr.app.data.mapper.ListEntryMapper.toEntity
@@ -40,6 +41,7 @@ class ListRepository @Inject constructor(
     private val remote: SupabaseListRemote,
     private val auth: AuthRepository,
     private val scheduler: SyncScheduler,
+    private val airingRefresh: AiringRefreshScheduler,
 ) {
     val entries: Flow<List<ListEntry>> = dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
@@ -49,6 +51,7 @@ class ListRepository @Inject constructor(
     private suspend fun write(entry: ListEntry) {
         dao.upsert(entry.copy(updatedAt = System.currentTimeMillis()).toEntity(dirty = true))
         scheduler.syncNow()
+        airingRefresh.refreshNow()
     }
 
     suspend fun save(item: MediaItem, status: ListStatus, rating: Int?, progress: Int) {
@@ -90,6 +93,7 @@ class ListRepository @Inject constructor(
         val existing = dao.get(entry.source.key, entry.externalId) ?: return
         dao.upsert(existing.copy(deleted = true, dirty = true, updatedAt = System.currentTimeMillis()))
         scheduler.syncNow()
+        airingRefresh.refreshNow()
     }
 
     /** Returns true when a sync ran. */
