@@ -1,6 +1,7 @@
 package com.trackr.app.data.local
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -17,6 +18,7 @@ private val Context.dataStore by preferencesDataStore("trackr_prefs")
 class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context) {
     private val recentKey = stringPreferencesKey("recent_searches")
     private val themeKey = stringPreferencesKey("theme_mode")
+    private val airingKey = booleanPreferencesKey("airing_enabled")
     private val sep = "\u001F"
 
     val recentSearches: Flow<List<String>> = ctx.dataStore.data.map { p ->
@@ -26,6 +28,11 @@ class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context
     val themeMode: Flow<ThemeMode> = ctx.dataStore.data.map { p ->
         p[themeKey]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.DARK
     }
+
+    /** Master switch for new-episode alerts; on by default. */
+    val airingEnabled: Flow<Boolean> = ctx.dataStore.data.map { it[airingKey] ?: true }
+
+    suspend fun setAiringEnabled(on: Boolean) = ctx.dataStore.edit { it[airingKey] = on }
 
     suspend fun addRecent(query: String, max: Int = 8) {
         val q = query.trim().takeIf { it.length >= 2 } ?: return
