@@ -28,6 +28,8 @@ data class AuthUiState(
     val app: AppState = AppState.Loading,
     val busy: Boolean = false,
     val error: String? = null,
+    val deletingAccount: Boolean = false,
+    val deleteError: String? = null,
 )
 
 @HiltViewModel
@@ -106,10 +108,34 @@ class AuthViewModel @Inject constructor(
             // Best effort: push pending edits first so nothing is lost, then wipe local data of this account.
             runCatching { lists.sync() }
             runCatching { auth.signOut() }
-            runCatching { lists.clearLocal() }
-            runCatching { airing.clearAll() }
-            profiles.clearMe()
+            wipeLocal()
         }
+    }
+
+    /** Permanently deletes the account; on success wipes this device like [signOut], on failure keeps everything. */
+    fun deleteAccount() {
+        if (_state.value.deletingAccount) return
+        _state.update { it.copy(deletingAccount = true, deleteError = null) }
+        viewModelScope.launch {
+            try {
+                auth.deleteAccount()
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(deletingAccount = false, deleteError = "Couldn't delete your account. Check your connection and try again.")
+                }
+                return@launch
+            }
+            wipeLocal()
+            _state.update { it.copy(deletingAccount = false) }
+        }
+    }
+
+    fun dismissDeleteError() = _state.update { it.copy(deleteError = null) }
+
+    private suspend fun wipeLocal() {
+        runCatching { lists.clearLocal() }
+        runCatching { airing.clearAll() }
+        profiles.clearMe()
     }
 
     fun dismissError() = _state.update { it.copy(error = null) }

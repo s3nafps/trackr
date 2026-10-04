@@ -28,7 +28,7 @@ _Rendered headlessly with fake sample data (Robolectric + Roborazzi), so poster 
 Google sign-in · Discover (continue watching, trending movies/TV/anime, airing this week) · Search with filters,
 debounce and recent searches · Detail (cast, seasons, friends who watched, rating/progress sheet) · My List (tabs, grid/list,
 sort/filter, +1 episode, offline with last-write-wins sync) · Friends (add by username/invite code, requests, activity feed,
-friend profiles, Watch Together) · Profile (stats, charts, invite code, theme, sign out) · About with TMDB/AniList attribution.
+friend profiles, Watch Together) · Profile (stats, charts, invite code, theme, sign out, delete account) · About with TMDB/AniList attribution.
 
 ## Setup
 Requirements: JDK 17, Android SDK (platform 35, build-tools 35). `export ANDROID_HOME=/path/to/sdk`.

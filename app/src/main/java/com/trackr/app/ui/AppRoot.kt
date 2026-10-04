@@ -17,6 +17,7 @@ import com.trackr.app.ui.screens.auth.AppState
 import com.trackr.app.ui.screens.auth.AuthViewModel
 import com.trackr.app.ui.screens.auth.LoginScreen
 import com.trackr.app.ui.screens.auth.UsernameScreen
+import com.trackr.app.ui.screens.profile.AccountDeletion
 
 @Composable
 fun AppRoot(openTarget: DetailTarget? = null, onTargetOpened: () -> Unit = {}, vm: AuthViewModel = hiltViewModel()) {
@@ -27,7 +28,12 @@ fun AppRoot(openTarget: DetailTarget? = null, onTargetOpened: () -> Unit = {}, v
         AppState.SignedOut -> LoginScreen(state, onGoogle = vm::signInWithGoogle)
         is AppState.NeedsUsername -> UsernameScreen(state, app.profile.username, vm::submitUsername)
         is AppState.Ready -> CompositionLocalProvider(LocalProfile provides (me ?: app.profile)) {
-            TrackrNavHost(onSignOut = vm::signOut, openTarget = openTarget, onTargetOpened = onTargetOpened)
+            TrackrNavHost(
+                onSignOut = vm::signOut,
+                deletion = AccountDeletion(state.deletingAccount, state.deleteError, vm::deleteAccount, vm::dismissDeleteError),
+                openTarget = openTarget,
+                onTargetOpened = onTargetOpened,
+            )
         }
     }
 }

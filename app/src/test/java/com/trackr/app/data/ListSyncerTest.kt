@@ -25,17 +25,28 @@ class FakeDao : ListEntryDao {
     override suspend fun getAllRaw() = rows.value.values.toList()
     override suspend fun getDirty() = rows.value.values.filter { it.dirty }
     override suspend fun upsert(entity: ListEntryEntity) { rows.value = rows.value + ((entity.source to entity.externalId) to entity) }
-    override suspend fun upsertAll(entities: List<ListEntryEntity>) = entities.forEach { upsert(it) }
-    override suspend fun hardDelete(source: String, id: String) { rows.value = rows.value - (source to id) }
     override suspend fun clear() { rows.value = emptyMap() }
+    override suspend fun markCleanIfUnchanged(source: String, id: String, updatedAt: Long) {
+        get(source, id)?.takeIf { it.updatedAt == updatedAt }?.let { upsert(it.copy(dirty = false)) }
+    }
+    override suspend fun hardDeleteIfUnchanged(source: String, id: String, updatedAt: Long) {
+        if (get(source, id)?.updatedAt == updatedAt) rows.value = rows.value - (source to id)
+    }
+    override suspend fun insertIfAbsent(entities: List<ListEntryEntity>) =
+        entities.filter { get(it.source, it.externalId) == null }.forEach { upsert(it) }
 }
 
 class FakeRemote(initial: List<ListEntryDto> = emptyList()) : ListRemote {
     val data = initial.associateBy { it.source to it.externalId }.toMutableMap()
     val deletes = mutableListOf<String>()
+    /** Runs while the request is "in flight", to simulate the user editing during a sync. */
+    var duringUpsert: suspend () -> Unit = {}
+    var duringDelete: suspend () -> Unit = {}
     override suspend fun fetchAll(userId: String) = data.values.toList()
-    override suspend fun upsert(dto: ListEntryDto) { data[dto.source to dto.externalId] = dto }
-    override suspend fun delete(userId: String, source: String, externalId: String) { data.remove(source to externalId); deletes += externalId }
+    override suspend fun upsert(dto: ListEntryDto) { data[dto.source to dto.externalId] = dto; duringUpsert() }
+    override suspend fun delete(userId: String, source: String, externalId: String) {
+        data.remove(source to externalId); deletes += externalId; duringDelete()
+    }
 }
 
 private fun entity(id: String, status: String = "watching", at: Long, dirty: Boolean = false, deleted: Boolean = false, progress: Int = 0, notify: Boolean = false) =
@@ -107,5 +118,62 @@ class ListSyncerTest {
         val remote = FakeRemote()
         ListSyncer(dao, remote).sync("u")
         assertNotNull(remote.data["tmdb" to "1"])
+    }
+
+    @Test fun `edit made while its push is in flight is kept and pushed next sync`() = runTest {
+        val dao = FakeDao().also { it.upsert(entity("1", progress = 3, at = 2000, dirty = true)) }
+        val remote = FakeRemote()
+        remote.duringUpsert = { dao.upsert(entity("1", progress = 4, at = 3000, dirty = true)) }
+        ListSyncer(dao, remote).sync("u")
+        val e = dao.get("tmdb", "1")!!
+        assertEquals(4, e.progress); assertTrue(e.dirty)
+
+        remote.duringUpsert = {}
+        ListSyncer(dao, remote).sync("u")
+        assertEquals(4, remote.data["tmdb" to "1"]!!.progress)
+        assertFalse(dao.get("tmdb", "1")!!.dirty)
+    }
+
+    @Test fun `entry re-added while its delete is in flight survives`() = runTest {
+        val dao = FakeDao().also { it.upsert(entity("1", at = 3000, dirty = true, deleted = true)) }
+        val remote = FakeRemote(listOf(dto("1", at = 1000)))
+        remote.duringDelete = { dao.upsert(entity("1", "completed", at = 4000, dirty = true)) }
+        ListSyncer(dao, remote).sync("u")
+        val e = dao.get("tmdb", "1")!!
+        assertFalse(e.deleted); assertTrue(e.dirty); assertEquals("completed", e.status)
+    }
+
+    // The edits below land while another row ("0") is being pushed, i.e. after the syncer took its local snapshot.
+
+    @Test fun `newer remote row does not overwrite an edit made mid-sync`() = runTest {
+        val dao = FakeDao().also {
+            it.upsert(entity("0", at = 1000, dirty = true))
+            it.upsert(entity("1", "watching", at = 1000))
+        }
+        val remote = FakeRemote(listOf(dto("1", "dropped", at = 5000)))
+        remote.duringUpsert = { dao.upsert(entity("1", "completed", at = 9000, dirty = true)) }
+        ListSyncer(dao, remote).sync("u")
+        assertEquals("completed", dao.get("tmdb", "1")!!.status)
+        assertTrue(dao.get("tmdb", "1")!!.dirty)
+    }
+
+    @Test fun `clean row edited mid-sync is not dropped as deleted elsewhere`() = runTest {
+        val dao = FakeDao().also {
+            it.upsert(entity("0", at = 1000, dirty = true))
+            it.upsert(entity("1", at = 1000))
+        }
+        val remote = FakeRemote()
+        remote.duringUpsert = { dao.upsert(entity("1", progress = 2, at = 2000, dirty = true)) }
+        ListSyncer(dao, remote).sync("u")
+        assertEquals(2, dao.get("tmdb", "1")!!.progress)
+    }
+
+    @Test fun `entry added locally mid-sync is not replaced by the pulled remote row`() = runTest {
+        val dao = FakeDao().also { it.upsert(entity("0", at = 1000, dirty = true)) }
+        val remote = FakeRemote(listOf(dto("1", "dropped", at = 1000)))
+        remote.duringUpsert = { dao.upsert(entity("1", "watching", at = 2000, dirty = true)) }
+        ListSyncer(dao, remote).sync("u")
+        assertEquals("watching", dao.get("tmdb", "1")!!.status)
+        assertTrue(dao.get("tmdb", "1")!!.dirty)
     }
 }

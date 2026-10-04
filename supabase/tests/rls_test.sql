@@ -83,11 +83,30 @@ begin
   if n <> 0 then raise exception 'FAIL: stranger sees activity'; end if;
   reset role;
 
+  -- delete_account removes only the caller, cascading to profile, entries and friendships
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.list_entries (user_id, source, external_id, media_type, title, status)
+    values (b, 'tmdb', '3', 'movie', 'Heat', 'completed');
+  perform public.delete_account();
+  reset role;
+  if exists (select 1 from auth.users where id = b) then raise exception 'FAIL: delete_account kept auth user'; end if;
+  if exists (select 1 from public.profiles where id = b) then raise exception 'FAIL: delete_account kept profile'; end if;
+  if exists (select 1 from public.list_entries where user_id = b) then raise exception 'FAIL: delete_account kept entries'; end if;
+  if exists (select 1 from public.friendships where b in (requester_id, addressee_id)) then
+    raise exception 'FAIL: delete_account kept friendships';
+  end if;
+  if not exists (select 1 from public.list_entries where user_id = a) then raise exception 'FAIL: delete_account touched another user'; end if;
+
   -- anon cannot read anything
   set local role anon;
   begin
     perform 1 from public.list_entries;
     raise exception 'FAIL: anon can select list_entries';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.delete_account();
+    raise exception 'FAIL: anon can call delete_account';
   exception when insufficient_privilege then null; end;
   reset role;
 
