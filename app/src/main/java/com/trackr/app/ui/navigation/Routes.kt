@@ -20,6 +20,7 @@ object Routes {
     const val FRIEND_PROFILE = "friend/{userId}"
     const val SETTINGS = "settings"
     const val ABOUT = "about"
+    const val IMPORT_EXPORT = "import_export"
 
     fun detail(source: String, type: String, id: String) = "detail/$source/$type/$id"
     fun search(filter: String? = null) = if (filter == null) SEARCH_PATTERN.replace("?filter={filter}", "") else "search?filter=$filter"

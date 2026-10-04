@@ -81,6 +81,33 @@ class ListRepository @Inject constructor(
 
     suspend fun setNotify(entry: ListEntry, on: Boolean) = write(entry.copy(notify = on))
 
+    /**
+     * Adds imported entries that aren't in the list yet (a removed entry counts as absent) and never touches existing
+     * ones. Returns how many were added; sync and airing refresh are scheduled once for the batch.
+     */
+    suspend fun importEntries(entries: List<ListEntry>): Int {
+        val now = System.currentTimeMillis()
+        var added = 0
+        entries.distinctBy { it.key }.forEach { e ->
+            val existing = dao.get(e.source.key, e.externalId)
+            if (existing != null && !existing.deleted) return@forEach
+            val total = e.totalEpisodes
+            val progress = when {
+                e.status == ListStatus.COMPLETED && total != null -> total
+                total != null -> e.progress.coerceIn(0, total)
+                else -> e.progress.coerceAtLeast(0)
+            }
+            val rating = e.rating?.takeIf { it > 0 }?.coerceIn(1, 10)
+            dao.upsert(e.copy(progress = progress, rating = rating, updatedAt = now).toEntity(dirty = true))
+            added++
+        }
+        if (added > 0) {
+            scheduler.syncNow()
+            airingRefresh.refreshNow()
+        }
+        return added
+    }
+
     /** "+1 episode": auto-completes at the last episode, and moves Plan/Dropped to Watching. */
     suspend fun incrementProgress(entry: ListEntry) {
         val total = entry.totalEpisodes
