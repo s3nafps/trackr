@@ -36,6 +36,32 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Shared title links (see DeepLinks). The web hosts aren't ours, so they can't be verified App Links:
+                 Android 12+ opens them in Trackr only after the user allows it (Settings → Open links in Trackr). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="trackr" android:host="title" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="www.themoviedb.org" />
+                <data android:host="themoviedb.org" />
+                <data android:pathPrefix="/movie/" />
+                <data android:pathPrefix="/tv/" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="anilist.co" />
+                <data android:pathPrefix="/anime/" />
+            </intent-filter>
         </activity>
         <receiver android:name=".data.airing.AiringReceiver" android:exported="false" />
         <receiver
