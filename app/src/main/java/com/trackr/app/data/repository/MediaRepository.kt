@@ -91,14 +91,17 @@ class MediaRepository @Inject constructor(
         merged
     }
 
-    suspend fun detail(source: MediaSource, id: String, type: MediaType, force: Boolean = false): MediaDetail {
-        val key = "${source.key}:$type:$id"
+    /** [region] picks the TMDB watch-provider country; it defaults to the device's country. */
+    suspend fun detail(
+        source: MediaSource, id: String, type: MediaType, force: Boolean = false, region: String = deviceRegion(),
+    ): MediaDetail {
+        val key = "${source.key}:$type:$id:$region"
         if (!force) details.get(key)?.let { return it }
         return try {
             val d = when (source) {
                 MediaSource.TMDB -> {
                     val intId = id.toIntOrNull() ?: throw IOException("Invalid id")
-                    TmdbMapper.toDetail(if (type == MediaType.MOVIE) tmdb.movieDetail(intId) else tmdb.tvDetail(intId), type)
+                    TmdbMapper.toDetail(if (type == MediaType.MOVIE) tmdb.movieDetail(intId) else tmdb.tvDetail(intId), type, region = region)
                 }
                 MediaSource.ANILIST -> anilist.detail(id.toIntOrNull() ?: throw IOException("Invalid id"))
             }
@@ -109,6 +112,9 @@ class MediaRepository @Inject constructor(
     }
 
     companion object {
+        /** ISO 3166-1 country of the device locale, or US when the locale has none. */
+        fun deviceRegion(): String = java.util.Locale.getDefault().country.takeIf { it.length == 2 } ?: "US"
+
         fun interleave(lists: List<List<MediaItem>>): List<MediaItem> {
             val out = ArrayList<MediaItem>()
             val max = lists.maxOfOrNull { it.size } ?: 0

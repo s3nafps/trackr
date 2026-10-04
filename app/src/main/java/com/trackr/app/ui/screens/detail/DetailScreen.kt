@@ -1,6 +1,7 @@
 package com.trackr.app.ui.screens.detail
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +57,8 @@ import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.model.WatchOptions
+import com.trackr.app.domain.model.WatchProvider
 import com.trackr.app.ui.components.ErrorState
 import com.trackr.app.ui.components.PosterImage
 import com.trackr.app.ui.components.rememberNotificationPermission
@@ -67,6 +70,7 @@ import com.trackr.app.ui.components.UserAvatar
 import com.trackr.app.ui.components.formatRuntime
 import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.color
+import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -99,6 +103,8 @@ fun DetailScreen(onBack: () -> Unit, vm: DetailViewModel = hiltViewModel()) {
                         ),
                     )
                 },
+                // No browser/app for the link is not worth a crash.
+                onOpenUrl = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } },
             )
         }
         // Floating back button
@@ -129,6 +135,7 @@ fun DetailScreen(onBack: () -> Unit, vm: DetailViewModel = hiltViewModel()) {
 fun DetailContent(
     detail: MediaDetail, state: DetailUiState, showSheetClick: () -> Unit, onShare: () -> Unit,
     bell: BellState = BellState.Hidden, onBell: () -> Unit = {}, nowMillis: Long = System.currentTimeMillis(),
+    onOpenUrl: (String) -> Unit = {},
 ) {
     val item = detail.item
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -253,6 +260,8 @@ fun DetailContent(
 
             InfoCard(detail)
 
+            WatchSection(detail.watch, onOpenUrl)
+
             if (state.friends.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Friends who watched this", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.headlineSmall)
@@ -326,6 +335,66 @@ private fun InfoCard(detail: MediaDetail) {
                 Text(v, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun WatchSection(watch: WatchOptions, onOpenUrl: (String) -> Unit) {
+    // AniList lists nothing when it knows nothing; TMDB's "nothing in your country" is worth saying.
+    if (watch.isEmpty && watch.region == null) return
+    val country = watch.region?.let { Locale("", it).displayCountry.ifBlank { it } }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Where to watch", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.headlineSmall)
+        if (watch.isEmpty) {
+            Text(
+                "Not available to stream, rent or buy in $country yet.", Modifier.padding(horizontal = 16.dp),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        listOf("Stream" to watch.stream, "Free" to watch.free, "Rent" to watch.rent, "Buy" to watch.buy).forEach { (label, providers) ->
+            if (providers.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(label, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(providers, key = { it.name }) { ProviderTile(it, onOpenUrl) }
+                }
+            }
+        }
+        if (country != null) {
+            Text(
+                "$country · Streaming data from JustWatch", Modifier.padding(horizontal = 16.dp),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProviderTile(p: WatchProvider, onOpenUrl: (String) -> Unit) {
+    // AniList icons are white glyphs meant to sit on the site's brand colour; TMDB logos are full tiles.
+    val brand = p.color?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
+    val url = p.url
+    Column(
+        Modifier.width(64.dp).clip(MaterialTheme.shapes.medium).then(if (url != null) Modifier.clickable { onOpenUrl(url) } else Modifier),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            Modifier.size(56.dp).clip(MaterialTheme.shapes.medium).background(brand ?: MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (p.logoUrl != null) {
+                AsyncImage(
+                    p.logoUrl, contentDescription = null,
+                    modifier = if (brand != null) Modifier.size(32.dp) else Modifier.fillMaxSize(),
+                    contentScale = if (brand != null) ContentScale.Fit else ContentScale.Crop,
+                )
+            } else {
+                Text(p.name.take(1), style = MaterialTheme.typography.titleMedium)
+            }
+        }
+        Text(
+            p.name, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }
 

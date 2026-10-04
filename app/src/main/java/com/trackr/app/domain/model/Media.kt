@@ -28,6 +28,23 @@ data class MediaItem(
 
 data class CastMember(val name: String, val role: String?, val imageUrl: String?)
 
+/** One place to watch a title. [url] opens it; [color] is the site's brand colour (hex) when the source gives one. */
+data class WatchProvider(val name: String, val logoUrl: String?, val url: String?, val color: String? = null)
+
+/**
+ * Where a title can be watched. TMDB data is per [region] (ISO 3166-1 country) and comes from JustWatch;
+ * AniList streaming links are not region-specific, so [region] is null for them.
+ */
+data class WatchOptions(
+    val region: String? = null,
+    val stream: List<WatchProvider> = emptyList(),
+    val free: List<WatchProvider> = emptyList(),
+    val rent: List<WatchProvider> = emptyList(),
+    val buy: List<WatchProvider> = emptyList(),
+) {
+    val isEmpty: Boolean get() = stream.isEmpty() && free.isEmpty() && rent.isEmpty() && buy.isEmpty()
+}
+
 data class SeasonInfo(val number: Int, val name: String, val episodeCount: Int, val year: Int?, val posterUrl: String?)
 
 data class MediaDetail(
@@ -40,6 +57,7 @@ data class MediaDetail(
     val seasonCount: Int? = null,
     val studios: List<String> = emptyList(),
     val certification: String? = null,
+    val watch: WatchOptions = WatchOptions(),
 )
 
 /** Result wrapper so UI can render loading/error/content without exceptions leaking. */
