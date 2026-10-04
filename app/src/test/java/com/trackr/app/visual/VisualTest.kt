@@ -38,6 +38,13 @@ import com.trackr.app.domain.model.Profile
 import com.trackr.app.domain.model.StatsCalculator
 import com.trackr.app.domain.model.EntrySocial
 import com.trackr.app.domain.model.Recommendation
+import com.trackr.app.domain.model.SharedList
+import com.trackr.app.domain.model.SharedListItem
+import com.trackr.app.ui.screens.social.SharedListActions
+import com.trackr.app.ui.screens.social.SharedListContent
+import com.trackr.app.ui.screens.social.SharedListUiState
+import com.trackr.app.ui.screens.social.SharedListsContent
+import com.trackr.app.ui.screens.social.SharedListsUiState
 import com.trackr.app.domain.util.YearInReview
 import com.trackr.app.ui.screens.friends.FriendData
 import com.trackr.app.ui.screens.friends.FriendProfileContent
@@ -234,6 +241,26 @@ class VisualTest {
             ),
             null, {}, {}, {}, noActions,
         )
+    }
+
+    private val movieNight = SharedList(
+        "l1", "Friday movie night", ownerId = "me", members = listOf(Profile("me", "mo"), Profile("us", "sara"), Profile("ub", "ben")), itemCount = 3,
+    )
+
+    @Test fun sharedLists() = shot("shared_lists") {
+        SharedListsContent(
+            SharedListsUiState(lists = Load.Success(listOf(movieNight, SharedList("l2", "Anime club", "us", listOf(Profile("us", "sara"), Profile("me", "mo")), 12)))),
+            {}, {}, {}, {}, {}, { _, _ -> }, {},
+        )
+    }
+
+    @Test fun sharedList() = shot("shared_list") {
+        val items = listOf(
+            SharedListItem(item("1", "Heat", MediaType.MOVIE, 1995, 8.3, "Crime"), Profile("us", "sara"), 0),
+            SharedListItem(item("2", "Perfect Blue", MediaType.ANIME, 1997, 8.3, "Thriller"), Profile("ub", "ben"), 0),
+            SharedListItem(item("3", "Severance", MediaType.TV, 2022, 8.7, "Drama"), null, 0),
+        )
+        SharedListContent(SharedListUiState(Load.Success(movieNight), Load.Success(items), me = "me"), {}, {}, SharedListActions())
     }
 
     @Test fun friendProfile() = shot("friend_profile") {

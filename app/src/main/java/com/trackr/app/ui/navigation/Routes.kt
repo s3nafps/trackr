@@ -22,11 +22,14 @@ object Routes {
     const val ABOUT = "about"
     const val IMPORT_EXPORT = "import_export"
     const val WRAPPED = "wrapped"
+    const val SHARED_LISTS = "shared_lists"
+    const val SHARED_LIST = "shared_list/{id}"
 
     fun detail(source: String, type: String, id: String) = "detail/$source/$type/$id"
     fun search(filter: String? = null) = if (filter == null) SEARCH_PATTERN.replace("?filter={filter}", "") else "search?filter=$filter"
     fun myList(status: String? = null) = if (status == null) MY_LIST_BASE else "mylist?status=$status"
     fun friend(userId: String) = "friend/$userId"
+    fun sharedList(id: String) = "shared_list/$id"
 }
 
 enum class TopLevel(val route: String, val pattern: String, val label: String, val icon: ImageVector) {
