@@ -38,7 +38,7 @@ Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-k
 | trackr_home_discover | ui/screens/home/HomeScreen | [x] (notification bell omitted: no feature) |
 | trackr_search | ui/screens/search/SearchScreen | [x] ("People" chip + niche-syntax promo omitted) |
 | trackr_media_details_rating_sheet | ui/screens/detail/DetailScreen + components/TrackSheet | [x] (favourite/custom-collection buttons omitted; "Rewatch count" replaced by episode stepper per brief) |
-| trackr_my_list | ui/screens/mylist/MyListScreen | [x] ("Import Watchlists" promo omitted: not a feature) |
+| trackr_my_list | ui/screens/mylist/MyListScreen | [x] ("Import Watchlists" promo omitted; import lives in Settings → Import & export) |
 | trackr_friends_activity | ui/screens/friends/FriendsScreen | [x] (likes/comments/reactions omitted: no backing feature) |
 | trackr_friend_profile | ui/screens/friends/FriendProfileScreen | [x] (followers/bio/location/'Plan Watch Party' omitted) |
 | trackr_profile_stats | ui/screens/profile/ProfileScreen (+ SettingsScreens.kt) | [x] (genre chart → status breakdown, since genres aren't stored; notifications row omitted) |
@@ -60,3 +60,4 @@ Screens absent from export (Settings, About, username setup, add-friend dialog) 
 - [x] Sync race fix: syncer writes are conditional on the row's updatedAt (markCleanIfUnchanged / replaceIfUnchanged / hardDeleteIfUnchanged / insertIfAbsent) so edits made mid-sync survive; ListRepository.sync is serialized by a Mutex. In-app account deletion (migration 20261004000001_delete_account.sql — must be applied to the project).
 - [x] Where to watch (Detail): TMDB `watch/providers` via append_to_response, filtered to the device region (MediaRepository.deviceRegion, part of the detail cache key), links to TMDB's watch page; AniList `externalLinks` STREAMING sites. JustWatch attribution on the section and in About.
 - [x] Detail discovery: trailer card (TMDB best YouTube trailer > trailer > teaser; AniList youtube/dailymotion), anime Related row (AniList relations, anime only, prequel/sequel first), More like this (TMDB recommendations → similar fallback; AniList recommendations). Posters open DetailScreen via onOpenItem.
+- [x] Import & export (Settings → Import & export, ImportExportScreen): AniList by username (MediaListCollection, chunked), MyAnimeList export XML(.gz) matched via AniList idMal_in, Letterboxd export zip/CSV matched on TMDB search by title+year, Trackr JSON backup. Import only adds missing titles (removed ones count as missing), never overwrites; ListRepository.importEntries schedules one sync. Export: versioned JSON backup + CSV via SAF. Parsers in data/importer are pure Kotlin.

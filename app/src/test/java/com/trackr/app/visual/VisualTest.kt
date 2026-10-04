@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.trackr.app.data.importer.ImportSummary
 import com.trackr.app.data.repository.SearchFilter
 import com.trackr.app.domain.model.CastMember
 import com.trackr.app.domain.model.ListEntry
@@ -41,6 +42,9 @@ import com.trackr.app.ui.screens.friends.FriendProfileUiState
 import com.trackr.app.ui.screens.friends.FriendsActions
 import com.trackr.app.ui.screens.friends.FriendsContent
 import com.trackr.app.ui.screens.friends.FriendsUiState
+import com.trackr.app.ui.screens.profile.ImportExportContent
+import com.trackr.app.ui.screens.profile.ImportExportUiState
+import com.trackr.app.ui.screens.profile.ImportOutcome
 import com.trackr.app.ui.screens.profile.ProfileContent
 import com.trackr.app.ui.screens.profile.ProfileUiState
 import com.trackr.app.ui.screens.mylist.ListSort
@@ -131,6 +135,11 @@ class VisualTest {
             ),
         )
         DetailContent(d, DetailUiState(Load.Success(d), entry("2", "Dune", MediaType.MOVIE, ListStatus.PLAN_TO_WATCH, 0, 1), emptyList()), {}, {})
+    }
+
+    @Test fun importExport() = shot("import_export") {
+        val summary = ImportSummary(added = 212, skipped = 4, notFound = listOf("La Jetée (1962)", "Sátántangó (1994)"))
+        ImportExportContent(ImportExportUiState(outcome = ImportOutcome("Letterboxd", summary)), {}, {}, {})
     }
 
     @Test fun detailAiring() = shot("detail_airing") {
