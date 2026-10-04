@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -51,11 +52,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.domain.model.ActivityEntry
+import com.trackr.app.domain.model.Comment
+import com.trackr.app.domain.model.EntrySocial
 import com.trackr.app.domain.model.Friend
 import com.trackr.app.domain.model.FriendRequest
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.Load
+import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.model.Recommendation
+import com.trackr.app.ui.components.CommentsSheet
 import com.trackr.app.ui.components.CountBadge
 import com.trackr.app.ui.components.EmptyState
 import com.trackr.app.ui.components.ErrorState
@@ -64,6 +70,8 @@ import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.MediaTypePill
 import com.trackr.app.ui.components.PosterImage
 import com.trackr.app.ui.components.RatingBadge
+import com.trackr.app.ui.components.ReactionBar
+import com.trackr.app.ui.components.RecommendationCard
 import com.trackr.app.ui.components.SegmentedControl
 import com.trackr.app.ui.components.StatusBadge
 import com.trackr.app.ui.components.TrackrProgressBar
@@ -85,6 +93,13 @@ class FriendsActions(
     val search: () -> Unit,
     val sendRequest: () -> Unit,
     val toastShown: () -> Unit,
+    val toggleReaction: (entryId: String, emoji: String) -> Unit = { _, _ -> },
+    val openComments: (ActivityEntry) -> Unit = {},
+    val postComment: (String) -> Unit = {},
+    val deleteComment: (Comment) -> Unit = {},
+    val closeComments: () -> Unit = {},
+    val openRecommendation: (Recommendation) -> Unit = {},
+    val dismissRecommendation: (Recommendation) -> Unit = {},
 )
 
 @Composable
@@ -92,12 +107,19 @@ fun FriendsScreen(
     onOpenFriend: (String) -> Unit,
     onOpenDetail: (ActivityEntry) -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenTitle: (MediaItem) -> Unit = {},
     vm: FriendsViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     FriendsContent(
         state, LocalProfile.current?.avatarUrl, onOpenProfile, onOpenFriend, onOpenDetail,
-        FriendsActions(vm::refresh, vm::respond, vm::planToWatch, vm::openAdd, vm::closeAdd, vm::setAddQuery, vm::search, vm::sendRequest, vm::toastShown),
+        FriendsActions(
+            vm::refresh, vm::respond, vm::planToWatch, vm::openAdd, vm::closeAdd, vm::setAddQuery, vm::search, vm::sendRequest, vm::toastShown,
+            toggleReaction = vm::toggleReaction, openComments = vm::openComments, postComment = vm::postComment,
+            deleteComment = vm::deleteComment, closeComments = vm::closeComments,
+            openRecommendation = vm::openRecommendation, dismissRecommendation = vm::dismissRecommendation,
+        ),
+        onOpenTitle = onOpenTitle,
     )
 }
 
@@ -110,6 +132,7 @@ fun FriendsContent(
     onOpenFriend: (String) -> Unit,
     onOpenDetail: (ActivityEntry) -> Unit,
     actions: FriendsActions,
+    onOpenTitle: (MediaItem) -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableStateOf(FriendsTab.ACTIVITY) }
     var pendingOpen by rememberSaveable { mutableStateOf(true) }
@@ -153,6 +176,9 @@ fun FriendsContent(
                     if (state.pending.isNotEmpty()) item("pending") {
                         PendingCard(state.pending, pendingOpen, { pendingOpen = !pendingOpen }, actions.respond, onOpenFriend)
                     }
+                    if (tab == FriendsTab.ACTIVITY && state.inbox.isNotEmpty()) item("inbox") {
+                        InboxRow(state.inbox, onOpen = { r -> actions.openRecommendation(r); onOpenTitle(r.item) }, onDismiss = actions.dismissRecommendation)
+                    }
                     when (tab) {
                         FriendsTab.ACTIVITY -> activityItems(state, actions, onOpenDetail, onOpenFriend)
                         FriendsTab.FRIENDS -> friendItems(state, actions, onOpenFriend)
@@ -164,6 +190,21 @@ fun FriendsContent(
     }
 
     if (state.add.open) AddFriendDialog(state.add, actions)
+    state.comments?.let { CommentsSheet(it, actions.postComment, actions.deleteComment, actions.closeComments) }
+}
+
+@Composable
+private fun InboxRow(inbox: List<Recommendation>, onOpen: (Recommendation) -> Unit, onDismiss: (Recommendation) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Recommended to you", style = MaterialTheme.typography.titleMedium)
+            val unseen = inbox.count { !it.seen }
+            if (unseen > 0) CountBadge(unseen, container = MaterialTheme.colorScheme.primaryContainer)
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(inbox, key = { it.id }) { r -> RecommendationCard(r, onOpen = { onOpen(r) }, onDismiss = { onDismiss(r) }) }
+        }
+    }
 }
 
 @Composable
@@ -226,13 +267,19 @@ private fun androidx.compose.foundation.lazy.LazyListScope.activityItems(
                 actionLabel = "Add a friend", onAction = actions.openAdd,
             )
         } else items(a.data, key = { it.id }) { e ->
-            ActivityCard(e, inMyList = e.key in state.myKeys, onClick = { onOpenDetail(e) }, onUser = { onOpenFriend(e.userId) }, onPlan = { actions.planToWatch(e) })
+            ActivityCard(
+                e, inMyList = e.key in state.myKeys, onClick = { onOpenDetail(e) }, onUser = { onOpenFriend(e.userId) }, onPlan = { actions.planToWatch(e) },
+                social = state.social[e.id] ?: EntrySocial(), onReact = { emoji -> actions.toggleReaction(e.id, emoji) }, onComments = { actions.openComments(e) },
+            )
         }
     }
 }
 
 @Composable
-fun ActivityCard(e: ActivityEntry, inMyList: Boolean, onClick: () -> Unit, onUser: () -> Unit, onPlan: () -> Unit) {
+fun ActivityCard(
+    e: ActivityEntry, inMyList: Boolean, onClick: () -> Unit, onUser: () -> Unit, onPlan: () -> Unit,
+    social: EntrySocial = EntrySocial(), onReact: (String) -> Unit = {}, onComments: () -> Unit = {},
+) {
     Column(
         Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -265,6 +312,7 @@ fun ActivityCard(e: ActivityEntry, inMyList: Boolean, onClick: () -> Unit, onUse
                 }
             }
         }
+        ReactionBar(social, onToggle = onReact, onComments = onComments)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             if (inMyList) Text("In your list", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
             else Row(

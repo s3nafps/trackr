@@ -130,6 +130,7 @@ fun TrackrNavHost(
                     onOpenFriend = { nav.navigate(Routes.friend(it)) },
                     onOpenDetail = { a -> nav.navigate(Routes.detail(a.source.key, a.mediaType.key, a.externalId)) },
                     onOpenProfile = { nav.goTop(Routes.PROFILE) },
+                    onOpenTitle = { openDetail(it) },
                 )
             }
             composable(

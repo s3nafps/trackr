@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,11 +28,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,18 +57,22 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.trackr.app.domain.model.CastMember
+import com.trackr.app.domain.model.EntrySocial
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.model.REACTIONS
 import com.trackr.app.domain.model.Trailer
 import com.trackr.app.domain.model.WatchOptions
 import com.trackr.app.domain.model.WatchProvider
+import com.trackr.app.ui.components.CommentsSheet
 import com.trackr.app.ui.components.ErrorState
 import com.trackr.app.ui.components.PosterCard
 import com.trackr.app.ui.components.PosterImage
+import com.trackr.app.ui.components.RecommendSheet
 import com.trackr.app.ui.components.rememberNotificationPermission
 import com.trackr.app.ui.components.ScorePill
 import com.trackr.app.ui.components.ShimmerBox
@@ -84,6 +91,7 @@ import java.util.Locale
 fun DetailScreen(onBack: () -> Unit, onOpenItem: (MediaItem) -> Unit = {}, vm: DetailViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val bell by vm.bellState.collectAsStateWithLifecycle()
+    val social by vm.socialState.collectAsStateWithLifecycle()
     val ensureNotifications = rememberNotificationPermission(vm::onPermissionResult)
     var showSheet by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
@@ -111,6 +119,9 @@ fun DetailScreen(onBack: () -> Unit, onOpenItem: (MediaItem) -> Unit = {}, vm: D
                 // No browser/app for the link is not worth a crash.
                 onOpenUrl = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } },
                 onOpenItem = onOpenItem,
+                onRecommend = vm::openRecommend,
+                ownSocial = social.ownSocial?.takeIf { it.reactions.isNotEmpty() || it.commentCount > 0 },
+                onOwnComments = vm::openOwnComments,
             )
         }
         // Floating back button
@@ -134,6 +145,8 @@ fun DetailScreen(onBack: () -> Unit, onOpenItem: (MediaItem) -> Unit = {}, vm: D
             onRemove = state.entry?.let { { vm.remove(); showSheet = false } },
         )
     }
+    social.recommend?.let { r -> detail?.let { RecommendSheet(it.item.title, r, vm::sendRecommendation, vm::closeRecommend) } }
+    social.comments?.let { CommentsSheet(it, vm::postComment, vm::deleteComment, vm::closeComments) }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -143,6 +156,9 @@ fun DetailContent(
     bell: BellState = BellState.Hidden, onBell: () -> Unit = {}, nowMillis: Long = System.currentTimeMillis(),
     onOpenUrl: (String) -> Unit = {},
     onOpenItem: (MediaItem) -> Unit = {},
+    onRecommend: (() -> Unit)? = null,
+    ownSocial: EntrySocial? = null,
+    onOwnComments: () -> Unit = {},
 ) {
     val item = detail.item
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -219,6 +235,12 @@ fun DetailContent(
                     Modifier.size(48.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onShare),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.Share, "Share", Modifier.size(20.dp)) }
+                if (onRecommend != null) {
+                    Box(
+                        Modifier.size(48.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onRecommend),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.AutoMirrored.Outlined.Send, "Recommend to a friend", Modifier.size(20.dp)) }
+                }
                 if (bell != BellState.Hidden) {
                     val on = bell == BellState.On
                     Box(
@@ -295,6 +317,8 @@ fun DetailContent(
                 }
             }
 
+            ownSocial?.let { OwnEntrySocial(it, onOwnComments) }
+
             if (detail.related.isNotEmpty()) PosterRow("Related", detail.related.map { it.item to it.relation }, onOpenItem)
 
             if (detail.seasons.isNotEmpty()) {
@@ -347,6 +371,27 @@ private fun InfoCard(detail: MediaDetail) {
                 Text(k, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(v, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp))
             }
+        }
+    }
+}
+
+/** Friends' reactions and comments on your own entry for this title. */
+@Composable
+private fun OwnEntrySocial(social: EntrySocial, onComments: () -> Unit) {
+    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Friends on your entry", style = MaterialTheme.typography.headlineSmall)
+        Row(
+            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)
+                .clickable(onClick = onComments).padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            REACTIONS.forEach { e -> social.reactions[e]?.let { n -> Text("$e $n", style = MaterialTheme.typography.labelLarge) } }
+            Spacer(Modifier.weight(1f))
+            Icon(Icons.Outlined.ChatBubbleOutline, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(
+                when (social.commentCount) { 0 -> "Comments"; 1 -> "1 comment"; else -> "${social.commentCount} comments" },
+                style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

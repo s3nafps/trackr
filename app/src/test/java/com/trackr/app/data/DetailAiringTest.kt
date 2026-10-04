@@ -81,7 +81,7 @@ class DetailAiringTest {
         every { prefs.airingEnabled } returns enabled
         val social = mockk<SocialRepository>(relaxed = true)
         val saved = SavedStateHandle(mapOf("source" to "anilist", "type" to "tv", "id" to "1"))
-        return DetailViewModel(saved, media, lists, social, prefs)
+        return DetailViewModel(saved, media, lists, social, prefs, mockk(relaxed = true))
     }
 
     private fun entry(status: ListStatus, notify: Boolean = false) =
