@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.Color
 
 enum class ThemeMode { DARK, LIGHT, SYSTEM }
 
-private val DarkScheme = darkColorScheme(
+internal val DarkScheme = darkColorScheme(
     primary = StitchPrimary, onPrimary = StitchOnPrimary,
     primaryContainer = StitchPrimaryContainer, onPrimaryContainer = StitchOnPrimaryContainer,
     inversePrimary = StitchInversePrimary,
@@ -28,7 +28,7 @@ private val DarkScheme = darkColorScheme(
     outline = StitchOutline, outlineVariant = StitchOutlineVariant,
 )
 
-private val LightScheme = lightColorScheme(
+internal val LightScheme = lightColorScheme(
     primary = LightPrimary, onPrimary = Color.White,
     primaryContainer = LightPrimaryContainer, onPrimaryContainer = LightOnPrimaryContainer,
     secondary = LightSecondary, onSecondary = Color.White,
