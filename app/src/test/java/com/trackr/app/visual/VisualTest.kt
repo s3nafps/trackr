@@ -36,6 +36,7 @@ import com.trackr.app.domain.model.Friend
 import com.trackr.app.domain.model.FriendRequest
 import com.trackr.app.domain.model.Profile
 import com.trackr.app.domain.model.StatsCalculator
+import com.trackr.app.domain.util.YearInReview
 import com.trackr.app.ui.screens.friends.FriendData
 import com.trackr.app.ui.screens.friends.FriendProfileContent
 import com.trackr.app.ui.screens.friends.FriendProfileUiState
@@ -46,6 +47,8 @@ import com.trackr.app.ui.screens.profile.ImportExportContent
 import com.trackr.app.ui.screens.profile.ImportExportUiState
 import com.trackr.app.ui.screens.profile.ImportOutcome
 import com.trackr.app.ui.screens.profile.ProfileContent
+import com.trackr.app.ui.screens.profile.WrappedContent
+import com.trackr.app.ui.screens.profile.WrappedUiState
 import com.trackr.app.ui.screens.profile.ProfileUiState
 import com.trackr.app.ui.screens.mylist.ListSort
 import com.trackr.app.ui.screens.mylist.MyListContent
@@ -135,6 +138,19 @@ class VisualTest {
             ),
         )
         DetailContent(d, DetailUiState(Load.Success(d), entry("2", "Dune", MediaType.MOVIE, ListStatus.PLAN_TO_WATCH, 0, 1), emptyList()), {}, {})
+    }
+
+    @Test fun wrapped() = shot("wrapped") {
+        val top = listOf(
+            entry("1", "Dune: Part Two", MediaType.MOVIE, ListStatus.COMPLETED, 1, 1).copy(rating = 10),
+            entry("2", "Frieren", MediaType.ANIME, ListStatus.COMPLETED, 28, 28).copy(rating = 10),
+            entry("3", "Shōgun", MediaType.TV, ListStatus.COMPLETED, 10, 10).copy(rating = 9),
+        )
+        val review = YearInReview(
+            year = 2026, completed = 42, movies = 18, shows = 9, anime = 15, episodes = 412, hours = 310, averageRating = 8.1,
+            topRated = top, perMonth = listOf(2, 3, 5, 1, 4, 6, 2, 3, 8, 4, 2, 2), usesEstimatedDates = false,
+        )
+        WrappedContent(WrappedUiState(years = listOf(2026, 2025), review = review), username = "mo", onSelectYear = {}, onShare = {})
     }
 
     @Test fun importExport() = shot("import_export") {

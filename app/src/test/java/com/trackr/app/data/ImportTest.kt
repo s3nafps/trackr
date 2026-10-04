@@ -10,6 +10,9 @@ import com.trackr.app.data.importer.Letterboxd
 import com.trackr.app.data.importer.LetterboxdFilm
 import com.trackr.app.data.importer.MalExport
 import com.trackr.app.data.importer.aniListStatus
+import com.trackr.app.data.importer.dateMillis
+import com.trackr.app.data.importer.fuzzyDateMillis
+import com.trackr.app.data.importer.isoDateMillis
 import com.trackr.app.data.importer.tenPointRating
 import com.trackr.app.data.mapper.ListEntryMapper.toEntity
 import com.trackr.app.data.remote.anilist.AniListClient
@@ -39,6 +42,7 @@ import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.time.Instant
+import java.time.LocalDate
 import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -118,8 +122,8 @@ class ImportFormatsTest {
         )
         assertEquals(
             setOf(
-                LetterboxdFilm("Heat", 1995, 9, watched = true),
-                LetterboxdFilm("Crouching Tiger, Hidden Dragon", 2000, null, watched = true),
+                LetterboxdFilm("Heat", 1995, 9, watched = true, watchedAt = dateMillis(LocalDate.of(2024, 1, 1))),
+                LetterboxdFilm("Crouching Tiger, Hidden Dragon", 2000, null, watched = true, watchedAt = dateMillis(LocalDate.of(2024, 1, 2))),
                 LetterboxdFilm("Dune", 2021, null, watched = false),
             ),
             films.toSet(),
@@ -147,7 +151,7 @@ class ImportFormatsTest {
 
     @Test fun `backup json round-trips and rejects foreign, newer and unknown data`() {
         val entries = listOf(
-            ListEntry(MediaSource.TMDB, "1", MediaType.MOVIE, "Heat", "p", null, ListStatus.COMPLETED, 9, 1, 1, 1_700_000_000_000, notify = false),
+            ListEntry(MediaSource.TMDB, "1", MediaType.MOVIE, "Heat", "p", null, ListStatus.COMPLETED, 9, 1, 1, 1_700_000_000_000, notify = false, completedAt = 1_699_000_000_000),
             ListEntry(MediaSource.ANILIST, "21", MediaType.ANIME, "One Piece", null, "b", ListStatus.WATCHING, null, 1100, null, 1_700_000_001_000, notify = true),
         )
         assertEquals(entries, Backup.fromJson(Backup.toJson(entries, Instant.EPOCH)))
@@ -162,11 +166,37 @@ class ImportFormatsTest {
         assertEquals(listOf("3"), Backup.fromJson(unknown).map { it.externalId })
     }
 
+    @Test fun `import dates are parsed to noon UTC on that day`() {
+        assertEquals(Instant.parse("2024-03-15T12:00:00Z").toEpochMilli(), isoDateMillis("2024-03-15"))
+        assertNull(isoDateMillis("0000-00-00")); assertNull(isoDateMillis("")); assertNull(isoDateMillis(null))
+        assertEquals(Instant.parse("2023-07-01T12:00:00Z").toEpochMilli(), fuzzyDateMillis(2023, null, null))
+        assertEquals(Instant.parse("2023-02-05T12:00:00Z").toEpochMilli(), fuzzyDateMillis(2023, 2, 5))
+        assertNull(fuzzyDateMillis(null, 2, 5)); assertNull(fuzzyDateMillis(2023, 2, 30))
+    }
+
+    @Test fun `mal finish dates are read`() {
+        val xml = "<myanimelist><anime><series_animedb_id>1</series_animedb_id><series_title>A</series_title>" +
+            "<my_status>Completed</my_status><my_finish_date>2024-03-15</my_finish_date></anime>" +
+            "<anime><series_animedb_id>2</series_animedb_id><series_title>B</series_title>" +
+            "<my_status>Completed</my_status><my_finish_date>0000-00-00</my_finish_date></anime></myanimelist>"
+        assertEquals(listOf(isoDateMillis("2024-03-15"), null), MalExport.parse(xml).map { it.finishedAt })
+    }
+
+    @Test fun `letterboxd prefers the diary's watched date and keeps the first watch`() {
+        val films = Letterboxd.parse(
+            mapOf(
+                "watched.csv" to "Date,Name,Year\n2024-05-01,Heat,1995\n",
+                "diary.csv" to "Date,Name,Year,Watched Date\n2024-05-02,Heat,1995,2023-12-30\n2024-06-01,Heat,1995,2024-06-01\n",
+            ),
+        )
+        assertEquals(isoDateMillis("2023-12-30"), films.single().watchedAt)
+    }
+
     @Test fun `csv export has a header and one escaped row per entry`() {
         val e = ListEntry(MediaSource.TMDB, "7", MediaType.MOVIE, "Crouching Tiger, Hidden Dragon", null, null, ListStatus.COMPLETED, 8, 1, 1, 0)
         val rows = Csv.parse(Backup.toCsv(listOf(e)))
-        assertEquals(listOf("title", "media_type", "status", "rating", "progress", "total_episodes", "source", "external_id", "updated_at"), rows[0])
-        assertEquals(listOf("Crouching Tiger, Hidden Dragon", "movie", "completed", "8", "1", "1", "tmdb", "7", "1970-01-01T00:00:00Z"), rows[1])
+        assertEquals(listOf("title", "media_type", "status", "rating", "progress", "total_episodes", "source", "external_id", "updated_at", "completed_at"), rows[0])
+        assertEquals(listOf("Crouching Tiger, Hidden Dragon", "movie", "completed", "8", "1", "1", "tmdb", "7", "1970-01-01T00:00:00Z", ""), rows[1])
     }
 }
 
@@ -207,6 +237,19 @@ class ImportRepositoryTest {
         assertNull(dao.get("anilist", "6"))
         verify(exactly = 1) { scheduler.syncNow() }
         verify(exactly = 1) { airingRefresh.refreshNow() }
+    }
+
+    @Test fun `completed imports keep the source's date, or are marked as unknown so Year in review skips them`() = runTest {
+        val finished = Instant.parse("2023-02-05T12:00:00Z").toEpochMilli()
+        coEvery { anilist.userAnimeList("me") } returns listOf(
+            AniListClient.ListRow(anime("1"), "COMPLETED", 8.0, 12, completedAt = finished),
+            AniListClient.ListRow(anime("2"), "COMPLETED", 8.0, 12),
+            AniListClient.ListRow(anime("3"), "CURRENT", 0.0, 2, completedAt = finished),
+        )
+        repo.fromAniList("me")
+        assertEquals(finished, dao.get("anilist", "1")!!.completedAt)
+        assertEquals(ListEntry.COMPLETED_DATE_UNKNOWN, dao.get("anilist", "2")!!.completedAt)
+        assertNull(dao.get("anilist", "3")!!.completedAt)
     }
 
     @Test fun `anilist errors become a readable message and blank names are refused`() = runTest {

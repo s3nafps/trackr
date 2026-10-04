@@ -2,6 +2,8 @@ package com.trackr.app.data.importer
 
 import com.trackr.app.domain.model.ListStatus
 import java.io.ByteArrayInputStream
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.zip.GZIPInputStream
 import java.util.zip.ZipInputStream
 
@@ -50,15 +52,28 @@ fun aniListStatus(raw: String?): ListStatus? = when (raw) {
     else -> null
 }
 
+/** A calendar date as epoch millis at noon UTC, so it falls on that date (and year) in practically every time zone. */
+fun dateMillis(date: LocalDate): Long = date.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
+
+/** "2024-03-15" → millis; blanks and MAL's "0000-00-00" mean no date. */
+fun isoDateMillis(s: String?): Long? = s?.trim()?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.let(::dateMillis)
+
+/** AniList FuzzyDate: a year alone still places it in that year's review. */
+fun fuzzyDateMillis(year: Int?, month: Int?, day: Int?): Long? =
+    year?.let { runCatching { dateMillis(LocalDate.of(it, month ?: 7, day ?: 1)) }.getOrNull() }
+
 /** A 0–10 score where 0 means "not rated", as AniList (POINT_10) and MyAnimeList use. */
 fun tenPointRating(score: Double?): Int? = score?.takeIf { it > 0 }?.let { Math.round(it).toInt().coerceIn(1, 10) }
 
-data class MalEntry(val malId: Int, val title: String, val episodes: Int?, val watched: Int, val score: Int?, val status: ListStatus)
+data class MalEntry(
+    val malId: Int, val title: String, val episodes: Int?, val watched: Int, val score: Int?, val status: ListStatus,
+    val finishedAt: Long? = null,
+)
 
 /** MyAnimeList's official list export (Profile → Export → anime list, an .xml.gz). */
 object MalExport {
     private val anime = Regex("<anime>(.*?)</anime>", RegexOption.DOT_MATCHES_ALL)
-    private val tags = listOf("series_animedb_id", "series_title", "series_episodes", "my_watched_episodes", "my_score", "my_status")
+    private val tags = listOf("series_animedb_id", "series_title", "series_episodes", "my_watched_episodes", "my_score", "my_status", "my_finish_date")
         .associateWith { Regex("<$it>\\s*(?:<!\\[CDATA\\[(.*?)]]>|([^<]*))\\s*</$it>", RegexOption.DOT_MATCHES_ALL) }
 
     private fun tag(block: String, name: String): String? =
@@ -84,6 +99,7 @@ object MalExport {
                 watched = tag(b, "my_watched_episodes")?.toIntOrNull() ?: 0,
                 score = tenPointRating(tag(b, "my_score")?.toDoubleOrNull()),
                 status = status(tag(b, "my_status")) ?: return@mapNotNull null,
+                finishedAt = isoDateMillis(tag(b, "my_finish_date")),
             )
         }.toList()
     }
@@ -92,7 +108,7 @@ object MalExport {
         s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&#039;", "'").replace("&amp;", "&")
 }
 
-data class LetterboxdFilm(val name: String, val year: Int?, val rating: Int?, val watched: Boolean)
+data class LetterboxdFilm(val name: String, val year: Int?, val rating: Int?, val watched: Boolean, val watchedAt: Long? = null)
 
 /** Letterboxd's export zip (Settings → Import & Export): watched.csv, ratings.csv, watchlist.csv. */
 object Letterboxd {
@@ -116,7 +132,12 @@ object Letterboxd {
                 // Diary URIs point at diary entries, not films, so title + year is the shared key.
                 val key = "$name|$year"
                 val prev = films[key]
-                films[key] = LetterboxdFilm(name, year, rating ?: prev?.rating, watched || prev?.watched == true)
+                // Diary has the real "Watched Date"; elsewhere "Date" is when it was logged. The first watch counts.
+                val watchedAt = if (watched) isoDateMillis(row["Watched Date"]) ?: isoDateMillis(row["Date"]) else null
+                films[key] = LetterboxdFilm(
+                    name, year, rating ?: prev?.rating, watched || prev?.watched == true,
+                    listOfNotNull(watchedAt, prev?.watchedAt).minOrNull(),
+                )
             }
         }
         return films.values.toList()
