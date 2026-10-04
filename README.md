@@ -26,7 +26,7 @@ _Rendered headlessly with fake sample data (Robolectric + Roborazzi), so poster 
 
 ## Features
 Google sign-in · Discover (continue watching, trending movies/TV/anime, airing this week) · Search with filters,
-debounce and recent searches · Detail (cast, seasons, where to watch, friends who watched, rating/progress sheet) · My List (tabs, grid/list,
+debounce and recent searches · Detail (trailer, cast, seasons, where to watch, related anime, more like this, friends who watched, rating/progress sheet) · My List (tabs, grid/list,
 sort/filter, +1 episode, offline with last-write-wins sync) · Friends (add by username/invite code, requests, activity feed,
 friend profiles, Watch Together) · Profile (stats, charts, invite code, theme, sign out, delete account) · About with TMDB/AniList attribution.
 
