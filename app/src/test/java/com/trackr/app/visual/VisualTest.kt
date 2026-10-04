@@ -19,6 +19,8 @@ import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.model.SeasonInfo
+import com.trackr.app.domain.model.WatchOptions
+import com.trackr.app.domain.model.WatchProvider
 import com.trackr.app.ui.screens.auth.AuthUiState
 import com.trackr.app.ui.screens.auth.LoginScreen
 import com.trackr.app.ui.screens.detail.DetailContent
@@ -115,6 +117,11 @@ class VisualTest {
             tagline = "Long live the fighters.", status = "Released", voteCount = 420000, certification = "PG-13",
             cast = listOf(CastMember("Timothée Chalamet", "Paul Atreides", null), CastMember("Zendaya", "Chani", null), CastMember("Rebecca Ferguson", "Jessica", null)),
             seasons = listOf(SeasonInfo(1, "Season 1", 10, 2019, null)),
+            watch = WatchOptions(
+                region = "US",
+                stream = listOf(WatchProvider("Max", null, null), WatchProvider("Netflix", null, null)),
+                rent = listOf(WatchProvider("Apple TV", null, null), WatchProvider("Amazon Video", null, null), WatchProvider("Google Play Movies", null, null)),
+            ),
         )
         DetailContent(d, DetailUiState(Load.Success(d), entry("2", "Dune", MediaType.MOVIE, ListStatus.PLAN_TO_WATCH, 0, 1), emptyList()), {}, {})
     }
