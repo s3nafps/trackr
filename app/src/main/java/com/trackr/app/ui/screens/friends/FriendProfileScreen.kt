@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Casino
 import androidx.compose.material.icons.outlined.Handshake
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -47,8 +48,10 @@ import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.ProfileStats
+import com.trackr.app.domain.util.GroupPick
 import com.trackr.app.ui.components.EmptyState
 import com.trackr.app.ui.components.ErrorState
+import com.trackr.app.ui.components.GroupPickDialog
 import com.trackr.app.ui.components.PosterImage
 import com.trackr.app.ui.components.RatingBadge
 import com.trackr.app.ui.components.ShimmerBox
@@ -164,6 +167,7 @@ private fun StatGrid(s: ProfileStats) {
 
 @Composable
 private fun WatchTogether(shared: List<ListEntry>, onOpen: (ListEntry) -> Unit) {
+    var pick by remember { mutableStateOf<ListEntry?>(null) }
     Column(
         Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -180,7 +184,16 @@ private fun WatchTogether(shared: List<ListEntry>, onOpen: (ListEntry) -> Unit) 
         if (shared.isEmpty()) {
             Text("No overlap yet – add titles to Plan to Watch to find something to watch together.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            Text("Common in Plan to Watch (${shared.size} ${if (shared.size == 1) "title" else "titles"})", style = MaterialTheme.typography.labelMedium)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Common in Plan to Watch (${shared.size} ${if (shared.size == 1) "title" else "titles"})",
+                    Modifier.weight(1f), style = MaterialTheme.typography.labelMedium,
+                )
+                TextButton(onClick = { pick = GroupPick.pick(shared, pick) }) {
+                    Icon(Icons.Outlined.Casino, null, Modifier.size(18.dp))
+                    Text("Pick one", Modifier.padding(start = 6.dp))
+                }
+            }
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(shared, key = { it.key }) { e ->
                     Column(Modifier.width(88.dp).clickable { onOpen(e) }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -190,5 +203,11 @@ private fun WatchTogether(shared: List<ListEntry>, onOpen: (ListEntry) -> Unit) 
                 }
             }
         }
+    }
+    pick?.let { p ->
+        GroupPickDialog(
+            title = p.title, posterUrl = p.posterUrl, subtitle = "On both your Plan to Watch lists", canPickAgain = shared.size > 1,
+            onOpen = { pick = null; onOpen(p) }, onPickAgain = { pick = GroupPick.pick(shared, pick) }, onDismiss = { pick = null },
+        )
     }
 }

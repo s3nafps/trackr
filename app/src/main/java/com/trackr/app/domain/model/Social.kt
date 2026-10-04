@@ -132,3 +132,15 @@ data class Recommendation(
     val seen: Boolean,
     val createdAt: Long,
 )
+
+/** A watchlist several friends share. [posters] are a few recent items' posters for the cover. */
+data class SharedList(
+    val id: String,
+    val name: String,
+    val ownerId: String,
+    val members: List<Profile>,
+    val itemCount: Int,
+    val posters: List<String> = emptyList(),
+)
+
+data class SharedListItem(val item: MediaItem, val addedBy: Profile?, val addedAt: Long)
