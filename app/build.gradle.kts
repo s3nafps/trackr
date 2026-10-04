@@ -36,9 +36,12 @@ android {
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${secret("GOOGLE_WEB_CLIENT_ID")}\"")
     }
 
+    // trackr.keystore signs debug and release alike so the SHA-1 registered with Google stays the same. Without
+    // keystore.properties (CI, fresh clones) debug falls back to the default debug key and release is unsigned.
+    val hasKeystore = keyProps.getProperty("storeFile") != null
     signingConfigs {
         create("trackr") {
-            if (keyProps.getProperty("storeFile") != null) {
+            if (hasKeystore) {
                 storeFile = rootProject.file(keyProps.getProperty("storeFile").removePrefix("../"))
                 storePassword = keyProps.getProperty("storePassword")
                 keyAlias = keyProps.getProperty("keyAlias")
@@ -49,13 +52,13 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("trackr")
+            if (hasKeystore) signingConfig = signingConfigs.getByName("trackr")
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("trackr")
+            if (hasKeystore) signingConfig = signingConfigs.getByName("trackr")
         }
     }
 
