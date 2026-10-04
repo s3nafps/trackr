@@ -1,0 +1,84 @@
+name: Release
+
+# Push a tag like v1.0.0 (or run this manually with a tag) to build the signed APK and publish a GitHub Release.
+# Release notes come from docs/release-notes/<tag>.md when that file exists.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release, e.g. v1.0.0 (created on the selected branch if it doesn't exist)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      TMDB_READ_TOKEN: ${{ secrets.TMDB_READ_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secrets
+        run: |
+          missing=0
+          for name in TMDB_READ_TOKEN SUPABASE_URL SUPABASE_ANON_KEY GOOGLE_WEB_CLIENT_ID KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::Repository secret $name is not set"; missing=1; fi
+          done
+          exit $missing
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The same trackr.keystore as local builds, so the SHA-1 registered for Google sign-in matches.
+      - name: Restore signing key
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > trackr.keystore
+          {
+            echo "storeFile=trackr.keystore"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Test and build release APK
+        run: ./gradlew --stacktrace testDebugUnitTest assembleRelease
+
+      - name: Show signing certificate
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/release/trackr-release.apk | grep -E "SHA-1|SHA-256|DN"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK="trackr-$TAG.apk"
+          cp app/build/outputs/apk/release/trackr-release.apk "$APK"
+          NOTES="docs/release-notes/$TAG.md"
+          if [ -f "$NOTES" ]; then NOTES_ARGS=(--notes-file "$NOTES"); else NOTES_ARGS=(--generate-notes); fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK" --title "Trackr $TAG" --target "$GITHUB_SHA" "${NOTES_ARGS[@]}"
+          fi
+
+      - name: Clean up signing key
+        if: always()
+        run: rm -f trackr.keystore keystore.properties
