@@ -63,6 +63,7 @@ fun SettingsScreen(
     onOpenAbout: () -> Unit,
     onSignOut: () -> Unit,
     deletion: AccountDeletion = AccountDeletion(),
+    onOpenImportExport: () -> Unit = {},
     vm: ProfileViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -93,6 +94,9 @@ fun SettingsScreen(
                 OutlinedButton(onClick = vm::syncNow, enabled = !state.syncing) { Text(if (state.syncing) "Syncing…" else "Sync now") }
                 state.syncMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
+
+            Text("Your data", style = MaterialTheme.typography.headlineSmall)
+            OutlinedButton(onClick = onOpenImportExport, modifier = Modifier.fillMaxWidth()) { Text("Import & export") }
 
             DebugSection()
 

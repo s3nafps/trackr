@@ -19,7 +19,11 @@ interface TmdbApi {
     ): TmdbPage<TmdbResult>
 
     @GET("search/movie")
-    suspend fun searchMovies(@Query("query") query: String, @Query("include_adult") includeAdult: Boolean = false): TmdbPage<TmdbResult>
+    suspend fun searchMovies(
+        @Query("query") query: String,
+        @Query("include_adult") includeAdult: Boolean = false,
+        @Query("year") year: Int? = null,
+    ): TmdbPage<TmdbResult>
 
     @GET("search/tv")
     suspend fun searchTv(@Query("query") query: String, @Query("include_adult") includeAdult: Boolean = false): TmdbPage<TmdbResult>
