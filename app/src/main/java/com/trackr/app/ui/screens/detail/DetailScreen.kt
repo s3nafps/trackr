@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.Icon
@@ -55,11 +57,14 @@ import com.trackr.app.domain.model.CastMember
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.MediaDetail
+import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.model.Trailer
 import com.trackr.app.domain.model.WatchOptions
 import com.trackr.app.domain.model.WatchProvider
 import com.trackr.app.ui.components.ErrorState
+import com.trackr.app.ui.components.PosterCard
 import com.trackr.app.ui.components.PosterImage
 import com.trackr.app.ui.components.rememberNotificationPermission
 import com.trackr.app.ui.components.ScorePill
@@ -68,13 +73,14 @@ import com.trackr.app.ui.components.StatusBadge
 import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.UserAvatar
 import com.trackr.app.ui.components.formatRuntime
+import com.trackr.app.ui.components.metaLine
 import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.color
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DetailScreen(onBack: () -> Unit, vm: DetailViewModel = hiltViewModel()) {
+fun DetailScreen(onBack: () -> Unit, onOpenItem: (MediaItem) -> Unit = {}, vm: DetailViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val bell by vm.bellState.collectAsStateWithLifecycle()
     val ensureNotifications = rememberNotificationPermission(vm::onPermissionResult)
@@ -105,6 +111,7 @@ fun DetailScreen(onBack: () -> Unit, vm: DetailViewModel = hiltViewModel()) {
                 },
                 // No browser/app for the link is not worth a crash.
                 onOpenUrl = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } },
+                onOpenItem = onOpenItem,
             )
         }
         // Floating back button
@@ -136,6 +143,7 @@ fun DetailContent(
     detail: MediaDetail, state: DetailUiState, showSheetClick: () -> Unit, onShare: () -> Unit,
     bell: BellState = BellState.Hidden, onBell: () -> Unit = {}, nowMillis: Long = System.currentTimeMillis(),
     onOpenUrl: (String) -> Unit = {},
+    onOpenItem: (MediaItem) -> Unit = {},
 ) {
     val item = detail.item
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -258,6 +266,8 @@ fun DetailContent(
                 }
             }
 
+            detail.trailer?.let { TrailerCard(it, onOpenUrl) }
+
             InfoCard(detail)
 
             WatchSection(detail.watch, onOpenUrl)
@@ -286,6 +296,8 @@ fun DetailContent(
                 }
             }
 
+            if (detail.related.isNotEmpty()) PosterRow("Related", detail.related.map { it.item to it.relation }, onOpenItem)
+
             if (detail.seasons.isNotEmpty()) {
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Seasons", style = MaterialTheme.typography.headlineSmall)
@@ -308,6 +320,8 @@ fun DetailContent(
             }
 
             if (detail.cast.isNotEmpty()) CastRow(detail.cast, if (item.source == MediaSource.ANILIST) "Characters" else "Cast")
+
+            if (detail.recommendations.isNotEmpty()) PosterRow("More like this", detail.recommendations.map { it to null }, onOpenItem)
         }
         }
       }
@@ -333,6 +347,41 @@ private fun InfoCard(detail: MediaDetail) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(k, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(v, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrailerCard(trailer: Trailer, onOpenUrl: (String) -> Unit) {
+    Box(
+        Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer).clickable { onOpenUrl(trailer.url) },
+        contentAlignment = Alignment.Center,
+    ) {
+        trailer.thumbnailUrl?.let { AsyncImage(it, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+        Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f)))
+        Row(
+            Modifier.clip(PillShape).background(MaterialTheme.colorScheme.primary).padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
+            Text("Watch trailer", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary)
+        }
+    }
+}
+
+/** Horizontal poster row; the optional label (e.g. "Sequel") sits on the poster. */
+@Composable
+private fun PosterRow(title: String, posters: List<Pair<MediaItem, String?>>, onOpenItem: (MediaItem) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(title, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.headlineSmall)
+        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(posters, key = { it.first.key }) { (item, label) ->
+                PosterCard(
+                    title = item.title, posterUrl = item.posterUrl, meta = item.metaLine(), width = 120.dp,
+                    score = item.score, overlayLabel = label, onClick = { onOpenItem(item) },
+                )
             }
         }
     }

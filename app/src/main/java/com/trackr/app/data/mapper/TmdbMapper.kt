@@ -4,12 +4,14 @@ import com.trackr.app.data.remote.tmdb.TmdbDetail
 import com.trackr.app.data.remote.tmdb.TmdbProvider
 import com.trackr.app.data.remote.tmdb.TmdbRegionProviders
 import com.trackr.app.data.remote.tmdb.TmdbResult
+import com.trackr.app.data.remote.tmdb.TmdbVideo
 import com.trackr.app.domain.model.CastMember
 import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.model.SeasonInfo
+import com.trackr.app.domain.model.Trailer
 import com.trackr.app.domain.model.WatchOptions
 import com.trackr.app.domain.model.WatchProvider
 import java.time.LocalDate
@@ -80,6 +82,24 @@ object TmdbMapper {
         )
     }
 
+    /** Best YouTube video: an official trailer, then any trailer, then a teaser. */
+    fun trailer(videos: List<TmdbVideo>): Trailer? {
+        val yt = videos.filter { it.site == "YouTube" && it.key.isNotBlank() }
+        val best = yt.firstOrNull { it.type == "Trailer" && it.official } ?: yt.firstOrNull { it.type == "Trailer" }
+            ?: yt.firstOrNull { it.type == "Teaser" } ?: return null
+        return Trailer.youtube(best.key)
+    }
+
+    /** TMDB recommendations, falling back to "similar" (genre/keyword based) when there are none yet. */
+    fun recommendations(d: TmdbDetail, type: MediaType): List<MediaItem> =
+        d.recommendations?.results.orEmpty().ifEmpty { d.similar?.results.orEmpty() }
+            .filter { it.id != d.id }
+            .mapNotNull { toItem(it, type) }
+            .distinctBy { it.key }
+            .take(MAX_RECOMMENDATIONS)
+
+    const val MAX_RECOMMENDATIONS = 20
+
     fun toDetail(d: TmdbDetail, type: MediaType, today: LocalDate = LocalDate.now(), region: String = "US"): MediaDetail {
         val isMovie = type == MediaType.MOVIE
         val runtime = if (isMovie) d.runtime else d.episodeRunTime.firstOrNull()
@@ -126,6 +146,8 @@ object TmdbMapper {
             studios = d.networks.map { it.name },
             certification = cert,
             watch = watchOptions(d.watchProviders?.results?.get(region), region),
+            trailer = trailer(d.videos?.results.orEmpty()),
+            recommendations = recommendations(d, type),
         )
     }
 }

@@ -18,7 +18,9 @@ import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.model.RelatedItem
 import com.trackr.app.domain.model.SeasonInfo
+import com.trackr.app.domain.model.Trailer
 import com.trackr.app.domain.model.WatchOptions
 import com.trackr.app.domain.model.WatchProvider
 import com.trackr.app.ui.screens.auth.AuthUiState
@@ -122,6 +124,11 @@ class VisualTest {
                 stream = listOf(WatchProvider("Max", null, null), WatchProvider("Netflix", null, null)),
                 rent = listOf(WatchProvider("Apple TV", null, null), WatchProvider("Amazon Video", null, null), WatchProvider("Google Play Movies", null, null)),
             ),
+            trailer = Trailer.youtube("Way9Dexny3w"),
+            recommendations = listOf(
+                item("10", "Arrival", MediaType.MOVIE, 2016, 7.6, "Sci-Fi"), item("11", "Blade Runner 2049", MediaType.MOVIE, 2017, 7.6, "Sci-Fi"),
+                item("12", "Interstellar", MediaType.MOVIE, 2014, 8.4, "Adventure"),
+            ),
         )
         DetailContent(d, DetailUiState(Load.Success(d), entry("2", "Dune", MediaType.MOVIE, ListStatus.PLAN_TO_WATCH, 0, 1), emptyList()), {}, {})
     }
@@ -133,6 +140,10 @@ class VisualTest {
                 genres = listOf("Fantasy", "Adventure"), airingEpisode = 12, airingAtEpoch = now / 1000 + 2 * 86_400 + 4 * 3_600,
                 overview = "The adventure is over but life goes on for an elf mage."),
             status = "Releasing",
+            related = listOf(
+                RelatedItem("Prequel", item("30", "Frieren: Special", MediaType.ANIME, 2023, 8.2, "Fantasy")),
+                RelatedItem("Sequel", item("31", "Frieren Season 2", MediaType.ANIME, 2026, 0.0, "Fantasy")),
+            ),
         )
         DetailContent(
             d, DetailUiState(Load.Success(d), entry("3", "Frieren", MediaType.ANIME, ListStatus.WATCHING, 11, 28), emptyList()), {}, {},
