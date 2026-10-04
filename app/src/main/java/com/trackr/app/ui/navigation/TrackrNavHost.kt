@@ -37,6 +37,8 @@ import com.trackr.app.ui.screens.profile.AboutScreen
 import com.trackr.app.ui.screens.profile.AccountDeletion
 import com.trackr.app.ui.screens.profile.ImportExportScreen
 import com.trackr.app.ui.screens.profile.WrappedScreen
+import com.trackr.app.ui.screens.social.SharedListScreen
+import com.trackr.app.ui.screens.social.SharedListsScreen
 import com.trackr.app.ui.screens.profile.ProfileScreen
 import com.trackr.app.ui.screens.profile.SettingsScreen
 import com.trackr.app.ui.screens.search.SearchScreen
@@ -114,7 +116,9 @@ fun TrackrNavHost(
                     navArgument("type") { type = NavType.StringType },
                     navArgument("id") { type = NavType.StringType },
                 ),
-            ) { DetailScreen(onBack = { nav.popBackStack() }, onOpenItem = { openDetail(it) }) }
+            ) {
+                DetailScreen(onBack = { nav.popBackStack() }, onOpenItem = { openDetail(it) }, onOpenSharedLists = { nav.navigate(Routes.SHARED_LISTS) })
+            }
             composable(
                 Routes.MY_LIST,
                 arguments = listOf(navArgument("status") { type = NavType.StringType; nullable = true; defaultValue = null }),
@@ -131,6 +135,7 @@ fun TrackrNavHost(
                     onOpenDetail = { a -> nav.navigate(Routes.detail(a.source.key, a.mediaType.key, a.externalId)) },
                     onOpenProfile = { nav.goTop(Routes.PROFILE) },
                     onOpenTitle = { openDetail(it) },
+                    onOpenSharedLists = { nav.navigate(Routes.SHARED_LISTS) },
                 )
             }
             composable(
@@ -158,6 +163,12 @@ fun TrackrNavHost(
             }
             composable(Routes.IMPORT_EXPORT) { ImportExportScreen(onBack = { nav.popBackStack() }) }
             composable(Routes.WRAPPED) { WrappedScreen(onBack = { nav.popBackStack() }) }
+            composable(Routes.SHARED_LISTS) {
+                SharedListsScreen(onBack = { nav.popBackStack() }, onOpenList = { nav.navigate(Routes.sharedList(it)) })
+            }
+            composable(Routes.SHARED_LIST, arguments = listOf(navArgument("id") { type = NavType.StringType })) {
+                SharedListScreen(onBack = { nav.popBackStack() }, onOpenTitle = { openDetail(it) })
+            }
             composable(Routes.ABOUT) { AboutScreen(onBack = { nav.popBackStack() }) }
         }
     }

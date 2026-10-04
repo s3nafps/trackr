@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -33,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.trackr.app.data.repository.SocialRepository
@@ -53,6 +56,8 @@ import com.trackr.app.domain.model.EntrySocial
 import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.REACTIONS
 import com.trackr.app.domain.model.Recommendation
+import com.trackr.app.domain.model.SharedList
+import com.trackr.app.ui.screens.social.AddToSharedState
 import com.trackr.app.ui.screens.social.CommentsState
 import com.trackr.app.ui.screens.social.RecommendState
 import com.trackr.app.ui.theme.PillShape
@@ -228,5 +233,76 @@ fun RecommendationCard(r: Recommendation, onOpen: () -> Unit, onDismiss: () -> U
         Text(r.item.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text("from @${r.from.username}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         r.note?.let { Text("“$it”", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+    }
+}
+
+/** "Pick for us": the chosen title, with Open and (when there's another option) Pick again. */
+@Composable
+fun GroupPickDialog(
+    title: String, posterUrl: String?, subtitle: String?, canPickAgain: Boolean,
+    onOpen: () -> Unit, onPickAgain: () -> Unit, onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tonight's pick") },
+        text = {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                PosterImage(posterUrl, Modifier.width(140.dp), contentDescription = title)
+                Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) }
+            }
+        },
+        confirmButton = { TextButton(onClick = onOpen) { Text("Open") } },
+        dismissButton = {
+            if (canPickAgain) TextButton(onClick = onPickAgain) { Text("Pick again") } else TextButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
+}
+
+/** Detail's "Add to a shared list": your lists, with a check on the ones that already have the title. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddToSharedListSheet(title: String, state: AddToSharedState, onAdd: (SharedList) -> Unit, onNewList: () -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column {
+                Text("Add to a shared list", style = MaterialTheme.typography.headlineSmall)
+                Text(title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            state.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            when (val l = state.lists) {
+                Load.Loading -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(24.dp)) }
+                is Load.Failure -> Text(l.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                is Load.Success -> {
+                    if (l.data.isEmpty()) {
+                        Text("You're not in any shared lists yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        LazyColumn(Modifier.heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(l.data, key = { it.id }) { list ->
+                                val added = list.id in state.containing
+                                Row(
+                                    Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)
+                                        .clickable(enabled = !added && state.busy == null) { onAdd(list) }.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(list.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(
+                                            "${list.members.size} ${if (list.members.size == 1) "member" else "members"} · ${list.itemCount} ${if (list.itemCount == 1) "title" else "titles"}",
+                                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    when {
+                                        added -> Icon(Icons.Filled.Check, "Already on this list", tint = MaterialTheme.colorScheme.primary)
+                                        state.busy == list.id -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    TextButton(onClick = onNewList) { Text("New shared list") }
+                }
+            }
+        }
     }
 }

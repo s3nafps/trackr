@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ExpandMore
@@ -68,6 +69,7 @@ import com.trackr.app.domain.model.REACTIONS
 import com.trackr.app.domain.model.Trailer
 import com.trackr.app.domain.model.WatchOptions
 import com.trackr.app.domain.model.WatchProvider
+import com.trackr.app.ui.components.AddToSharedListSheet
 import com.trackr.app.ui.components.CommentsSheet
 import com.trackr.app.ui.components.ErrorState
 import com.trackr.app.ui.components.PosterCard
@@ -88,7 +90,12 @@ import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DetailScreen(onBack: () -> Unit, onOpenItem: (MediaItem) -> Unit = {}, vm: DetailViewModel = hiltViewModel()) {
+fun DetailScreen(
+    onBack: () -> Unit,
+    onOpenItem: (MediaItem) -> Unit = {},
+    onOpenSharedLists: () -> Unit = {},
+    vm: DetailViewModel = hiltViewModel(),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
     val bell by vm.bellState.collectAsStateWithLifecycle()
     val social by vm.socialState.collectAsStateWithLifecycle()
@@ -122,6 +129,7 @@ fun DetailScreen(onBack: () -> Unit, onOpenItem: (MediaItem) -> Unit = {}, vm: D
                 onRecommend = vm::openRecommend,
                 ownSocial = social.ownSocial?.takeIf { it.reactions.isNotEmpty() || it.commentCount > 0 },
                 onOwnComments = vm::openOwnComments,
+                onAddToShared = vm::openAddToShared,
             )
         }
         // Floating back button
@@ -147,6 +155,11 @@ fun DetailScreen(onBack: () -> Unit, onOpenItem: (MediaItem) -> Unit = {}, vm: D
     }
     social.recommend?.let { r -> detail?.let { RecommendSheet(it.item.title, r, vm::sendRecommendation, vm::closeRecommend) } }
     social.comments?.let { CommentsSheet(it, vm::postComment, vm::deleteComment, vm::closeComments) }
+    social.addToShared?.let { s ->
+        detail?.let {
+            AddToSharedListSheet(it.item.title, s, vm::addToShared, onNewList = { vm.closeAddToShared(); onOpenSharedLists() }, onDismiss = vm::closeAddToShared)
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -159,6 +172,7 @@ fun DetailContent(
     onRecommend: (() -> Unit)? = null,
     ownSocial: EntrySocial? = null,
     onOwnComments: () -> Unit = {},
+    onAddToShared: (() -> Unit)? = null,
 ) {
     val item = detail.item
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -255,6 +269,15 @@ fun DetailContent(
                             Modifier.size(20.dp), tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         )
                     }
+                }
+            }
+            if (onAddToShared != null) {
+                Row(
+                    Modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onAddToShared).padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text("Add to a shared list", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 }
             }
             airingLine(item, nowMillis)?.let {
