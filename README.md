@@ -1,8 +1,28 @@
 # Trackr
 
-Android app for tracking movies, TV shows and anime together with a small group of friends.
+Trackr is an Android app for keeping track of the movies, TV shows and anime you watch, together with a small group of
+friends. Log what you're watching, rate it, tick off episodes, and see what your friends are up to. Movies and TV come from
+TMDB, anime from AniList, and everything syncs through Supabase, so your list works offline and follows you across devices.
+
 Kotlin · Jetpack Compose (Material 3, "Cinematic Dark" from the Stitch design) · Hilt · Room · WorkManager ·
 Supabase (Auth + Postgres/RLS) · TMDB (REST) · AniList (GraphQL).
+
+## Screenshots
+<p>
+  <img src="docs/screenshots/login.png" width="200" alt="Login">
+  <img src="docs/screenshots/home.png" width="200" alt="Home / Discover">
+  <img src="docs/screenshots/search.png" width="200" alt="Search">
+  <img src="docs/screenshots/detail.png" width="200" alt="Details">
+</p>
+<p>
+  <img src="docs/screenshots/detail_airing.png" width="200" alt="Details with airing info">
+  <img src="docs/screenshots/mylist.png" width="200" alt="My List">
+  <img src="docs/screenshots/friends.png" width="200" alt="Friends activity">
+  <img src="docs/screenshots/friend_profile.png" width="200" alt="Friend profile">
+  <img src="docs/screenshots/profile.png" width="200" alt="Profile and stats">
+</p>
+
+_Rendered headlessly with fake sample data (Robolectric + Roborazzi), so poster images appear as placeholders._
 
 ## Features
 Google sign-in · Discover (continue watching, trending movies/TV/anime, airing this week) · Search with filters,
