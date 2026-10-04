@@ -11,6 +11,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
@@ -58,5 +60,33 @@ class AccountDeletionTest {
         assertNotNull(vm.state.value.deleteError)
         vm.dismissDeleteError()
         assertNull(vm.state.value.deleteError)
+    }
+
+    @Test fun `login stays disabled until the post-deletion wipe finishes`() {
+        val wipe = CompletableDeferred<Unit>()
+        coEvery { lists.clearLocal() } coAnswers { wipe.await() }
+        val vm = AuthViewModel(auth, profiles, lists, airing)
+        vm.deleteAccount()
+        assertTrue(vm.state.value.busy)
+        wipe.complete(Unit)
+        assertFalse(vm.state.value.busy)
+        assertFalse(vm.state.value.deletingAccount)
+    }
+
+    @Test fun `login stays disabled until the sign-out wipe finishes`() {
+        val wipe = CompletableDeferred<Unit>()
+        coEvery { lists.clearLocal() } coAnswers { wipe.await() }
+        val vm = AuthViewModel(auth, profiles, lists, airing)
+        vm.signOut()
+        assertTrue(vm.state.value.busy)
+        wipe.complete(Unit)
+        assertFalse(vm.state.value.busy)
+    }
+
+    @Test fun `failed deletion re-enables the UI`() {
+        coEvery { auth.deleteAccount() } throws IOException("offline")
+        val vm = AuthViewModel(auth, profiles, lists, airing)
+        vm.deleteAccount()
+        assertFalse(vm.state.value.busy)
     }
 }
