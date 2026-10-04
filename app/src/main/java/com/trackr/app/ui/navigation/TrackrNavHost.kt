@@ -36,6 +36,7 @@ import com.trackr.app.ui.screens.mylist.MyListScreen
 import com.trackr.app.ui.screens.profile.AboutScreen
 import com.trackr.app.ui.screens.profile.AccountDeletion
 import com.trackr.app.ui.screens.profile.ImportExportScreen
+import com.trackr.app.ui.screens.profile.WrappedScreen
 import com.trackr.app.ui.screens.profile.ProfileScreen
 import com.trackr.app.ui.screens.profile.SettingsScreen
 import com.trackr.app.ui.screens.search.SearchScreen
@@ -145,6 +146,7 @@ fun TrackrNavHost(
                     onOpenSettings = { nav.navigate(Routes.SETTINGS) },
                     onOpenAbout = { nav.navigate(Routes.ABOUT) },
                     onSignOut = onSignOut,
+                    onOpenWrapped = { nav.navigate(Routes.WRAPPED) },
                 )
             }
             composable(Routes.SETTINGS) {
@@ -154,6 +156,7 @@ fun TrackrNavHost(
                 )
             }
             composable(Routes.IMPORT_EXPORT) { ImportExportScreen(onBack = { nav.popBackStack() }) }
+            composable(Routes.WRAPPED) { WrappedScreen(onBack = { nav.popBackStack() }) }
             composable(Routes.ABOUT) { AboutScreen(onBack = { nav.popBackStack() }) }
         }
     }

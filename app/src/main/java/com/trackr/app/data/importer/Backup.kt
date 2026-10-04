@@ -23,6 +23,8 @@ data class BackupEntry(
     @SerialName("total_episodes") val totalEpisodes: Int? = null,
     @SerialName("updated_at") val updatedAt: String,
     val notify: Boolean = false,
+    /** Added after v1 shipped; older backups simply lack it. */
+    @SerialName("completed_at") val completedAt: String? = null,
 )
 
 @Serializable
@@ -50,6 +52,7 @@ object Backup {
                 BackupEntry(
                     it.source.key, it.externalId, it.mediaType.key, it.title, it.posterUrl, it.backdropUrl, it.status.key,
                     it.rating, it.progress, it.totalEpisodes, Instant.ofEpochMilli(it.updatedAt).toString(), it.notify,
+                    it.completedAt?.let { c -> Instant.ofEpochMilli(c).toString() },
                 )
             },
         ),
@@ -67,16 +70,18 @@ object Backup {
             ListEntry(
                 source, e.externalId, type, e.title, e.posterUrl, e.backdropUrl, status, e.rating, e.progress, e.totalEpisodes,
                 runCatching { Instant.parse(e.updatedAt).toEpochMilli() }.getOrDefault(0L), e.notify,
+                e.completedAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() },
             )
         }
     }
 
     fun toCsv(entries: List<ListEntry>): String = Csv.write(
-        listOf("title", "media_type", "status", "rating", "progress", "total_episodes", "source", "external_id", "updated_at"),
+        listOf("title", "media_type", "status", "rating", "progress", "total_episodes", "source", "external_id", "updated_at", "completed_at"),
         entries.map {
             listOf(
                 it.title, it.mediaType.key, it.status.key, it.rating, it.progress, it.totalEpisodes, it.source.key, it.externalId,
                 Instant.ofEpochMilli(it.updatedAt).toString(),
+                it.completedAt?.takeIf { c -> c != ListEntry.COMPLETED_DATE_UNKNOWN }?.let { c -> Instant.ofEpochMilli(c).toString() },
             )
         },
     )

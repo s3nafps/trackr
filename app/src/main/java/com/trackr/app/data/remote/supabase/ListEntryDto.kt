@@ -18,6 +18,7 @@ data class ListEntryDto(
     @SerialName("total_episodes") val totalEpisodes: Int? = null,
     @SerialName("updated_at") val updatedAt: String,
     val notify: Boolean = false,
+    @SerialName("completed_at") val completedAt: String? = null,
 )
 
 /** Row from the friend_activity view. */

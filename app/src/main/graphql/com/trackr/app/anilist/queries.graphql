@@ -72,6 +72,7 @@ query UserAnimeList($userName: String!, $chunk: Int!, $perChunk: Int = 500) {
         status
         score(format: POINT_10)
         progress
+        completedAt { year month day }
         media { ...MediaFields }
       }
     }

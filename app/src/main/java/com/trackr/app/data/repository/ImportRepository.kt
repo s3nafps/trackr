@@ -44,7 +44,7 @@ class ImportRepository @Inject constructor(
         } catch (e: IOException) {
             throw ImportException("Couldn't load $name's AniList list. Check the username and that the list is public.")
         }
-        return add(rows.mapNotNull { r -> aniListStatus(r.status)?.let { entry(r.item, it, tenPointRating(r.score), r.progress) } })
+        return add(rows.mapNotNull { r -> aniListStatus(r.status)?.let { entry(r.item, it, tenPointRating(r.score), r.progress, r.completedAt) } })
     }
 
     /** [files] is the opened MyAnimeList export (an .xml, usually delivered as .xml.gz). */
@@ -57,7 +57,7 @@ class ImportRepository @Inject constructor(
             throw ImportException("Couldn't reach AniList to match your titles. Try again when you're online.")
         }
         return add(
-            mal.mapNotNull { m -> byId[m.malId]?.let { entry(it, m.status, m.score, m.watched) } },
+            mal.mapNotNull { m -> byId[m.malId]?.let { entry(it, m.status, m.score, m.watched, m.finishedAt) } },
             notFound = mal.filter { it.malId !in byId }.map { it.title },
         )
     }
@@ -78,7 +78,10 @@ class ImportRepository @Inject constructor(
         }
         return add(
             matched.mapNotNull { (f, item) ->
-                item?.let { entry(it.copy(totalEpisodes = 1), if (f.watched) ListStatus.COMPLETED else ListStatus.PLAN_TO_WATCH, f.rating, if (f.watched) 1 else 0) }
+                item?.let {
+                    val status = if (f.watched) ListStatus.COMPLETED else ListStatus.PLAN_TO_WATCH
+                    entry(it.copy(totalEpisodes = 1), status, f.rating, if (f.watched) 1 else 0, f.watchedAt)
+                }
             },
             notFound = matched.filter { it.second == null }.map { (f, _) -> f.year?.let { "${f.name} ($it)" } ?: f.name },
         )
@@ -102,9 +105,10 @@ class ImportRepository @Inject constructor(
         return pick?.let { TmdbMapper.toItem(it, MediaType.MOVIE) }
     }
 
-    private fun entry(item: MediaItem, status: ListStatus, rating: Int?, progress: Int) = ListEntry(
+    /** [completedAt] only sticks to Completed entries; ListRepository.importEntries marks a missing one as unknown. */
+    private fun entry(item: MediaItem, status: ListStatus, rating: Int?, progress: Int, completedAt: Long? = null) = ListEntry(
         item.source, item.externalId, item.type, item.title, item.posterUrl, item.backdropUrl, status, rating, progress,
-        item.totalEpisodes, updatedAt = 0L,
+        item.totalEpisodes, updatedAt = 0L, completedAt = completedAt.takeIf { status == ListStatus.COMPLETED },
     )
 
     private suspend fun add(entries: List<ListEntry>, notFound: List<String> = emptyList()): ImportSummary {
