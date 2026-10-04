@@ -45,6 +45,16 @@ data class WatchOptions(
     val isEmpty: Boolean get() = stream.isEmpty() && free.isEmpty() && rent.isEmpty() && buy.isEmpty()
 }
 
+/** A trailer video; [url] opens it in the YouTube app or the browser. */
+data class Trailer(val url: String, val thumbnailUrl: String?) {
+    companion object {
+        fun youtube(key: String) = Trailer("https://www.youtube.com/watch?v=$key", "https://img.youtube.com/vi/$key/hqdefault.jpg")
+    }
+}
+
+/** A title linked to another one; [relation] is a display label such as "Sequel". */
+data class RelatedItem(val relation: String, val item: MediaItem)
+
 data class SeasonInfo(val number: Int, val name: String, val episodeCount: Int, val year: Int?, val posterUrl: String?)
 
 data class MediaDetail(
@@ -58,6 +68,9 @@ data class MediaDetail(
     val studios: List<String> = emptyList(),
     val certification: String? = null,
     val watch: WatchOptions = WatchOptions(),
+    val trailer: Trailer? = null,
+    val related: List<RelatedItem> = emptyList(),
+    val recommendations: List<MediaItem> = emptyList(),
 )
 
 /** Result wrapper so UI can render loading/error/content without exceptions leaking. */

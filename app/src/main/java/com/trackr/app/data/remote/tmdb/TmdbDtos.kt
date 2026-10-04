@@ -94,7 +94,16 @@ data class TmdbDetail(
     @SerialName("content_ratings") val contentRatings: TmdbContentRatings? = null,
     @SerialName("next_episode_to_air") val nextEpisodeToAir: TmdbEpisodeStub? = null,
     @SerialName("watch/providers") val watchProviders: TmdbWatchProviders? = null,
+    val videos: TmdbVideos? = null,
+    val recommendations: TmdbPage<TmdbResult>? = null,
+    val similar: TmdbPage<TmdbResult>? = null,
 )
+
+@Serializable
+data class TmdbVideos(val results: List<TmdbVideo> = emptyList())
+
+@Serializable
+data class TmdbVideo(val key: String = "", val site: String = "", val type: String = "", val official: Boolean = false)
 
 /** `watch/providers` (JustWatch data), keyed by ISO 3166-1 country. */
 @Serializable

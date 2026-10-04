@@ -44,6 +44,16 @@ query AnimeDetail($id: Int!) {
     description(asHtml: false)
     season
     externalLinks { site url type icon color isDisabled }
+    trailer { id site thumbnail }
+    relations {
+      edges {
+        relationType(version: 2)
+        node { type ...MediaFields }
+      }
+    }
+    recommendations(sort: [RATING_DESC], perPage: 20) {
+      nodes { mediaRecommendation { ...MediaFields } }
+    }
     characters(sort: ROLE, perPage: 12) {
       edges {
         role
