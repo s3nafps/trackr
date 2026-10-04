@@ -18,6 +18,7 @@ import com.trackr.app.ui.ThemeViewModel
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.trackr.app.data.airing.AiringNotifier
 import com.trackr.app.ui.AppRoot
+import com.trackr.app.ui.navigation.DeepLinks
 import com.trackr.app.ui.navigation.DetailTarget
 import com.trackr.app.ui.theme.TrackrTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,7 +27,9 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var openTarget by mutableStateOf<DetailTarget?>(null)
 
+    /** Notification/widget extras, or a shared title link (trackr://, TMDB or AniList page). */
     private fun readTarget(intent: Intent?): DetailTarget? {
+        if (intent?.action == Intent.ACTION_VIEW) DeepLinks.parse(intent.dataString)?.let { return it }
         val source = intent?.getStringExtra(AiringNotifier.EXTRA_OPEN_SOURCE) ?: return null
         val id = intent.getStringExtra(AiringNotifier.EXTRA_OPEN_ID) ?: return null
         val type = intent.getStringExtra(AiringNotifier.EXTRA_OPEN_TYPE) ?: return null

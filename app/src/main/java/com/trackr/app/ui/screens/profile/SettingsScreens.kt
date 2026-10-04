@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -97,6 +98,8 @@ fun SettingsScreen(
 
             Text("Your data", style = MaterialTheme.typography.headlineSmall)
             OutlinedButton(onClick = onOpenImportExport, modifier = Modifier.fillMaxWidth()) { Text("Import & export") }
+
+            if (Build.VERSION.SDK_INT >= 31) OpenLinksSetting()
 
             DebugSection()
 
@@ -195,6 +198,27 @@ private fun NotificationSettings(enabled: Boolean, onToggle: (Boolean) -> Unit) 
         if (!canExact) SettingsLink("Allow exact timing") {
             if (Build.VERSION.SDK_INT >= 31) {
                 context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")))
+            }
+        }
+    }
+}
+
+/** Android 12+ only opens unverified links (shared TMDB/AniList pages) in an app the user has allowed. */
+@RequiresApi(31)
+@Composable
+private fun OpenLinksSetting() {
+    val context = LocalContext.current
+    Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
+            Text("Open links in Trackr", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Titles shared from Trackr are TMDB and AniList links. Allow them here to open shared titles in the app.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        SettingsLink("Choose links to open") {
+            runCatching {
+                context.startActivity(Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, Uri.parse("package:${context.packageName}")))
             }
         }
     }
