@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
@@ -108,6 +110,7 @@ fun FriendsScreen(
     onOpenDetail: (ActivityEntry) -> Unit,
     onOpenProfile: () -> Unit,
     onOpenTitle: (MediaItem) -> Unit = {},
+    onOpenSharedLists: () -> Unit = {},
     vm: FriendsViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -120,6 +123,7 @@ fun FriendsScreen(
             openRecommendation = vm::openRecommendation, dismissRecommendation = vm::dismissRecommendation,
         ),
         onOpenTitle = onOpenTitle,
+        onOpenSharedLists = onOpenSharedLists,
     )
 }
 
@@ -133,6 +137,7 @@ fun FriendsContent(
     onOpenDetail: (ActivityEntry) -> Unit,
     actions: FriendsActions,
     onOpenTitle: (MediaItem) -> Unit = {},
+    onOpenSharedLists: () -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableStateOf(FriendsTab.ACTIVITY) }
     var pendingOpen by rememberSaveable { mutableStateOf(true) }
@@ -176,6 +181,7 @@ fun FriendsContent(
                     if (state.pending.isNotEmpty()) item("pending") {
                         PendingCard(state.pending, pendingOpen, { pendingOpen = !pendingOpen }, actions.respond, onOpenFriend)
                     }
+                    item("shared") { SharedListsEntry(onOpenSharedLists) }
                     if (tab == FriendsTab.ACTIVITY && state.inbox.isNotEmpty()) item("inbox") {
                         InboxRow(state.inbox, onOpen = { r -> actions.openRecommendation(r); onOpenTitle(r.item) }, onDismiss = actions.dismissRecommendation)
                     }
@@ -191,6 +197,21 @@ fun FriendsContent(
 
     if (state.add.open) AddFriendDialog(state.add, actions)
     state.comments?.let { CommentsSheet(it, actions.postComment, actions.deleteComment, actions.closeComments) }
+}
+
+@Composable
+private fun SharedListsEntry(onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, null, tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f)) {
+            Text("Shared watchlists", style = MaterialTheme.typography.titleSmall)
+            Text("Build lists with friends and let Trackr pick", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable

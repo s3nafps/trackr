@@ -28,7 +28,7 @@ _Rendered headlessly with fake sample data (Robolectric + Roborazzi), so poster 
 Google sign-in · Discover (continue watching, trending movies/TV/anime, airing this week) · Search with filters,
 debounce and recent searches · Detail (trailer, cast, seasons, where to watch, related anime, more like this, friends who watched, rating/progress sheet) · My List (tabs, grid/list,
 sort/filter, +1 episode, offline with last-write-wins sync) · Friends (add by username/invite code, requests, activity feed,
-friend profiles, Watch Together) · Profile (stats, charts, invite code, theme, sign out, delete account) · Import from AniList, MyAnimeList and Letterboxd, export to JSON/CSV · "Up next" home-screen widget (airing this week, continue watching, +1) · Shared TMDB/AniList links open the title in Trackr · Year in review with a shareable image · Reactions and comments on friends' activity, recommend titles to friends · About with TMDB/AniList attribution.
+friend profiles, Watch Together) · Profile (stats, charts, invite code, theme, sign out, delete account) · Import from AniList, MyAnimeList and Letterboxd, export to JSON/CSV · "Up next" home-screen widget (airing this week, continue watching, +1) · Shared TMDB/AniList links open the title in Trackr · Year in review with a shareable image · Reactions and comments on friends' activity, recommend titles to friends · Shared watchlists with friends and a random "Pick for us" · About with TMDB/AniList attribution.
 
 ## Setup
 Requirements: JDK 17, Android SDK (platform 35, build-tools 35). `export ANDROID_HOME=/path/to/sdk`.

@@ -6,6 +6,7 @@ import com.trackr.app.data.repository.userMessage
 import com.trackr.app.domain.model.Comment
 import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.Profile
+import com.trackr.app.domain.model.SharedList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,3 +110,11 @@ class CommentsController(
         _state.update { c -> if (c != null && c.entryId == entryId) change(c) else c }
     }
 }
+
+/** The Detail screen's "Add to a shared list" sheet: your lists, which already have the title, and the one saving. */
+data class AddToSharedState(
+    val lists: Load<List<SharedList>> = Load.Loading,
+    val containing: Set<String> = emptySet(),
+    val busy: String? = null,
+    val error: String? = null,
+)

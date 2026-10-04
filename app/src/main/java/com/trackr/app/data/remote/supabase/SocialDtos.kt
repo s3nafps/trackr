@@ -41,3 +41,33 @@ data class RecommendationDto(
 /** A list entry's server id, to find reactions on one of your own entries. */
 @Serializable
 data class EntryIdDto(val id: String)
+
+@Serializable
+data class SharedListDto(
+    val id: String,
+    val name: String,
+    @SerialName("owner_id") val ownerId: String,
+    @SerialName("created_at") val createdAt: String,
+)
+
+@Serializable
+data class SharedMemberDto(
+    @SerialName("list_id") val listId: String,
+    @SerialName("user_id") val userId: String,
+)
+
+@Serializable
+data class SharedItemDto(
+    @SerialName("list_id") val listId: String,
+    val source: String,
+    @SerialName("external_id") val externalId: String,
+    @SerialName("media_type") val mediaType: String,
+    val title: String,
+    @SerialName("poster_url") val posterUrl: String? = null,
+    @SerialName("added_by") val addedBy: String? = null,
+    @SerialName("created_at") val createdAt: String,
+)
+
+/** Just a list id, for "which of my lists has this title". */
+@Serializable
+data class ListIdDto(@SerialName("list_id") val listId: String)

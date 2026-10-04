@@ -8,6 +8,7 @@ import com.trackr.app.data.remote.supabase.ActivityDto
 import com.trackr.app.data.repository.FriendsRepository
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.MediaRepository
+import com.trackr.app.data.repository.SharedListsRepository
 import com.trackr.app.data.repository.SocialException
 import com.trackr.app.data.repository.SocialRepository
 import com.trackr.app.data.repository.userMessage
@@ -19,6 +20,8 @@ import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.model.SharedList
+import com.trackr.app.ui.screens.social.AddToSharedState
 import com.trackr.app.ui.screens.social.CommentsController
 import com.trackr.app.ui.screens.social.CommentsState
 import com.trackr.app.ui.screens.social.RecommendState
@@ -46,6 +49,7 @@ data class DetailSocialState(
     val ownEntryId: String? = null,
     val ownSocial: EntrySocial? = null,
     val comments: CommentsState? = null,
+    val addToShared: AddToSharedState? = null,
 )
 
 @HiltViewModel
@@ -56,6 +60,7 @@ class DetailViewModel @Inject constructor(
     private val social: SocialRepository,
     prefs: UserPrefs,
     private val friendsRepo: FriendsRepository,
+    private val sharedLists: SharedListsRepository,
 ) : ViewModel() {
     val source: MediaSource = MediaSource.fromKey(saved.get<String>("source").orEmpty())
     val type: MediaType = MediaType.fromKey(saved.get<String>("type").orEmpty())
@@ -158,6 +163,43 @@ class DetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 val message = (e as? SocialException)?.message ?: e.userMessage()
                 socialLocal.update { s -> s.copy(recommend = s.recommend?.copy(sending = null, error = message)) }
+            }
+        }
+    }
+
+    // ----- add to a shared list -----
+
+    fun openAddToShared() {
+        val item = (detail.value as? Load.Success)?.data?.item ?: return
+        socialLocal.update { it.copy(addToShared = AddToSharedState()) }
+        viewModelScope.launch {
+            val lists = try {
+                Load.Success(sharedLists.lists())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Load.Failure(e.userMessage())
+            }
+            val containing = runCatching { sharedLists.listsContaining(item) }.getOrDefault(emptySet())
+            socialLocal.update { s -> s.copy(addToShared = s.addToShared?.copy(lists = lists, containing = containing)) }
+        }
+    }
+
+    fun closeAddToShared() = socialLocal.update { it.copy(addToShared = null) }
+
+    fun addToShared(list: SharedList) {
+        val item = (detail.value as? Load.Success)?.data?.item ?: return
+        if (socialLocal.value.addToShared?.busy != null) return
+        socialLocal.update { s -> s.copy(addToShared = s.addToShared?.copy(busy = list.id, error = null)) }
+        viewModelScope.launch {
+            try {
+                sharedLists.addItem(list.id, item)
+                socialLocal.update { s -> s.copy(addToShared = s.addToShared?.let { it.copy(busy = null, containing = it.containing + list.id) }) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val message = (e as? SocialException)?.message ?: e.userMessage()
+                socialLocal.update { s -> s.copy(addToShared = s.addToShared?.copy(busy = null, error = message)) }
             }
         }
     }
