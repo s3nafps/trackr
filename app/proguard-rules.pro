@@ -30,3 +30,6 @@
 
 # Room entities are referenced by generated code; Hilt workers by name
 -keep class com.trackr.app.data.sync.SyncWorker { *; }
+
+# Glance instantiates widget action callbacks by class name.
+-keep class * implements androidx.glance.appwidget.action.ActionCallback { <init>(); }

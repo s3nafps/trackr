@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Trackr</string>
+    <string name="widget_up_next">Up next</string>
+    <string name="widget_up_next_description">Episodes airing this week and the shows you\'re watching, with a quick +1.</string>
 </resources>
