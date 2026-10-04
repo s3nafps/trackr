@@ -74,6 +74,7 @@ import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.UserAvatar
 import com.trackr.app.ui.components.formatRuntime
 import com.trackr.app.ui.components.metaLine
+import com.trackr.app.ui.navigation.DeepLinks
 import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.color
 import java.util.Locale
@@ -98,10 +99,8 @@ fun DetailScreen(onBack: () -> Unit, onOpenItem: (MediaItem) -> Unit = {}, vm: D
                 bell = bell,
                 onBell = { if (bell == BellState.Off) ensureNotifications(vm::toggleBell) else vm.toggleBell() },
                 onShare = {
-                    val url = when (d.data.item.source) {
-                        MediaSource.TMDB -> "https://www.themoviedb.org/${if (d.data.item.type == MediaType.MOVIE) "movie" else "tv"}/${d.data.item.externalId}"
-                        MediaSource.ANILIST -> "https://anilist.co/anime/${d.data.item.externalId}"
-                    }
+                    // A web link works for everyone and opens Trackr where it's installed (DeepLinks).
+                    val url = DeepLinks.webUrl(d.data.item.source, d.data.item.type, d.data.item.externalId)
                     context.startActivity(
                         Intent.createChooser(
                             Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, "${d.data.item.title} – $url") },

@@ -47,9 +47,6 @@ private fun NavHostController.goTop(route: String, restore: Boolean = true) = na
     restoreState = restore
 }
 
-/** A title to open straight on its Detail screen (from a notification tap). */
-data class DetailTarget(val source: String, val type: String, val id: String)
-
 @Composable
 fun TrackrNavHost(
     onSignOut: () -> Unit = {},
