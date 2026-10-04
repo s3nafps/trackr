@@ -62,3 +62,25 @@ query AnimeDetail($id: Int!) {
     }
   }
 }
+
+query UserAnimeList($userName: String!, $chunk: Int!, $perChunk: Int = 500) {
+  MediaListCollection(userName: $userName, type: ANIME, chunk: $chunk, perChunk: $perChunk) {
+    hasNextChunk
+    lists {
+      isCustomList
+      entries {
+        status
+        score(format: POINT_10)
+        progress
+        media { ...MediaFields }
+      }
+    }
+  }
+}
+
+query AnimeByMalIds($ids: [Int]!, $page: Int = 1) {
+  Page(page: $page, perPage: 50) {
+    pageInfo { hasNextPage }
+    media(idMal_in: $ids, type: ANIME) { idMal ...MediaFields }
+  }
+}
