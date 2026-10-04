@@ -53,6 +53,27 @@ class ListRepositoryTest {
         assertTrue(dao.getAllRaw().isEmpty())
     }
 
+    @Test fun `completing stamps a date that later edits keep and leaving Completed clears`() = runTest {
+        repo.save(show, ListStatus.WATCHING, null, 1)
+        assertNull(dao.get("tmdb", "1")!!.completedAt)
+        repo.save(show, ListStatus.COMPLETED, null, 3)
+        val stamped = dao.get("tmdb", "1")!!.completedAt!!
+        assertTrue(stamped > 0)
+        Thread.sleep(2)
+        repo.update(repo.entry(show).first()!!, rating = 9)
+        assertEquals(stamped, dao.get("tmdb", "1")!!.completedAt)
+        repo.update(repo.entry(show).first()!!, status = ListStatus.WATCHING)
+        assertNull(dao.get("tmdb", "1")!!.completedAt)
+    }
+
+    @Test fun `editing a title completed before dates were recorded pins its old date`() = runTest {
+        repo.save(movie, ListStatus.COMPLETED, null, 1)
+        dao.upsert(dao.get("tmdb", "2")!!.copy(completedAt = null, updatedAt = 1_000))
+        repo.update(repo.entry(movie).first()!!, rating = 7)
+        val row = dao.get("tmdb", "2")!!
+        assertEquals(1_000L, row.completedAt); assertTrue(row.updatedAt > 1_000)
+    }
+
     @Test fun `save marks dirty and schedules sync`() = runTest {
         repo.save(show, ListStatus.WATCHING, 8, 1)
         val row = dao.get("tmdb", "1")!!

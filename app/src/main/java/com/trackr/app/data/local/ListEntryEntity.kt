@@ -23,4 +23,6 @@ data class ListEntryEntity(
     val deleted: Boolean = false,
     /** Plan-to-Watch opt-in for airing notifications. */
     val notify: Boolean = false,
+    /** See ListEntry.completedAt. */
+    val completedAt: Long? = null,
 )

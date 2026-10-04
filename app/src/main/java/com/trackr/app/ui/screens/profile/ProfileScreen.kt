@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Badge
 import androidx.compose.material.icons.outlined.Dataset
 import androidx.compose.material.icons.outlined.DarkMode
@@ -73,10 +74,11 @@ fun ProfileScreen(
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     onSignOut: () -> Unit,
+    onOpenWrapped: () -> Unit = {},
     vm: ProfileViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
-    ProfileContent(state, onOpenSettings, onOpenAbout, onSignOut, vm::editUsername, vm::resetEdit)
+    ProfileContent(state, onOpenSettings, onOpenAbout, onSignOut, vm::editUsername, vm::resetEdit, onOpenWrapped)
 }
 
 @Composable
@@ -87,6 +89,7 @@ fun ProfileContent(
     onSignOut: () -> Unit,
     onEditUsername: (String) -> Unit,
     onResetEdit: () -> Unit,
+    onOpenWrapped: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var editing by rememberSaveable { mutableStateOf(false) }
@@ -127,6 +130,8 @@ fun ProfileContent(
                     MiniStat((state.stats.statusCounts.values.sum() - (state.stats.statusCounts.entries.firstOrNull { it.key.key == "plan_to_watch" }?.value ?: 0)).toString(), "Started")
                 }
             }
+
+            WrappedBanner(onOpenWrapped)
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -267,5 +272,22 @@ private fun PrefRow(icon: ImageVector, title: String, subtitle: String, tint: Co
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun WrappedBanner(onClick: () -> Unit) {
+    val on = MaterialTheme.colorScheme.onPrimaryContainer
+    Row(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.primaryContainer)
+            .clickable(onClick = onClick).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = on)
+        Column(Modifier.weight(1f)) {
+            Text("Your ${java.time.Year.now().value} in review", style = MaterialTheme.typography.titleMedium, color = on)
+            Text("What you finished, your top rated and more, ready to share.", style = MaterialTheme.typography.bodySmall, color = on)
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = on)
     }
 }

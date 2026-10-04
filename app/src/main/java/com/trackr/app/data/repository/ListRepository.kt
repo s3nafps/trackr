@@ -54,7 +54,16 @@ class ListRepository @Inject constructor(
     fun entry(source: String, id: String): Flow<ListEntry?> = dao.observe(source, id).map { it?.toDomain() }
 
     private suspend fun write(entry: ListEntry) {
-        dao.upsert(entry.copy(updatedAt = System.currentTimeMillis()).toEntity(dirty = true))
+        val now = System.currentTimeMillis()
+        val previous = dao.get(entry.source.key, entry.externalId)?.takeIf { !it.deleted }
+        // Becoming Completed stamps the date; staying Completed keeps the original one (pinning the old updatedAt
+        // for rows completed before dates were recorded, since this write moves it); anything else clears it.
+        val completedAt = when {
+            entry.status != ListStatus.COMPLETED -> null
+            previous?.status == ListStatus.COMPLETED.key -> previous.completedAt ?: previous.updatedAt
+            else -> now
+        }
+        dao.upsert(entry.copy(updatedAt = now, completedAt = completedAt).toEntity(dirty = true))
         scheduler.syncNow()
         airingRefresh.refreshNow()
     }
@@ -98,7 +107,9 @@ class ListRepository @Inject constructor(
                 else -> e.progress.coerceAtLeast(0)
             }
             val rating = e.rating?.takeIf { it > 0 }?.coerceIn(1, 10)
-            dao.upsert(e.copy(progress = progress, rating = rating, updatedAt = now).toEntity(dirty = true))
+            // updatedAt becomes "now", so it can't stand in for a missing completion date (Year in review).
+            val completedAt = if (e.status == ListStatus.COMPLETED) e.completedAt ?: ListEntry.COMPLETED_DATE_UNKNOWN else null
+            dao.upsert(e.copy(progress = progress, rating = rating, updatedAt = now, completedAt = completedAt).toEntity(dirty = true))
             added++
         }
         if (added > 0) {
