@@ -36,6 +36,8 @@ import com.trackr.app.domain.model.Friend
 import com.trackr.app.domain.model.FriendRequest
 import com.trackr.app.domain.model.Profile
 import com.trackr.app.domain.model.StatsCalculator
+import com.trackr.app.domain.model.EntrySocial
+import com.trackr.app.domain.model.Recommendation
 import com.trackr.app.domain.util.YearInReview
 import com.trackr.app.ui.screens.friends.FriendData
 import com.trackr.app.ui.screens.friends.FriendProfileContent
@@ -213,6 +215,22 @@ class VisualTest {
                 )),
                 friends = Load.Success(listOf(Friend("f1", sara, listOf(act("2", "sara", "Shōgun", MediaType.TV, ListStatus.WATCHING, null, 3, 10))))),
                 pending = listOf(FriendRequest("r1", julian), FriendRequest("r2", Profile("um", "minht"))),
+            ),
+            null, {}, {}, {}, noActions,
+        )
+    }
+
+    @Test fun friendsSocial() = shot("friends_social") {
+        val ben = Profile("ub", "ben")
+        FriendsContent(
+            FriendsUiState(
+                activity = Load.Success(listOf(act("1", "sara", "Attack on Titan: The Final Chapters", MediaType.ANIME, ListStatus.COMPLETED, 10))),
+                friends = Load.Success(emptyList()),
+                social = mapOf("1" to EntrySocial(mapOf("🔥" to 3, "❤️" to 1), setOf("🔥"), commentCount = 2)),
+                inbox = listOf(
+                    Recommendation("r1", ben, item("7", "Perfect Blue", MediaType.ANIME, 1997, 8.3, "Thriller"), "Trust me on this one", seen = false, createdAt = 0),
+                    Recommendation("r2", Profile("us", "sara"), item("8", "Heat", MediaType.MOVIE, 1995, 8.3, "Crime"), null, seen = true, createdAt = 0),
+                ),
             ),
             null, {}, {}, {}, noActions,
         )

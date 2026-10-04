@@ -4,13 +4,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trackr.app.data.repository.FriendsRepository
 import com.trackr.app.data.repository.ListRepository
+import com.trackr.app.data.repository.SocialRepository
 import com.trackr.app.data.repository.userMessage
 import com.trackr.app.domain.model.ActivityEntry
+import com.trackr.app.domain.model.Comment
+import com.trackr.app.domain.model.EntrySocial
 import com.trackr.app.domain.model.Friend
 import com.trackr.app.domain.model.FriendRequest
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.Profile
+import com.trackr.app.domain.model.Recommendation
+import com.trackr.app.ui.screens.social.CommentsController
+import com.trackr.app.ui.screens.social.CommentsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,17 +45,30 @@ data class FriendsUiState(
     val add: AddFriendState = AddFriendState(),
     val refreshing: Boolean = false,
     val toast: String? = null,
+    /** Reactions and comment counts per activity entry id. */
+    val social: Map<String, EntrySocial> = emptyMap(),
+    /** Titles friends recommended to you, newest first. */
+    val inbox: List<Recommendation> = emptyList(),
+    val comments: CommentsState? = null,
 )
 
 @HiltViewModel
 class FriendsViewModel @Inject constructor(
     private val repo: FriendsRepository,
     private val lists: ListRepository,
+    private val social: SocialRepository,
 ) : ViewModel() {
     private val remote = MutableStateFlow(FriendsUiState())
 
-    val state: StateFlow<FriendsUiState> = combine(remote, lists.entries) { r, mine ->
-        r.copy(myKeys = mine.map { it.key }.toSet())
+    private val commentsCtl = CommentsController(viewModelScope, social) { id, delta ->
+        remote.update { s ->
+            val cur = s.social[id] ?: EntrySocial()
+            s.copy(social = s.social + (id to cur.copy(commentCount = (cur.commentCount + delta).coerceAtLeast(0))))
+        }
+    }
+
+    val state: StateFlow<FriendsUiState> = combine(remote, lists.entries, commentsCtl.state) { r, mine, c ->
+        r.copy(myKeys = mine.map { it.key }.toSet(), comments = c)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FriendsUiState())
 
     init { refresh() }
@@ -57,10 +76,18 @@ class FriendsViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             remote.update { it.copy(refreshing = true) }
-            val a = launch { remote.update { s -> s.copy(activity = attempt { repo.activity() }) } }
+            val a = launch {
+                val activity = attempt { repo.activity() }
+                remote.update { s -> s.copy(activity = activity) }
+                // Reactions are extra: if they fail to load, the feed still shows (just without counts).
+                (activity as? Load.Success)?.data?.let { entries ->
+                    runCatching { social.socialFor(entries.map { it.id }) }.onSuccess { m -> remote.update { s -> s.copy(social = m) } }
+                }
+            }
             val f = launch { remote.update { s -> s.copy(friends = attempt { repo.friends() }) } }
             val p = launch { runCatching { repo.pendingRequests() }.onSuccess { r -> remote.update { s -> s.copy(pending = r) } } }
-            a.join(); f.join(); p.join()
+            val i = launch { runCatching { social.inbox() }.onSuccess { r -> remote.update { s -> s.copy(inbox = r) } } }
+            a.join(); f.join(); p.join(); i.join()
             remote.update { it.copy(refreshing = false) }
         }
     }
@@ -93,6 +120,51 @@ class FriendsViewModel @Inject constructor(
     }
 
     fun toastShown() = remote.update { it.copy(toast = null) }
+
+    // ----- reactions & comments -----
+
+    /** Optimistic: the pill flips at once and flips back if the server says no. */
+    fun toggleReaction(entryId: String, emoji: String) {
+        val on = emoji !in (remote.value.social[entryId] ?: EntrySocial()).myReactions
+        val flip = { s: FriendsUiState -> s.copy(social = s.social + (entryId to (s.social[entryId] ?: EntrySocial()).toggled(emoji))) }
+        remote.update(flip)
+        viewModelScope.launch {
+            try {
+                social.setReaction(entryId, emoji, on)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                remote.update { flip(it).copy(toast = "Couldn't save your reaction. Try again.") }
+            }
+        }
+    }
+
+    fun openComments(entry: ActivityEntry) = commentsCtl.open(entry.id, entry.title, entry.userId)
+    fun postComment(text: String) = commentsCtl.post(text)
+    fun deleteComment(comment: Comment) = commentsCtl.delete(comment)
+    fun closeComments() = commentsCtl.close()
+
+    // ----- recommendations inbox -----
+
+    /** Opening a recommendation marks it seen (best effort). */
+    fun openRecommendation(r: Recommendation) {
+        if (r.seen) return
+        remote.update { s -> s.copy(inbox = s.inbox.map { if (it.id == r.id) it.copy(seen = true) else it }) }
+        viewModelScope.launch { runCatching { social.markSeen(r.id) } }
+    }
+
+    fun dismissRecommendation(r: Recommendation) {
+        remote.update { s -> s.copy(inbox = s.inbox.filterNot { it.id == r.id }) }
+        viewModelScope.launch {
+            try {
+                social.deleteRecommendation(r.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                remote.update { s -> s.copy(inbox = (s.inbox + r).sortedByDescending { it.createdAt }, toast = e.userMessage()) }
+            }
+        }
+    }
 
     // ----- add friend dialog -----
     fun openAdd() = remote.update { it.copy(add = AddFriendState(open = true)) }
