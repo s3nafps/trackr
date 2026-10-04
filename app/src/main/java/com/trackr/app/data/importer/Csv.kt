@@ -8,7 +8,7 @@ object Csv {
         val field = StringBuilder()
         var quoted = false
         var i = 0
-        val s = text.removePrefix("﻿")
+        val s = text.removePrefix("\uFEFF")
         while (i < s.length) {
             val c = s[i]
             when {
