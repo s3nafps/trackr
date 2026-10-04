@@ -45,7 +45,7 @@ class ListRepository @Inject constructor(
     private val scheduler: SyncScheduler,
     private val airingRefresh: AiringRefreshScheduler,
 ) {
-    /** The worker, pull-to-refresh, "Sync now" and sign-out can all call [sync]; runs never overlap. */
+    /** The worker, pull-to-refresh, "Sync now" and sign-out can all call [sync]; runs never overlap, nor with [clearLocal]. */
     private val syncLock = Mutex()
 
     val entries: Flow<List<ListEntry>> = dao.observeAll().map { rows -> rows.map { it.toDomain() } }
@@ -101,12 +101,13 @@ class ListRepository @Inject constructor(
         airingRefresh.refreshNow()
     }
 
-    /** Returns true when a sync ran. */
-    suspend fun sync(): Boolean {
-        val uid = auth.currentUserId ?: return false
-        syncLock.withLock { ListSyncer(dao, remote).sync(uid) }
-        return true
+    /** Returns true when a sync ran. The user is read inside the lock so a sync queued behind sign-out is a no-op. */
+    suspend fun sync(): Boolean = syncLock.withLock {
+        val uid = auth.currentUserId ?: return@withLock false
+        ListSyncer(dao, remote).sync(uid)
+        true
     }
 
-    suspend fun clearLocal() = dao.clear()
+    /** Waits for an in-flight sync, which could otherwise re-insert the pulled rows of the account being wiped. */
+    suspend fun clearLocal() = syncLock.withLock { dao.clear() }
 }
