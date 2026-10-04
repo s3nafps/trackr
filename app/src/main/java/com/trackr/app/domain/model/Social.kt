@@ -92,3 +92,43 @@ object StatsCalculator {
         return mine.filter { it.status == ListStatus.PLAN_TO_WATCH && it.key in other }
     }
 }
+
+/** The reactions people can leave on an activity entry, in display order (matches the DB check constraint). */
+val REACTIONS = listOf("🔥", "❤️", "😂", "😮", "👏")
+
+/** Reactions and comment count on one list entry, from the caller's point of view. */
+data class EntrySocial(
+    val reactions: Map<String, Int> = emptyMap(),
+    val myReactions: Set<String> = emptySet(),
+    val commentCount: Int = 0,
+) {
+    fun toggled(emoji: String): EntrySocial {
+        val on = emoji !in myReactions
+        val count = (reactions[emoji] ?: 0) + if (on) 1 else -1
+        return copy(
+            reactions = if (count > 0) reactions + (emoji to count) else reactions - emoji,
+            myReactions = if (on) myReactions + emoji else myReactions - emoji,
+        )
+    }
+}
+
+data class Comment(
+    val id: String,
+    val userId: String,
+    val username: String,
+    val avatarUrl: String?,
+    val body: String,
+    val createdAt: Long,
+    /** Its author, or the owner of the entry it's on. */
+    val canDelete: Boolean,
+)
+
+/** A title a friend sent you. */
+data class Recommendation(
+    val id: String,
+    val from: Profile,
+    val item: MediaItem,
+    val note: String?,
+    val seen: Boolean,
+    val createdAt: Long,
+)
