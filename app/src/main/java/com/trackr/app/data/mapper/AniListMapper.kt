@@ -7,6 +7,8 @@ import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.model.WatchOptions
+import com.trackr.app.domain.model.WatchProvider
 
 object AniListMapper {
     private val tagRegex = Regex("<[^>]*>")
@@ -53,6 +55,23 @@ object AniListMapper {
             status = m.mediaFields.status?.rawValue?.lowercase()?.replace('_', ' ')?.replaceFirstChar { it.uppercase() },
             cast = cast,
             studios = m.mediaFields.studios?.nodes.orEmpty().filterNotNull().map { it.name },
+            watch = watchOptions(
+                m.externalLinks.orEmpty().filterNotNull().map {
+                    ExternalLink(it.site, it.url, it.type?.rawValue, it.icon, it.color, it.isDisabled == true)
+                },
+            ),
         )
     }
+
+    /** Plain copy of AniList's MediaExternalLink so the mapping is testable without Apollo types. */
+    data class ExternalLink(
+        val site: String, val url: String?, val type: String?, val icon: String?, val color: String?, val disabled: Boolean,
+    )
+
+    /** AniList only lists streaming sites (no rent/buy, no region), one link each. */
+    fun watchOptions(links: List<ExternalLink>) = WatchOptions(
+        stream = links.filter { it.type == "STREAMING" && !it.disabled && !it.url.isNullOrBlank() }
+            .distinctBy { it.site }
+            .map { WatchProvider(it.site, it.icon, it.url, it.color) },
+    )
 }

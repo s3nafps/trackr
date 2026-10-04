@@ -24,9 +24,9 @@ interface TmdbApi {
     @GET("search/tv")
     suspend fun searchTv(@Query("query") query: String, @Query("include_adult") includeAdult: Boolean = false): TmdbPage<TmdbResult>
 
-    @GET("movie/{id}?append_to_response=credits,release_dates")
+    @GET("movie/{id}?append_to_response=credits,release_dates,watch/providers")
     suspend fun movieDetail(@Path("id") id: Int): TmdbDetail
 
-    @GET("tv/{id}?append_to_response=credits,content_ratings")
+    @GET("tv/{id}?append_to_response=credits,content_ratings,watch/providers")
     suspend fun tvDetail(@Path("id") id: Int): TmdbDetail
 }
