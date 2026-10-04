@@ -115,7 +115,7 @@ fun TrackrNavHost(
                     navArgument("type") { type = NavType.StringType },
                     navArgument("id") { type = NavType.StringType },
                 ),
-            ) { DetailScreen(onBack = { nav.popBackStack() }) }
+            ) { DetailScreen(onBack = { nav.popBackStack() }, onOpenItem = { openDetail(it) }) }
             composable(
                 Routes.MY_LIST,
                 arguments = listOf(navArgument("status") { type = NavType.StringType; nullable = true; defaultValue = null }),
