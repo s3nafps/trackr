@@ -1,6 +1,8 @@
 package com.trackr.app.data.mapper
 
 import com.trackr.app.data.remote.tmdb.TmdbDetail
+import com.trackr.app.data.remote.tmdb.TmdbProvider
+import com.trackr.app.data.remote.tmdb.TmdbRegionProviders
 import com.trackr.app.data.remote.tmdb.TmdbResult
 import com.trackr.app.domain.model.CastMember
 import com.trackr.app.domain.model.MediaDetail
@@ -8,6 +10,8 @@ import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.model.SeasonInfo
+import com.trackr.app.domain.model.WatchOptions
+import com.trackr.app.domain.model.WatchProvider
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -26,6 +30,7 @@ object TmdbMapper {
     fun poster(path: String?) = path?.let { "${IMG}w500$it" }
     fun backdrop(path: String?) = path?.let { "${IMG}w1280$it" }
     fun profile(path: String?) = path?.let { "${IMG}w185$it" }
+    fun logo(path: String?) = path?.let { "${IMG}w92$it" }
 
     fun yearOf(date: String?): Int? = date?.takeIf { it.length >= 4 }?.substring(0, 4)?.toIntOrNull()
 
@@ -61,7 +66,21 @@ object TmdbMapper {
     fun localNineAm(date: String, zone: ZoneId = ZoneId.systemDefault()): Long? =
         runCatching { LocalDate.parse(date).atTime(LocalTime.of(9, 0)).atZone(zone).toEpochSecond() }.getOrNull()
 
-    fun toDetail(d: TmdbDetail, type: MediaType, today: LocalDate = LocalDate.now()): MediaDetail {
+    /** Providers for [region] only: another country's catalogue would be misleading. */
+    fun watchOptions(p: TmdbRegionProviders?, region: String): WatchOptions {
+        fun List<TmdbProvider>.toProviders() =
+            sortedBy { it.displayPriority }.distinctBy { it.name }.map { WatchProvider(it.name, logo(it.logoPath), p?.link) }
+        if (p == null) return WatchOptions(region)
+        return WatchOptions(
+            region = region,
+            stream = p.flatrate.toProviders(),
+            free = (p.free + p.ads).toProviders(),
+            rent = p.rent.toProviders(),
+            buy = p.buy.toProviders(),
+        )
+    }
+
+    fun toDetail(d: TmdbDetail, type: MediaType, today: LocalDate = LocalDate.now(), region: String = "US"): MediaDetail {
         val isMovie = type == MediaType.MOVIE
         val runtime = if (isMovie) d.runtime else d.episodeRunTime.firstOrNull()
         val seasons = d.seasons.filter { it.seasonNumber > 0 }.map {
@@ -106,6 +125,7 @@ object TmdbMapper {
             seasonCount = d.numberOfSeasons,
             studios = d.networks.map { it.name },
             certification = cert,
+            watch = watchOptions(d.watchProviders?.results?.get(region), region),
         )
     }
 }

@@ -43,6 +43,7 @@ query AnimeDetail($id: Int!) {
     ...MediaFields
     description(asHtml: false)
     season
+    externalLinks { site url type icon color isDisabled }
     characters(sort: ROLE, perPage: 12) {
       edges {
         role

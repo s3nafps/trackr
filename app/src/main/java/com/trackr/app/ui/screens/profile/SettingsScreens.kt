@@ -161,6 +161,8 @@ fun AboutScreen(onBack: () -> Unit) {
                 Text("Data sources", style = MaterialTheme.typography.titleMedium)
                 Text(TMDB_ATTRIBUTION, style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = { open("https://www.themoviedb.org") }) { Text("themoviedb.org") }
+                Text("Streaming availability for movies and TV is provided by JustWatch.", style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = { open("https://www.justwatch.com") }) { Text("justwatch.com") }
                 Text("Anime data and cover art are provided by AniList (anilist.co) through its public GraphQL API.", style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = { open("https://anilist.co") }) { Text("anilist.co") }
             }

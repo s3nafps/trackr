@@ -93,6 +93,29 @@ data class TmdbDetail(
     @SerialName("release_dates") val releaseDates: TmdbReleaseDates? = null,
     @SerialName("content_ratings") val contentRatings: TmdbContentRatings? = null,
     @SerialName("next_episode_to_air") val nextEpisodeToAir: TmdbEpisodeStub? = null,
+    @SerialName("watch/providers") val watchProviders: TmdbWatchProviders? = null,
+)
+
+/** `watch/providers` (JustWatch data), keyed by ISO 3166-1 country. */
+@Serializable
+data class TmdbWatchProviders(val results: Map<String, TmdbRegionProviders> = emptyMap())
+
+@Serializable
+data class TmdbRegionProviders(
+    /** TMDB's watch page for the title in this region; links out to each provider. */
+    val link: String? = null,
+    val flatrate: List<TmdbProvider> = emptyList(),
+    val free: List<TmdbProvider> = emptyList(),
+    val ads: List<TmdbProvider> = emptyList(),
+    val rent: List<TmdbProvider> = emptyList(),
+    val buy: List<TmdbProvider> = emptyList(),
+)
+
+@Serializable
+data class TmdbProvider(
+    @SerialName("provider_name") val name: String,
+    @SerialName("logo_path") val logoPath: String? = null,
+    @SerialName("display_priority") val displayPriority: Int = Int.MAX_VALUE,
 )
 
 @Serializable
