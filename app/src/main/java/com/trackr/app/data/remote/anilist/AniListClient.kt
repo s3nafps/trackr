@@ -9,6 +9,7 @@ import com.trackr.app.anilist.SearchAnimeQuery
 import com.trackr.app.anilist.TrendingAnimeQuery
 import com.trackr.app.anilist.UserAnimeListQuery
 import com.trackr.app.anilist.fragment.MediaFields
+import com.trackr.app.data.importer.fuzzyDateMillis
 import com.trackr.app.data.mapper.AniListMapper
 import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaItem
@@ -49,8 +50,8 @@ class AniListClient @Inject constructor(private val apollo: ApolloClient) {
         return AniListMapper.toDetail(media)
     }
 
-    /** One entry of a user's list: raw AniList status, score on a 0–10 scale (0 = unrated), episodes seen. */
-    data class ListRow(val item: MediaItem, val status: String?, val score: Double?, val progress: Int)
+    /** One entry of a user's list: raw AniList status, score on a 0–10 scale (0 = unrated), episodes seen, completion date. */
+    data class ListRow(val item: MediaItem, val status: String?, val score: Double?, val progress: Int, val completedAt: Long? = null)
 
     /** A user's public anime list, all chunks. Custom lists repeat entries from the status lists, so they're skipped. */
     suspend fun userAnimeList(userName: String): List<ListRow> {
@@ -61,7 +62,10 @@ class AniListClient @Inject constructor(private val apollo: ApolloClient) {
                 ?: throw IOException("AniList user not found")
             c.lists.orEmpty().filterNotNull().filter { it.isCustomList != true }.forEach { list ->
                 list.entries.orEmpty().filterNotNull().forEach { e ->
-                    e.media?.mediaFields?.let { rows += ListRow(AniListMapper.toItem(it), e.status?.rawValue, e.score, e.progress ?: 0) }
+                    e.media?.mediaFields?.let {
+                        val done = e.completedAt?.let { d -> fuzzyDateMillis(d.year, d.month, d.day) }
+                        rows += ListRow(AniListMapper.toItem(it), e.status?.rawValue, e.score, e.progress ?: 0, done)
+                    }
                 }
             }
             if (c.hasNextChunk != true || chunk >= MAX_CHUNKS) break

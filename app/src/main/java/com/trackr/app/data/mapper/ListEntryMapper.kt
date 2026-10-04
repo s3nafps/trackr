@@ -12,23 +12,25 @@ import java.time.OffsetDateTime
 object ListEntryMapper {
     fun ListEntryEntity.toDomain() = ListEntry(
         MediaSource.fromKey(source), externalId, MediaType.fromKey(mediaType), title, posterUrl, backdropUrl,
-        ListStatus.fromKey(status), rating, progress, totalEpisodes, updatedAt, notify,
+        ListStatus.fromKey(status), rating, progress, totalEpisodes, updatedAt, notify, completedAt,
     )
 
     fun ListEntry.toEntity(dirty: Boolean, deleted: Boolean = false) = ListEntryEntity(
         source.key, externalId, mediaType.key, title, posterUrl, backdropUrl, status.key, rating, progress,
-        totalEpisodes, updatedAt, dirty, deleted, notify,
+        totalEpisodes, updatedAt, dirty, deleted, notify, completedAt,
     )
 
     fun ListEntryDto.toEntity() = ListEntryEntity(
         source, externalId, mediaType, title, posterUrl, backdropUrl, status, rating, progress, totalEpisodes,
         parseInstant(updatedAt), dirty = false, deleted = false, notify = notify,
+        completedAt = completedAt?.let { parseInstant(it) },
     )
 
     fun ListEntryEntity.toDto(userId: String) = ListEntryDto(
         userId = userId, source = source, externalId = externalId, mediaType = mediaType, title = title,
         posterUrl = posterUrl, backdropUrl = backdropUrl, status = status, rating = rating, progress = progress,
         totalEpisodes = totalEpisodes, updatedAt = Instant.ofEpochMilli(updatedAt).toString(), notify = notify,
+        completedAt = completedAt?.let { Instant.ofEpochMilli(it).toString() },
     )
 
     fun parseInstant(s: String): Long = runCatching { OffsetDateTime.parse(s).toInstant().toEpochMilli() }
