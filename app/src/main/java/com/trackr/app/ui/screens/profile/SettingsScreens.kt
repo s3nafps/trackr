@@ -18,8 +18,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
@@ -47,10 +49,25 @@ import com.trackr.app.ui.theme.ThemeMode
 
 const val TMDB_ATTRIBUTION = "This product uses the TMDB API but is not endorsed or certified by TMDB."
 
+/** Account deletion state and actions; owned by AuthViewModel, which also wipes the device on success. */
+data class AccountDeletion(
+    val inProgress: Boolean = false,
+    val error: String? = null,
+    val onDelete: () -> Unit = {},
+    val onDismissError: () -> Unit = {},
+)
+
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenAbout: () -> Unit, onSignOut: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onSignOut: () -> Unit,
+    deletion: AccountDeletion = AccountDeletion(),
+    vm: ProfileViewModel = hiltViewModel(),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
     var confirm by rememberSaveable { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         TrackrTopBar("Settings", LocalProfile.current?.avatarUrl, {}, onBack = onBack)
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -86,6 +103,10 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAbout: () -> Unit, onSignOut: () ->
                 onClick = { confirm = true }, modifier = Modifier.fillMaxWidth(),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
             ) { Text("Sign out") }
+            TextButton(
+                onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) { Text("Delete account") }
         }
     }
     if (confirm) AlertDialog(
@@ -93,6 +114,34 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAbout: () -> Unit, onSignOut: () ->
         text = { Text("You can sign back in anytime; your list is stored in the cloud.") },
         confirmButton = { TextButton(onClick = { confirm = false; onSignOut() }) { Text("Sign out", color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } },
+    )
+    if (confirmDelete) DeleteAccountDialog(deletion, onDismiss = { confirmDelete = false; deletion.onDismissError() })
+}
+
+private const val DELETE_CONFIRMATION = "DELETE"
+
+@Composable
+private fun DeleteAccountDialog(deletion: AccountDeletion, onDismiss: () -> Unit) {
+    var typed by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = { if (!deletion.inProgress) onDismiss() },
+        title = { Text("Delete account?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("This permanently deletes your profile, your list and your friendships. It can't be undone.")
+                Text("Type $DELETE_CONFIRMATION to confirm.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(typed, { typed = it }, singleLine = true, enabled = !deletion.inProgress, modifier = Modifier.fillMaxWidth())
+                deletion.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = deletion.onDelete,
+                enabled = typed.trim().equals(DELETE_CONFIRMATION, ignoreCase = true) && !deletion.inProgress,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) { Text(if (deletion.inProgress) "Deleting…" else "Delete forever") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !deletion.inProgress) { Text("Cancel") } },
     )
 }
 

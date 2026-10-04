@@ -15,6 +15,8 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,6 +45,9 @@ class ListRepository @Inject constructor(
     private val scheduler: SyncScheduler,
     private val airingRefresh: AiringRefreshScheduler,
 ) {
+    /** The worker, pull-to-refresh, "Sync now" and sign-out can all call [sync]; runs never overlap. */
+    private val syncLock = Mutex()
+
     val entries: Flow<List<ListEntry>> = dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
     fun entry(item: MediaItem): Flow<ListEntry?> = dao.observe(item.source.key, item.externalId).map { it?.toDomain() }
@@ -99,7 +104,7 @@ class ListRepository @Inject constructor(
     /** Returns true when a sync ran. */
     suspend fun sync(): Boolean {
         val uid = auth.currentUserId ?: return false
-        ListSyncer(dao, remote).sync(uid)
+        syncLock.withLock { ListSyncer(dao, remote).sync(uid) }
         return true
     }
 
