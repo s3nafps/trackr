@@ -34,6 +34,7 @@ import com.trackr.app.ui.screens.friends.FriendProfileScreen
 import com.trackr.app.ui.screens.friends.FriendsScreen
 import com.trackr.app.ui.screens.mylist.MyListScreen
 import com.trackr.app.ui.screens.profile.AboutScreen
+import com.trackr.app.ui.screens.profile.AccountDeletion
 import com.trackr.app.ui.screens.profile.ProfileScreen
 import com.trackr.app.ui.screens.profile.SettingsScreen
 import com.trackr.app.ui.screens.search.SearchScreen
@@ -49,7 +50,12 @@ private fun NavHostController.goTop(route: String, restore: Boolean = true) = na
 data class DetailTarget(val source: String, val type: String, val id: String)
 
 @Composable
-fun TrackrNavHost(onSignOut: () -> Unit = {}, openTarget: DetailTarget? = null, onTargetOpened: () -> Unit = {}) {
+fun TrackrNavHost(
+    onSignOut: () -> Unit = {},
+    deletion: AccountDeletion = AccountDeletion(),
+    openTarget: DetailTarget? = null,
+    onTargetOpened: () -> Unit = {},
+) {
     val nav = rememberNavController()
     LaunchedEffect(openTarget) {
         openTarget?.let { nav.navigate(Routes.detail(it.source, it.type, it.id)); onTargetOpened() }
@@ -143,7 +149,7 @@ fun TrackrNavHost(onSignOut: () -> Unit = {}, openTarget: DetailTarget? = null, 
                     onSignOut = onSignOut,
                 )
             }
-            composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }, onOpenAbout = { nav.navigate(Routes.ABOUT) }, onSignOut = onSignOut) }
+            composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }, onOpenAbout = { nav.navigate(Routes.ABOUT) }, onSignOut = onSignOut, deletion = deletion) }
             composable(Routes.ABOUT) { AboutScreen(onBack = { nav.popBackStack() }) }
         }
     }

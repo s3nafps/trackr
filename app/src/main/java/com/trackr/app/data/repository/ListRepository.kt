@@ -15,6 +15,8 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,6 +45,9 @@ class ListRepository @Inject constructor(
     private val scheduler: SyncScheduler,
     private val airingRefresh: AiringRefreshScheduler,
 ) {
+    /** The worker, pull-to-refresh, "Sync now" and sign-out can all call [sync]; runs never overlap, nor with [clearLocal]. */
+    private val syncLock = Mutex()
+
     val entries: Flow<List<ListEntry>> = dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
     fun entry(item: MediaItem): Flow<ListEntry?> = dao.observe(item.source.key, item.externalId).map { it?.toDomain() }
@@ -96,12 +101,13 @@ class ListRepository @Inject constructor(
         airingRefresh.refreshNow()
     }
 
-    /** Returns true when a sync ran. */
-    suspend fun sync(): Boolean {
-        val uid = auth.currentUserId ?: return false
+    /** Returns true when a sync ran. The user is read inside the lock so a sync queued behind sign-out is a no-op. */
+    suspend fun sync(): Boolean = syncLock.withLock {
+        val uid = auth.currentUserId ?: return@withLock false
         ListSyncer(dao, remote).sync(uid)
-        return true
+        true
     }
 
-    suspend fun clearLocal() = dao.clear()
+    /** Waits for an in-flight sync, which could otherwise re-insert the pulled rows of the account being wiped. */
+    suspend fun clearLocal() = syncLock.withLock { dao.clear() }
 }

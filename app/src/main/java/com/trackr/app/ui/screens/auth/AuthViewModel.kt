@@ -28,6 +28,8 @@ data class AuthUiState(
     val app: AppState = AppState.Loading,
     val busy: Boolean = false,
     val error: String? = null,
+    val deletingAccount: Boolean = false,
+    val deleteError: String? = null,
 )
 
 @HiltViewModel
@@ -102,13 +104,48 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signOut() {
+        // Login stays disabled (busy) until the wipe finishes, so a new account can't sign in and then be wiped.
+        _state.update { it.copy(busy = true) }
         viewModelScope.launch {
             // Best effort: push pending edits first so nothing is lost, then wipe local data of this account.
             runCatching { lists.sync() }
             runCatching { auth.signOut() }
+            wipeLocal()
+        }
+    }
+
+    /** Permanently deletes the account; on success wipes this device like [signOut], on failure keeps everything. */
+    fun deleteAccount() {
+        if (_state.value.deletingAccount) return
+        // busy also gates login, which appears as soon as the session ends but before the wipe finishes.
+        _state.update { it.copy(deletingAccount = true, deleteError = null, busy = true) }
+        viewModelScope.launch {
+            try {
+                auth.deleteAccount()
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        deletingAccount = false, busy = false,
+                        deleteError = "Couldn't delete your account. Check your connection and try again.",
+                    )
+                }
+                return@launch
+            }
+            wipeLocal()
+            _state.update { it.copy(deletingAccount = false) }
+        }
+    }
+
+    fun dismissDeleteError() = _state.update { it.copy(deleteError = null) }
+
+    /** Clears this account's local data, then re-enables login. */
+    private suspend fun wipeLocal() {
+        try {
             runCatching { lists.clearLocal() }
             runCatching { airing.clearAll() }
             profiles.clearMe()
+        } finally {
+            _state.update { it.copy(busy = false) }
         }
     }
 

@@ -3,6 +3,7 @@ package com.trackr.app.data
 import com.trackr.app.data.airing.AiringRefreshScheduler
 import com.trackr.app.data.repository.AuthRepository
 import com.trackr.app.data.repository.ListRepository
+import com.trackr.app.data.remote.supabase.ListEntryDto
 import com.trackr.app.data.repository.SupabaseListRemote
 import com.trackr.app.data.sync.SyncScheduler
 import com.trackr.app.domain.model.ListEntry
@@ -13,9 +14,13 @@ import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.util.computeStreak
 import com.trackr.app.ui.screens.mylist.ListSort
 import com.trackr.app.ui.screens.mylist.applyListView
+import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -32,6 +37,21 @@ class ListRepositoryTest {
     private val repo = ListRepository(dao, mockk<SupabaseListRemote>(relaxed = true), mockk<AuthRepository>(relaxed = true), scheduler, airingRefresh)
     private val show = MediaItem(MediaSource.TMDB, "1", MediaType.TV, "Show", null, totalEpisodes = 3)
     private val movie = MediaItem(MediaSource.TMDB, "2", MediaType.MOVIE, "Film", null, totalEpisodes = 1)
+
+    @Test fun `clearLocal waits for an in-flight sync so its pulled rows are wiped too`() = runTest {
+        val fetching = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val pulled = ListEntryDto("u", "tmdb", "9", "movie", "T9", status = "watching", updatedAt = "2026-01-01T00:00:00Z")
+        val remote = mockk<SupabaseListRemote> { coEvery { fetchAll("u") } coAnswers { fetching.complete(Unit); release.await(); listOf(pulled) } }
+        val auth = mockk<AuthRepository> { every { currentUserId } returns "u" }
+        val repo = ListRepository(dao, remote, auth, scheduler, airingRefresh)
+        val sync = launch { repo.sync() }
+        fetching.await()
+        val clear = launch { repo.clearLocal() }
+        release.complete(Unit)
+        sync.join(); clear.join()
+        assertTrue(dao.getAllRaw().isEmpty())
+    }
 
     @Test fun `save marks dirty and schedules sync`() = runTest {
         repo.save(show, ListStatus.WATCHING, 8, 1)
