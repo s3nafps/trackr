@@ -51,6 +51,8 @@ _Rendered headlessly with fake sample data (Robolectric + Roborazzi), so poster 
 - **Links**: shared TMDB/AniList title links open in Trackr.
 - **Profile & settings**: stats and charts, invite code, theme, sign out, delete account; About with TMDB, AniList and
   JustWatch attribution.
+- **Updates**: the app checks this repository's latest GitHub release (at most every 12 hours, or from About) and offers
+  the new APK, since sideloaded apps get no store updates.
 
 ## Setup
 Requirements: JDK 17, Android SDK (platform 35, build-tools 35). `export ANDROID_HOME=/path/to/sdk`.

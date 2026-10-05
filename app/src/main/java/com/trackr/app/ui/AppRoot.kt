@@ -6,6 +6,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import com.trackr.app.ui.components.LocalProfile
+import com.trackr.app.ui.components.UpdateDialog
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,9 +21,16 @@ import com.trackr.app.ui.screens.auth.UsernameScreen
 import com.trackr.app.ui.screens.profile.AccountDeletion
 
 @Composable
-fun AppRoot(openTarget: DetailTarget? = null, onTargetOpened: () -> Unit = {}, vm: AuthViewModel = hiltViewModel()) {
+fun AppRoot(
+    openTarget: DetailTarget? = null,
+    onTargetOpened: () -> Unit = {},
+    vm: AuthViewModel = hiltViewModel(),
+    updates: UpdateViewModel = hiltViewModel(),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
     val me by vm.me.collectAsStateWithLifecycle()
+    val update by updates.state.collectAsStateWithLifecycle()
+    update.available?.let { UpdateDialog(it, onDownload = updates::downloadStarted, onLater = updates::later) }
     when (val app = state.app) {
         AppState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         AppState.SignedOut -> LoginScreen(state, onGoogle = vm::signInWithGoogle)
