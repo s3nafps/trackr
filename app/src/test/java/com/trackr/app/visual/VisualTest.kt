@@ -29,6 +29,7 @@ import com.trackr.app.ui.screens.auth.LoginScreen
 import com.trackr.app.ui.screens.detail.DetailContent
 import com.trackr.app.ui.screens.detail.DetailUiState
 import com.trackr.app.domain.util.PageState
+import com.trackr.app.ui.screens.home.ForYouRow
 import com.trackr.app.ui.screens.home.HomeContent
 import com.trackr.app.ui.screens.home.HomeSection
 import com.trackr.app.ui.screens.home.HomeUiState
@@ -113,11 +114,12 @@ class VisualTest {
             HomeUiState(
                 sections = mapOf(HomeSection.MOVIES to PageState.of(movies, hasMore = true), HomeSection.TV to PageState.of(tv, hasMore = true), HomeSection.ANIME to PageState.of(anime, hasMore = true), HomeSection.AIRING to PageState.of(airing)),
                 discover = PageState.of(movies + tv + anime, hasMore = true),
+                forYou = ForYouRow(items = tv + movies, because = listOf("Arcane", "Frieren")),
                 continueWatching = listOf(entry("4", "Severance", MediaType.TV, ListStatus.WATCHING, 4, 10), entry("5", "Frieren", MediaType.ANIME, ListStatus.WATCHING, 22, 28)),
                 listKeys = setOf("tmdb:1"), streak = 14,
             ),
             avatarUrl = null, username = "Alex", onRefresh = {}, onRetry = {}, onLoadMore = {}, onTrack = { _, _, _, _ -> }, onPlusOne = {},
-            onDiscoverFilter = {}, onDiscoverMore = {}, onDiscoverRetry = {}, onOpenDetail = {},
+            onDiscoverFilter = {}, onDiscoverGenre = {}, onDiscoverMore = {}, onDiscoverRetry = {}, onOpenDetail = {},
             onOpenEntry = { _, _, _ -> }, onSeeAllWatching = {}, onExplore = {}, onOpenProfile = {},
         )
     }
@@ -126,14 +128,14 @@ class VisualTest {
         val results = listOf(item("1", "Arcane: League of Legends", MediaType.TV, 2021, 9.0, "Animation", 9), item("2", "Cyberpunk: Edgerunners", MediaType.ANIME, 2022, 8.6, "Sci-Fi", 10, "Studio Trigger"), item("3", "Blade Runner 2049", MediaType.MOVIE, 2017, 8.0, "Sci-Fi"))
         SearchContent(
             SearchUiState(query = "Arcane", filter = SearchFilter.ALL, results = PageState.of(results), entries = mapOf("tmdb:1" to entry("1", "Arcane", MediaType.TV, ListStatus.WATCHING, 4, 9))),
-            SearchActions({}, {}, {}, {}, {}, { _, _, _, _ -> }, { _, _ -> }, {}, {}, {}), onOpenDetail = {}, onOpenProfile = {}, avatarUrl = null,
+            SearchActions({}, {}, {}, {}, {}, {}, { _, _, _, _ -> }, { _, _ -> }, {}, {}, {}), onOpenDetail = {}, onOpenProfile = {}, avatarUrl = null,
         )
     }
 
     @Test fun searchBlank() = shot("search_blank") {
         SearchContent(
             SearchUiState(query = "", suggestions = PageState.of(movies + tv, hasMore = true), recents = listOf("Interstellar", "Arcane", "Attack on Titan", "Hayao Miyazaki")),
-            SearchActions({}, {}, {}, {}, {}, { _, _, _, _ -> }, { _, _ -> }, {}, {}, {}), onOpenDetail = {}, onOpenProfile = {}, avatarUrl = null,
+            SearchActions({}, {}, {}, {}, {}, {}, { _, _, _, _ -> }, { _, _ -> }, {}, {}, {}), onOpenDetail = {}, onOpenProfile = {}, avatarUrl = null,
         )
     }
 
