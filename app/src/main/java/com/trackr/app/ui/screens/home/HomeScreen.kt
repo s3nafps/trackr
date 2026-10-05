@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -239,7 +238,9 @@ fun HomeContent(
         }
     }
     tracking?.let { item ->
-        val seasons by produceState(emptyList<Int>(), item.key) { value = seasonsFor(item) }
+        // The title's seasons arrive a moment after the sheet opens; until then it just counts episodes.
+        var seasons by remember(item.key) { mutableStateOf(emptyList<Int>()) }
+        LaunchedEffect(item.key) { seasons = seasonsFor(item) }
         TrackSheet(
             item, entry = null, onDismiss = { tracking = null },
             onSave = { status, rating, progress -> onTrack(item, status, rating, progress); tracking = null },
