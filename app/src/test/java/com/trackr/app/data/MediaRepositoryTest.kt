@@ -7,6 +7,7 @@ import com.trackr.app.data.remote.tmdb.TmdbResult
 import com.trackr.app.data.repository.MediaRepository
 import com.trackr.app.data.repository.SearchFilter
 import com.trackr.app.data.repository.userMessage
+import com.trackr.app.domain.model.Genre
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaPage
 import com.trackr.app.domain.model.MediaSource
@@ -129,5 +130,18 @@ class MediaRepositoryTest {
         val out = repo.trendingAll(2)
         assertEquals(listOf("tmdb:4"), out.items.map { it.key })
         assertTrue(out.hasMore)
+    }
+
+    @Test fun `a genre is passed to each source in its own terms, and sources without it are skipped`() = runTest {
+        coEvery { tmdb.discoverMovies(1, any(), any(), any(), "80") } returns TmdbPage(results = listOf(result(1, "Heist")), totalPages = 1)
+        coEvery { tmdb.discoverTv(1, any(), any(), any(), any(), "80") } returns TmdbPage(
+            results = listOf(TmdbResult(id = 2, mediaType = "tv", name = "Cop Show")), totalPages = 1,
+        )
+        val out = repo.popular(null, 1, genre = Genre.CRIME)
+        assertEquals(listOf("tmdb:1", "tmdb:2"), out.items.map { it.key })
+        coVerify(exactly = 0) { anilist.popular(any(), any(), any()) }
+
+        coEvery { anilist.popular(1, any(), "Sci-Fi") } returns MediaPage(listOf(anime("5")), hasMore = true)
+        assertEquals(listOf("anilist:5"), repo.popular(MediaType.ANIME, 1, genre = Genre.SCI_FI).items.map { it.key })
     }
 }

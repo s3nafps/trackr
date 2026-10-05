@@ -32,12 +32,16 @@ class AniListClient @Inject constructor(private val apollo: ApolloClient) {
 
     suspend fun trending(page: Int = 1, perPage: Int = 20): MediaPage = browse(MediaSort.TRENDING_DESC, page, perPage)
 
-    /** All-time most popular anime. */
-    suspend fun popular(page: Int = 1, perPage: Int = 20): MediaPage = browse(MediaSort.POPULARITY_DESC, page, perPage)
+    /** All-time most popular anime, optionally in one AniList [genre]. */
+    suspend fun popular(page: Int = 1, perPage: Int = 20, genre: String? = null): MediaPage =
+        browse(MediaSort.POPULARITY_DESC, page, perPage, genre)
 
-    private suspend fun browse(sort: MediaSort, page: Int, perPage: Int): MediaPage {
-        val p = apollo.query(BrowseAnimeQuery(Optional.present(page), Optional.present(perPage), Optional.present(listOf(sort))))
-            .execute().dataOrThrow().Page
+    private suspend fun browse(sort: MediaSort, page: Int, perPage: Int, genre: String? = null): MediaPage {
+        val query = BrowseAnimeQuery(
+            page = Optional.present(page), perPage = Optional.present(perPage), sort = Optional.present(listOf(sort)),
+            genre = Optional.presentIfNotNull(genre),
+        )
+        val p = apollo.query(query).execute().dataOrThrow().Page
         return MediaPage(
             p?.media.orEmpty().filterNotNull().filter { it.mediaFields.isAdult != true }.map { AniListMapper.toItem(it.mediaFields) },
             hasMore = p?.pageInfo?.hasNextPage == true,

@@ -16,10 +16,10 @@ fragment MediaFields on Media {
   nextAiringEpisode { episode airingAt }
 }
 
-query BrowseAnime($page: Int = 1, $perPage: Int = 20, $sort: [MediaSort] = [TRENDING_DESC]) {
+query BrowseAnime($page: Int = 1, $perPage: Int = 20, $sort: [MediaSort] = [TRENDING_DESC], $genre: String) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { hasNextPage }
-    media(type: ANIME, sort: $sort, isAdult: false) { ...MediaFields }
+    media(type: ANIME, sort: $sort, genre: $genre, isAdult: false) { ...MediaFields }
   }
 }
 

@@ -48,12 +48,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.data.repository.SearchFilter
+import com.trackr.app.domain.model.Genre
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.util.PageState
 import com.trackr.app.ui.components.CountBadge
 import com.trackr.app.ui.components.EmptyState
 import com.trackr.app.ui.components.ErrorState
+import com.trackr.app.ui.components.GenreChips
 import com.trackr.app.ui.components.ListRowSkeleton
 import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.MediaResultCard
@@ -78,7 +80,7 @@ fun SearchScreen(
     SearchContent(
         state,
         SearchActions(
-            vm::setQuery, vm::setFilter, vm::applyRecent, vm::removeRecent, vm::clearRecents,
+            vm::setQuery, vm::setFilter, vm::setGenre, vm::applyRecent, vm::removeRecent, vm::clearRecents,
             track = { item, status, rating, progress ->
                 vm.track(item, status, rating, progress)
                 // New-episode alerts are on for Watching titles, so ask now rather than when the first one is due.
@@ -93,6 +95,7 @@ fun SearchScreen(
 class SearchActions(
     val setQuery: (String) -> Unit,
     val setFilter: (SearchFilter) -> Unit,
+    val setGenre: (Genre?) -> Unit,
     val applyRecent: (String) -> Unit,
     val removeRecent: (String) -> Unit,
     val clearRecents: () -> Unit,
@@ -135,9 +138,10 @@ fun SearchContent(
                 focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
             ),
         )
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyRow(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(SearchFilter.entries) { f -> TrackrChip(f.label, selected = state.filter == f, onClick = { vm.setFilter(f) }) }
         }
+        GenreChips(state.filter.type, state.genre, vm.setGenre, Modifier.padding(bottom = 12.dp))
 
         val blank = state.query.trim().length < 2
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -167,7 +171,7 @@ fun SearchContent(
                         }
                     }
                 }
-                item("trending-title") { Text("Trending now", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 4.dp)) }
+                item("trending-title") { Text(state.genre?.let { "Popular in ${it.label}" } ?: "Trending now", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 4.dp)) }
                 resultItems(state.suggestions, state, onOpenDetail, { tracking = it }, vm, vm.loadMoreSuggestions, emptyText = "Nothing trending right now.")
             } else {
                 item("results-title") {
