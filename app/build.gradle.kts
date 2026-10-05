@@ -26,8 +26,8 @@ android {
         applicationId = "com.trackr.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4.0"
+        versionCode = 6
+        versionName = "1.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "TMDB_READ_TOKEN", "\"${secret("TMDB_READ_TOKEN")}\"")
@@ -115,6 +115,7 @@ dependencies {
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
+    implementation(libs.supabase.realtime)
     implementation(libs.ktor.client.okhttp)
 
     implementation(libs.retrofit)

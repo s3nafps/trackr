@@ -46,7 +46,7 @@ class SharedListViewModelTest {
         coEvery { items("l1") } returns listOf(item("1"), item("2"), item("3"))
     }
     private val friends = mockk<FriendsRepository>(relaxed = true)
-    private fun vm() = SharedListViewModel(SavedStateHandle(mapOf("id" to "l1")), repo, friends)
+    private fun vm() = SharedListViewModel(SavedStateHandle(mapOf("id" to "l1")), repo, friends, mockk(relaxed = true))
 
     @Test fun `opening loads the list and its items, and knows who owns it`() {
         val s = vm().state.value
@@ -106,7 +106,7 @@ class SharedListViewModelTest {
     @Test fun `creating a list opens it and reports friends that couldn't be added`() {
         coEvery { repo.lists() } returns emptyList()
         coEvery { repo.create("Movie night", setOf("b", "x")) } returns ("new" to listOf("x"))
-        val vm = SharedListsViewModel(repo, friends)
+        val vm = SharedListsViewModel(repo, friends, mockk(relaxed = true))
         vm.openCreate()
         vm.create("Movie night", setOf("b", "x"))
         val s = vm.state.value
