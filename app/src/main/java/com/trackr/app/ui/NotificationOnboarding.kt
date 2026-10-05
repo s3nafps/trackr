@@ -46,7 +46,7 @@ class NotificationOnboardingViewModel @Inject constructor(private val prefs: Use
 private enum class Step { INTRO, EXACT }
 
 /**
- * First launch after sign-in: explains notifications, then asks Android for permission (13+), then for exact alarms
+ * First launch after sign-in: explains episode and release alerts, then asks Android for permission (13+), then for exact alarms
  * (12+, "Alarms & reminders") so episode alerts fire when the episode airs rather than minutes later. Shown once;
  * both can still be changed later in Settings.
  */
@@ -71,9 +71,7 @@ fun NotificationOnboarding(onDone: () -> Unit) {
             title = { Text("Stay in the loop") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Trackr can let you know when:")
-                    Text("• a new episode of something you're watching comes out")
-                    Text("• friends react, comment, recommend you a title or send a friend request")
+                    Text("Trackr can let you know when a new episode of something you're watching comes out, and when titles you've turned the bell on for are released.")
                 }
             },
             confirmButton = { Button(onClick = { ensurePermission {} }) { Text("Allow notifications") } },
