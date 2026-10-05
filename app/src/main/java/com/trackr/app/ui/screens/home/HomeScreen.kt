@@ -29,7 +29,9 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.data.repository.SearchFilter
+import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.util.PageState
@@ -49,7 +52,9 @@ import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.PagingFooter
 import com.trackr.app.ui.components.PosterCard
 import com.trackr.app.ui.components.PosterCarouselSkeleton
+import com.trackr.app.ui.components.rememberNotificationPermission
 import com.trackr.app.ui.components.SectionHeader
+import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.TrackrChip
 import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.components.metaLine
@@ -79,9 +84,16 @@ fun HomeScreen(
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val ensureNotifications = rememberNotificationPermission {}
     HomeContent(
         state, LocalProfile.current?.avatarUrl, LocalProfile.current?.username,
-        onRefresh = vm::refresh, onRetry = vm::retry, onLoadMore = vm::loadMore, onQuickAdd = vm::quickAdd, onPlusOne = vm::plusOne,
+        onRefresh = vm::refresh, onRetry = vm::retry, onLoadMore = vm::loadMore,
+        onTrack = { item, status, rating, progress ->
+            vm.track(item, status, rating, progress)
+            // New-episode alerts are on for Watching titles, so ask now rather than when the first one is due.
+            if (status == ListStatus.WATCHING) ensureNotifications {}
+        },
+        onPlusOne = vm::plusOne,
         onDiscoverFilter = vm::setDiscoverFilter, onDiscoverMore = vm::discoverMore, onDiscoverRetry = vm::retryDiscover,
         onOpenDetail = onOpenDetail, onOpenEntry = onOpenEntry, onSeeAllWatching = onSeeAllWatching,
         onExplore = onExplore, onOpenProfile = onOpenProfile,
@@ -97,7 +109,7 @@ fun HomeContent(
     onRefresh: () -> Unit,
     onRetry: (HomeSection) -> Unit,
     onLoadMore: (HomeSection) -> Unit,
-    onQuickAdd: (MediaItem) -> Unit,
+    onTrack: (MediaItem, ListStatus, rating: Int?, progress: Int) -> Unit,
     onPlusOne: (com.trackr.app.domain.model.ListEntry) -> Unit,
     onDiscoverFilter: (SearchFilter) -> Unit,
     onDiscoverMore: () -> Unit,
@@ -110,6 +122,9 @@ fun HomeContent(
 ) {
     val columns = maxOf(3, (LocalConfiguration.current.screenWidthDp - 20) / 116)
     val discoverRows = remember(state.discover.items, columns) { state.discover.items.chunked(columns) }
+    // The title whose status sheet is open; the bookmark on a poster that isn't in the list opens it.
+    var tracking by remember { mutableStateOf<MediaItem?>(null) }
+    val onAdd: (MediaItem) -> Unit = { tracking = it }
     Column(Modifier.fillMaxSize()) {
         TrackrTopBar("Home", avatarUrl, onOpenProfile)
         PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
@@ -149,13 +164,13 @@ fun HomeContent(
                 }
 
                 item("movies") {
-                    PosterSection("Trending Movies", Icons.Outlined.Movie, "Explore", { onExplore(MediaType.MOVIE) }, state.section(HomeSection.MOVIES), state.listKeys, { onRetry(HomeSection.MOVIES) }, { onLoadMore(HomeSection.MOVIES) }, onOpenDetail, onQuickAdd)
+                    PosterSection("Trending Movies", Icons.Outlined.Movie, "Explore", { onExplore(MediaType.MOVIE) }, state.section(HomeSection.MOVIES), state.listKeys, { onRetry(HomeSection.MOVIES) }, { onLoadMore(HomeSection.MOVIES) }, onOpenDetail, onAdd)
                 }
                 item("tv") {
-                    PosterSection("Trending TV Shows", Icons.Outlined.Tv, "See all", { onExplore(MediaType.TV) }, state.section(HomeSection.TV), state.listKeys, { onRetry(HomeSection.TV) }, { onLoadMore(HomeSection.TV) }, onOpenDetail, onQuickAdd)
+                    PosterSection("Trending TV Shows", Icons.Outlined.Tv, "See all", { onExplore(MediaType.TV) }, state.section(HomeSection.TV), state.listKeys, { onRetry(HomeSection.TV) }, { onLoadMore(HomeSection.TV) }, onOpenDetail, onAdd)
                 }
                 item("anime") {
-                    PosterSection("Trending Anime", Icons.Outlined.AutoAwesome, "See ranking", { onExplore(MediaType.ANIME) }, state.section(HomeSection.ANIME), state.listKeys, { onRetry(HomeSection.ANIME) }, { onLoadMore(HomeSection.ANIME) }, onOpenDetail, onQuickAdd)
+                    PosterSection("Trending Anime", Icons.Outlined.AutoAwesome, "See ranking", { onExplore(MediaType.ANIME) }, state.section(HomeSection.ANIME), state.listKeys, { onRetry(HomeSection.ANIME) }, { onLoadMore(HomeSection.ANIME) }, onOpenDetail, onAdd)
                 }
 
                 item("airing") {
@@ -179,9 +194,15 @@ fun HomeContent(
                     }
                 }
 
-                discoverFeed(state, discoverRows, columns, onDiscoverFilter, onDiscoverMore, onDiscoverRetry, onOpenDetail, onQuickAdd)
+                discoverFeed(state, discoverRows, columns, onDiscoverFilter, onDiscoverMore, onDiscoverRetry, onOpenDetail, onAdd)
             }
         }
+    }
+    tracking?.let { item ->
+        TrackSheet(
+            item, entry = null, onDismiss = { tracking = null },
+            onSave = { status, rating, progress -> onTrack(item, status, rating, progress); tracking = null },
+        )
     }
 }
 
@@ -194,7 +215,7 @@ private fun LazyListScope.discoverFeed(
     onMore: () -> Unit,
     onRetry: () -> Unit,
     onOpen: (MediaItem) -> Unit,
-    onQuickAdd: (MediaItem) -> Unit,
+    onAdd: (MediaItem) -> Unit,
 ) {
     val feed = state.discover
     item("discover-header") {
@@ -218,7 +239,7 @@ private fun LazyListScope.discoverFeed(
         else -> {
             items(rows, key = { "discover:${it.first().key}" }) { row ->
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { MediaPoster(it, it.key in state.listKeys, onOpen, onQuickAdd, Modifier.weight(1f)) }
+                    row.forEach { MediaPoster(it, it.key in state.listKeys, onOpen, onAdd, Modifier.weight(1f)) }
                     repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
@@ -238,7 +259,7 @@ private fun PosterSection(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onOpen: (MediaItem) -> Unit,
-    onQuickAdd: (MediaItem) -> Unit,
+    onAdd: (MediaItem) -> Unit,
 ) {
     Column(Modifier.padding(top = SectionGap), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader(title, icon = icon, actionLabel = action, onAction = onAction)
@@ -246,7 +267,7 @@ private fun PosterSection(
             load.items.isEmpty() && load.error != null -> ErrorState(load.error, onRetry)
             load.items.isEmpty() && !load.endReached -> PosterCarouselSkeleton()
             else -> LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(load.items, key = { it.key }) { item -> MediaPoster(item, item.key in listKeys, onOpen, onQuickAdd) }
+                items(load.items, key = { it.key }) { item -> MediaPoster(item, item.key in listKeys, onOpen, onAdd) }
                 // Swiping to the end of the row loads the next page.
                 if (!load.endReached || load.error != null) item("more") {
                     PagingFooter(load, onLoadMore, onRetry, Modifier.height(PosterHeight).widthIn(min = 64.dp, max = 160.dp))
@@ -257,11 +278,11 @@ private fun PosterSection(
 }
 
 @Composable
-private fun MediaPoster(item: MediaItem, inList: Boolean, onOpen: (MediaItem) -> Unit, onQuickAdd: (MediaItem) -> Unit, modifier: Modifier = Modifier) {
+private fun MediaPoster(item: MediaItem, inList: Boolean, onOpen: (MediaItem) -> Unit, onAdd: (MediaItem) -> Unit, modifier: Modifier = Modifier) {
     PosterCard(
         title = item.title, posterUrl = item.posterUrl, meta = item.metaLine(), modifier = modifier,
         score = item.score, overlayLabel = item.genres.firstOrNull(), inList = inList,
-        onToggleList = { if (inList) onOpen(item) else onQuickAdd(item) },
+        onToggleList = { if (inList) onOpen(item) else onAdd(item) },
         onClick = { onOpen(item) },
     )
 }

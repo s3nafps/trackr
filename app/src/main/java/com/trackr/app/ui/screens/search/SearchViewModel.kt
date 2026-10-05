@@ -89,7 +89,10 @@ class SearchViewModel @Inject constructor(
     fun removeRecent(q: String) { viewModelScope.launch { prefs.removeRecent(q) } }
     fun clearRecents() { viewModelScope.launch { prefs.clearRecent() } }
 
-    fun quickAdd(item: MediaItem) { viewModelScope.launch { lists.save(item, ListStatus.PLAN_TO_WATCH, null, 0) } }
+    /** Adds [item] with the status, rating and progress picked in the sheet (or updates it if it's already listed). */
+    fun track(item: MediaItem, status: ListStatus, rating: Int?, progress: Int) {
+        viewModelScope.launch { lists.save(item, status, rating, progress) }
+    }
     fun markCompleted(item: MediaItem, entry: ListEntry) {
         viewModelScope.launch { lists.update(entry, status = ListStatus.COMPLETED, progress = entry.totalEpisodes ?: item.totalEpisodes ?: entry.progress) }
     }
