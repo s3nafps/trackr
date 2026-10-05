@@ -74,6 +74,9 @@ data class MediaDetail(
 )
 
 /** Result wrapper so UI can render loading/error/content without exceptions leaking. */
+/** One page of a paged list; [hasMore] says whether asking for the next page is worthwhile. */
+data class MediaPage(val items: List<MediaItem>, val hasMore: Boolean)
+
 sealed interface Load<out T> {
     data object Loading : Load<Nothing>
     data class Success<T>(val data: T, val stale: Boolean = false) : Load<T>

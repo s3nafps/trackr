@@ -26,8 +26,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       # API keys aren't needed to compile or test; BuildConfig just gets empty strings.
+      # roborazzi.test.record saves the headless screen renders so they can be checked from the run's artifacts.
       - name: Build and test
-        run: ./gradlew --stacktrace testDebugUnitTest lintDebug assembleDebug
+        run: ./gradlew --stacktrace testDebugUnitTest lintDebug assembleDebug -Proborazzi.test.record=true
 
       - name: Upload reports
         if: always()
@@ -37,6 +38,14 @@ jobs:
           path: |
             app/build/reports/
             app/build/test-results/
+          if-no-files-found: ignore
+
+      - name: Upload screen renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: app/build/outputs/roborazzi/
           if-no-files-found: ignore
 
       - name: Upload debug APK

@@ -33,8 +33,9 @@ only accounts added as test users can sign in.
 _Rendered headlessly with fake sample data (Robolectric + Roborazzi), so poster images appear as placeholders._
 
 ## Features
-- **Discover & search**: continue watching, trending movies/TV/anime, airing this week; search TMDB + AniList with
-  filters, debounce and recent searches.
+- **Discover & search**: continue watching, trending movies/TV/anime, airing this week, and an endless "Discover More"
+  feed of popular titles; carousels, search results and trending keep loading as you scroll. Search covers TMDB +
+  AniList with filters, debounce and recent searches.
 - **Title pages**: trailer, where to watch in your country (stream / free / rent / buy, via JustWatch), cast, seasons,
   related anime (prequels, sequels…), more like this, friends who watched, and a rating/progress sheet.
 - **My List**: Watching / Completed / Plan to Watch / Dropped tabs, grid or list, sort and filter, +1 episode;
