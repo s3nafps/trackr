@@ -49,7 +49,7 @@ import java.util.zip.ZipOutputStream
 
 class ImportFormatsTest {
     @Test fun `csv handles quotes, embedded commas and newlines, CRLF and a BOM`() {
-        val rows = Csv.parse("﻿Name,Year\r\n\"Crouching Tiger, Hidden Dragon\",2000\r\n\"He said \"\"hi\"\"\nthen left\",1999\n\n")
+        val rows = Csv.parse("\uFEFFName,Year\r\n\"Crouching Tiger, Hidden Dragon\",2000\r\n\"He said \"\"hi\"\"\nthen left\",1999\n\n")
         assertEquals(listOf(listOf("Name", "Year"), listOf("Crouching Tiger, Hidden Dragon", "2000"), listOf("He said \"hi\"\nthen left", "1999")), rows)
     }
 
