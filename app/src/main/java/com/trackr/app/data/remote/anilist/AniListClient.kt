@@ -5,14 +5,16 @@ import com.apollographql.apollo.api.Optional
 import com.trackr.app.anilist.AiringThisWeekQuery
 import com.trackr.app.anilist.AnimeByMalIdsQuery
 import com.trackr.app.anilist.AnimeDetailQuery
+import com.trackr.app.anilist.BrowseAnimeQuery
 import com.trackr.app.anilist.SearchAnimeQuery
-import com.trackr.app.anilist.TrendingAnimeQuery
 import com.trackr.app.anilist.UserAnimeListQuery
 import com.trackr.app.anilist.fragment.MediaFields
+import com.trackr.app.anilist.type.MediaSort
 import com.trackr.app.data.importer.fuzzyDateMillis
 import com.trackr.app.data.mapper.AniListMapper
 import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaItem
+import com.trackr.app.domain.model.MediaPage
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,10 +30,19 @@ class AniListClient @Inject constructor(private val apollo: ApolloClient) {
         return d
     }
 
-    suspend fun trending(perPage: Int = 20): List<MediaItem> =
-        apollo.query(TrendingAnimeQuery(perPage = Optional.present(perPage))).execute().dataOrThrow()
-            .Page?.media.orEmpty().filterNotNull().filter { it.mediaFields.isAdult != true }
-            .map { AniListMapper.toItem(it.mediaFields) }
+    suspend fun trending(page: Int = 1, perPage: Int = 20): MediaPage = browse(MediaSort.TRENDING_DESC, page, perPage)
+
+    /** All-time most popular anime. */
+    suspend fun popular(page: Int = 1, perPage: Int = 20): MediaPage = browse(MediaSort.POPULARITY_DESC, page, perPage)
+
+    private suspend fun browse(sort: MediaSort, page: Int, perPage: Int): MediaPage {
+        val p = apollo.query(BrowseAnimeQuery(Optional.present(page), Optional.present(perPage), Optional.present(listOf(sort))))
+            .execute().dataOrThrow().Page
+        return MediaPage(
+            p?.media.orEmpty().filterNotNull().filter { it.mediaFields.isAdult != true }.map { AniListMapper.toItem(it.mediaFields) },
+            hasMore = p?.pageInfo?.hasNextPage == true,
+        )
+    }
 
     suspend fun airingThisWeek(fromEpoch: Long, toEpoch: Long): List<MediaItem> =
         apollo.query(AiringThisWeekQuery(fromEpoch.toInt(), toEpoch.toInt())).execute().dataOrThrow()
@@ -39,10 +50,14 @@ class AniListClient @Inject constructor(private val apollo: ApolloClient) {
             .mapNotNull { s -> s.media?.mediaFields?.takeIf { it.isAdult != true }?.let { AniListMapper.toItem(it, s.episode, s.airingAt.toLong()) } }
             .distinctBy { it.externalId }
 
-    suspend fun search(query: String, perPage: Int = 20): List<MediaItem> =
-        apollo.query(SearchAnimeQuery(search = query, perPage = Optional.present(perPage))).execute().dataOrThrow()
-            .Page?.media.orEmpty().filterNotNull().filter { it.mediaFields.isAdult != true }
-            .map { AniListMapper.toItem(it.mediaFields) }
+    suspend fun search(query: String, page: Int = 1, perPage: Int = 20): MediaPage {
+        val p = apollo.query(SearchAnimeQuery(search = query, page = Optional.present(page), perPage = Optional.present(perPage)))
+            .execute().dataOrThrow().Page
+        return MediaPage(
+            p?.media.orEmpty().filterNotNull().filter { it.mediaFields.isAdult != true }.map { AniListMapper.toItem(it.mediaFields) },
+            hasMore = p?.pageInfo?.hasNextPage == true,
+        )
+    }
 
     suspend fun detail(id: Int): MediaDetail {
         val media = apollo.query(AnimeDetailQuery(id)).execute().dataOrThrow().Media

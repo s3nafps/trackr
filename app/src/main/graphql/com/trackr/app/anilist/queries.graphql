@@ -16,9 +16,10 @@ fragment MediaFields on Media {
   nextAiringEpisode { episode airingAt }
 }
 
-query TrendingAnime($page: Int = 1, $perPage: Int = 20) {
+query BrowseAnime($page: Int = 1, $perPage: Int = 20, $sort: [MediaSort] = [TRENDING_DESC]) {
   Page(page: $page, perPage: $perPage) {
-    media(type: ANIME, sort: TRENDING_DESC, isAdult: false) { ...MediaFields }
+    pageInfo { hasNextPage }
+    media(type: ANIME, sort: $sort, isAdult: false) { ...MediaFields }
   }
 }
 
@@ -34,6 +35,7 @@ query AiringThisWeek($from: Int!, $to: Int!, $perPage: Int = 30) {
 
 query SearchAnime($search: String!, $page: Int = 1, $perPage: Int = 20) {
   Page(page: $page, perPage: $perPage) {
+    pageInfo { hasNextPage }
     media(type: ANIME, search: $search, sort: SEARCH_MATCH, isAdult: false) { ...MediaFields }
   }
 }
