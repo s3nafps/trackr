@@ -9,6 +9,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.trackr.app.data.local.ListEntryDao
 import com.trackr.app.data.repository.ListRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -63,15 +64,19 @@ class MetaBackfillScheduler @Inject constructor(@ApplicationContext private val 
     }
 }
 
-/** Started with the app: whenever titles are added to the list (or on launch), the backfill runs once things settle. */
+/**
+ * Started with the app: whenever titles are added to the list (or on launch), the backfill runs once things settle.
+ * Watches the DAO rather than [ListRepository], so starting the app doesn't build the Supabase client.
+ */
 @Singleton
-class MetaKeeper @Inject constructor(private val lists: ListRepository, private val scheduler: MetaBackfillScheduler) {
+class MetaKeeper @Inject constructor(private val listDao: ListEntryDao, private val scheduler: MetaBackfillScheduler) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @OptIn(FlowPreview::class)
     fun start() {
         scope.launch {
-            lists.entries.map { list -> list.map { it.key }.toSet() }.distinctUntilChanged().debounce(5_000).collect { scheduler.runSoon() }
+            listDao.observeAll().map { rows -> rows.map { it.source to it.externalId }.toSet() }
+                .distinctUntilChanged().debounce(5_000).collect { scheduler.runSoon() }
         }
     }
 }
