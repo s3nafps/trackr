@@ -8,6 +8,7 @@ import com.trackr.app.data.repository.MediaRepository
 import com.trackr.app.data.repository.SearchFilter
 import com.trackr.app.data.repository.userMessage
 import com.trackr.app.domain.model.MediaItem
+import com.trackr.app.domain.model.MediaPage
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
 import io.mockk.coEvery
@@ -59,24 +60,74 @@ class MediaRepositoryTest {
                 TmdbResult(id = 3, mediaType = "person", name = "Someone"),
             ),
         )
-        coEvery { anilist.search(any(), any()) } returns listOf(anime("9"))
+        coEvery { anilist.search(any(), any(), any()) } returns MediaPage(listOf(anime("9")), hasMore = false)
         val out = repo.search("query", SearchFilter.ALL)
         assertEquals(listOf("tmdb:1", "anilist:9"), out.map { it.key })
     }
 
     @Test fun `search returns partial results if one backend fails`() = runTest {
         coEvery { tmdb.searchMulti(any(), any(), any()) } throws IOException("boom")
-        coEvery { anilist.search(any(), any()) } returns listOf(anime("9"))
+        coEvery { anilist.search(any(), any(), any()) } returns MediaPage(listOf(anime("9")), hasMore = false)
         assertEquals(listOf("anilist:9"), repo.search("q2", SearchFilter.ALL).map { it.key })
     }
 
     @Test fun `search throws only when every backend fails`() = runTest {
         coEvery { tmdb.searchMulti(any(), any(), any()) } throws IOException("a")
-        coEvery { anilist.search(any(), any()) } throws IOException("b")
+        coEvery { anilist.search(any(), any(), any()) } throws IOException("b")
         try { repo.search("q3", SearchFilter.ALL); fail() } catch (e: IOException) { /* expected */ }
     }
 
     @Test fun `blank query makes no calls`() = runTest {
         assertTrue(repo.search("   ", SearchFilter.ALL).isEmpty())
+    }
+
+    @Test fun `pages are fetched and cached by page number`() = runTest {
+        coEvery { tmdb.trendingMovies(1) } returns TmdbPage(page = 1, results = listOf(result(1, "A")), totalPages = 3)
+        coEvery { tmdb.trendingMovies(3) } returns TmdbPage(page = 3, results = listOf(result(3, "C")), totalPages = 3)
+        val first = repo.trending(MediaType.MOVIE, 1)
+        val last = repo.trending(MediaType.MOVIE, 3)
+        repo.trending(MediaType.MOVIE, 3)
+        assertEquals(listOf("tmdb:1"), first.items.map { it.key })
+        assertTrue(first.hasMore)
+        assertEquals(listOf("tmdb:3"), last.items.map { it.key })
+        assertTrue(!last.hasMore)
+        coVerify(exactly = 1) { tmdb.trendingMovies(3) }
+    }
+
+    @Test fun `tmdb stops at page 500 whatever total_pages says`() {
+        assertTrue(!TmdbPage<TmdbResult>(page = 500, totalPages = 9000).hasMore)
+        assertTrue(TmdbPage<TmdbResult>(page = 499, totalPages = 9000).hasMore)
+    }
+
+    @Test fun `search asks every backend for the same page`() = runTest {
+        coEvery { tmdb.searchMulti("dune", 2, any()) } returns TmdbPage(page = 2, results = listOf(result(5, "Dune")), totalPages = 2)
+        coEvery { anilist.search("dune", 2, any()) } returns MediaPage(listOf(anime("8")), hasMore = true)
+        val out = repo.search("dune", SearchFilter.ALL, 2)
+        assertEquals(listOf("tmdb:5", "anilist:8"), out.items.map { it.key })
+        assertTrue("AniList still has pages", out.hasMore)
+    }
+
+    @Test fun `popular across all types interleaves and drops tmdb anime`() = runTest {
+        coEvery { tmdb.discoverMovies(1, any(), any(), any()) } returns TmdbPage(results = listOf(result(1, "Movie")), totalPages = 1)
+        coEvery { tmdb.discoverTv(1, any(), any(), any(), any()) } returns TmdbPage(
+            results = listOf(
+                TmdbResult(id = 2, mediaType = "tv", name = "Show"),
+                TmdbResult(id = 3, mediaType = "tv", name = "JP Anime", genreIds = listOf(16), originalLanguage = "ja"),
+            ),
+            totalPages = 1,
+        )
+        coEvery { anilist.popular(1, any()) } returns MediaPage(listOf(anime("9")), hasMore = false)
+        val out = repo.popular(null, 1)
+        assertEquals(listOf("tmdb:1", "tmdb:2", "anilist:9"), out.items.map { it.key })
+        assertTrue(!out.hasMore)
+    }
+
+    @Test fun `a mixed page survives one source failing`() = runTest {
+        coEvery { tmdb.trendingMovies(2) } throws IOException("down")
+        coEvery { tmdb.trendingTv(2) } returns TmdbPage(page = 2, results = listOf(TmdbResult(id = 4, mediaType = "tv", name = "Show")), totalPages = 5)
+        coEvery { anilist.trending(2, any()) } returns MediaPage(emptyList(), hasMore = false)
+        val out = repo.trendingAll(2)
+        assertEquals(listOf("tmdb:4"), out.items.map { it.key })
+        assertTrue(out.hasMore)
     }
 }

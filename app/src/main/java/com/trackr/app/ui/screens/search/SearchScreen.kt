@@ -45,14 +45,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.data.repository.SearchFilter
-import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.MediaItem
+import com.trackr.app.domain.util.PageState
 import com.trackr.app.ui.components.CountBadge
 import com.trackr.app.ui.components.EmptyState
 import com.trackr.app.ui.components.ErrorState
 import com.trackr.app.ui.components.ListRowSkeleton
 import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.MediaResultCard
+import com.trackr.app.ui.components.PagingFooter
 import com.trackr.app.ui.components.TrackrChip
 import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.theme.PillShape
@@ -69,7 +70,10 @@ fun SearchScreen(
     LaunchedEffect(initialFilter) { initialFilter?.let(vm::setFilter) }
     SearchContent(
         state,
-        SearchActions(vm::setQuery, vm::setFilter, vm::applyRecent, vm::removeRecent, vm::clearRecents, vm::quickAdd, vm::markCompleted, vm::retry),
+        SearchActions(
+            vm::setQuery, vm::setFilter, vm::applyRecent, vm::removeRecent, vm::clearRecents, vm::quickAdd, vm::markCompleted, vm::retry,
+            vm::loadMoreResults, vm::loadMoreSuggestions,
+        ),
         onOpenDetail, onOpenProfile,
     )
 }
@@ -83,6 +87,8 @@ class SearchActions(
     val quickAdd: (MediaItem) -> Unit,
     val markCompleted: (MediaItem, com.trackr.app.domain.model.ListEntry) -> Unit,
     val retry: () -> Unit,
+    val loadMoreResults: () -> Unit,
+    val loadMoreSuggestions: () -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -148,42 +154,50 @@ fun SearchContent(
                     }
                 }
                 item("trending-title") { Text("Trending now", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 4.dp)) }
-                resultItems(state.suggestions, state, onOpenDetail, vm, emptyText = "Nothing trending right now.")
+                resultItems(state.suggestions, state, onOpenDetail, vm, vm.loadMoreSuggestions, emptyText = "Nothing trending right now.")
             } else {
                 item("results-title") {
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Top Matches", style = MaterialTheme.typography.headlineSmall)
-                            (state.results as? Load.Success)?.let { CountBadge(it.data.size) }
+                            if (state.results.items.isNotEmpty()) CountBadge(state.results.items.size)
                         }
                         Text("Sorted by relevance", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                     }
                 }
-                resultItems(state.results, state, onOpenDetail, vm, emptyText = "No results for \"${state.query.trim()}\".")
+                resultItems(state.results, state, onOpenDetail, vm, vm.loadMoreResults, emptyText = "No results for \"${state.query.trim()}\".")
             }
         }
     }
 }
 
+/** A paged list of results: skeletons, then rows, then a footer that loads the next page when scrolled to. */
 private fun androidx.compose.foundation.lazy.LazyListScope.resultItems(
-    load: Load<List<MediaItem>>,
+    page: PageState,
     state: SearchUiState,
     onOpen: (MediaItem) -> Unit,
     vm: SearchActions,
+    onLoadMore: () -> Unit,
     emptyText: String,
 ) {
-    when (load) {
-        Load.Loading -> items(4, key = { "sk$it" }) { ListRowSkeleton(Modifier.padding(vertical = 4.dp)) }
-        is Load.Failure -> item("err") { ErrorState(load.message, onRetry = vm.retry) }
-        is Load.Success -> if (load.data.isEmpty()) item("empty") {
+    when {
+        page.items.isEmpty() && page.error != null -> item("err") { ErrorState(page.error, onRetry = vm.retry) }
+        page.items.isEmpty() && page.endReached -> item("empty") {
             EmptyState(Icons.Outlined.SearchOff, "Nothing found", emptyText)
-        } else items(load.data, key = { it.key }) { item ->
-            val entry = state.entries[item.key]
-            MediaResultCard(
-                item, entry, onClick = { onOpen(item) },
-                onQuickAdd = { vm.quickAdd(item) },
-                onMarkCompleted = { entry?.let { vm.markCompleted(item, it) } },
-            )
+        }
+        page.items.isEmpty() && (page.loading || page.pages == 0) -> items(4, key = { "sk$it" }) { ListRowSkeleton(Modifier.padding(vertical = 4.dp)) }
+        else -> {
+            items(page.items, key = { it.key }) { item ->
+                val entry = state.entries[item.key]
+                MediaResultCard(
+                    item, entry, onClick = { onOpen(item) },
+                    onQuickAdd = { vm.quickAdd(item) },
+                    onMarkCompleted = { entry?.let { vm.markCompleted(item, it) } },
+                )
+            }
+            if (!page.endReached || page.error != null) item("more") {
+                PagingFooter(page, onLoadMore, vm.retry, Modifier.fillMaxWidth().padding(8.dp))
+            }
         }
     }
 }

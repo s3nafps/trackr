@@ -10,21 +10,18 @@ import com.trackr.app.data.repository.SearchFilter
 import com.trackr.app.data.repository.userMessage
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
-import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.MediaItem
+import com.trackr.app.domain.model.MediaPage
+import com.trackr.app.domain.util.PageState
+import com.trackr.app.domain.util.Paginator
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -32,15 +29,15 @@ import javax.inject.Inject
 data class SearchUiState(
     val query: String = "",
     val filter: SearchFilter = SearchFilter.ALL,
-    /** Results for a non-blank query. */
-    val results: Load<List<MediaItem>> = Load.Success(emptyList()),
-    /** Trending suggestions shown when the query is blank. */
-    val suggestions: Load<List<MediaItem>> = Load.Loading,
+    /** Results for a non-blank query, a page at a time. */
+    val results: PageState = PageState.of(emptyList()),
+    /** Trending titles shown while the query is blank, also paged. */
+    val suggestions: PageState = PageState(),
     val recents: List<String> = emptyList(),
     val entries: Map<String, ListEntry> = emptyMap(),
 )
 
-@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val saved: SavedStateHandle,
@@ -53,59 +50,41 @@ class SearchViewModel @Inject constructor(
         saved.get<String>("f")?.let { runCatching { SearchFilter.valueOf(it) }.getOrNull() } ?: SearchFilter.ALL,
     )
 
-    private val retryTick = MutableStateFlow(0)
+    private val results = Paginator(viewModelScope, { it.userMessage() }) { _, _ -> MediaPage(emptyList(), hasMore = false) }
 
-    private val results: Flow<Load<List<MediaItem>>> = combine(query.debounce(400).distinctUntilChanged(), filter, retryTick) { q, f, t -> Triple(q.trim(), f, t) }
-        .distinctUntilChanged()
-        .flatMapLatest { (q, f, _) ->
-            flow {
-                if (q.length < 2) { emit(Load.Success(emptyList())); return@flow }
-                emit(Load.Loading)
-                try {
-                    val r = media.search(q, f)
-                    emit(Load.Success(r))
-                    if (r.isNotEmpty()) prefs.addRecent(q)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    emit(Load.Failure(e.userMessage()))
+    private val suggestions = Paginator(viewModelScope, { it.userMessage() }) { page, force ->
+        when (val type = filter.value.type) {
+            null -> media.trendingAll(page, force)
+            else -> media.trending(type, page, force)
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            combine(query.debounce(400), filter) { q, f -> q.trim() to f }.distinctUntilChanged().collect { (q, f) ->
+                if (q.length < 2) {
+                    results.clear()
+                } else {
+                    results.reset { page, _ ->
+                        media.search(q, f, page).also { if (page == 1 && it.items.isNotEmpty()) prefs.addRecent(q) }
+                    }
                 }
             }
         }
-
-    private val suggestions: Flow<Load<List<MediaItem>>> = combine(filter, retryTick) { f, _ -> f }.flatMapLatest { f ->
-        flow {
-            emit(Load.Loading)
-            try {
-                emit(Load.Success(trendingFor(f)))
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                emit(Load.Failure(e.userMessage()))
-            }
-        }
-    }
-
-    private suspend fun trendingFor(f: SearchFilter): List<MediaItem> = when (f) {
-        SearchFilter.MOVIES -> media.trendingMovies()
-        SearchFilter.TV -> media.trendingTv()
-        SearchFilter.ANIME -> media.trendingAnime()
-        SearchFilter.ALL -> MediaRepository.interleave(
-            listOf(runCatching { media.trendingMovies() }.getOrDefault(emptyList()).take(6),
-                runCatching { media.trendingTv() }.getOrDefault(emptyList()).take(6),
-                runCatching { media.trendingAnime() }.getOrDefault(emptyList()).take(6)),
-        ).ifEmpty { media.trendingMovies() }
+        viewModelScope.launch { filter.collect { suggestions.reset() } }
     }
 
     val state: StateFlow<SearchUiState> = combine(
-        query, filter, results, suggestions, combine(prefs.recentSearches, lists.entries) { r, e -> r to e },
+        query, filter, results.state, suggestions.state, combine(prefs.recentSearches, lists.entries) { r, e -> r to e },
     ) { q, f, res, sug, (recents, entries) ->
-        SearchUiState(q, f, if (q.trim().length < 2) Load.Success(emptyList()) else res, sug, recents, entries.associateBy { it.key })
+        SearchUiState(q, f, if (q.trim().length < 2) PageState.of(emptyList()) else res, sug, recents, entries.associateBy { it.key })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState(query.value, filter.value))
 
     fun setQuery(q: String) { query.value = q; saved["q"] = q }
     fun setFilter(f: SearchFilter) { filter.value = f; saved["f"] = f.name }
-    fun retry() { retryTick.value++ }
+    fun retry() { results.retry(); suggestions.retry() }
+    fun loadMoreResults() = results.loadMore()
+    fun loadMoreSuggestions() = suggestions.loadMore()
     fun applyRecent(q: String) = setQuery(q)
     fun removeRecent(q: String) { viewModelScope.launch { prefs.removeRecent(q) } }
     fun clearRecents() { viewModelScope.launch { prefs.clearRecent() } }
