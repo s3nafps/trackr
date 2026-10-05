@@ -42,6 +42,7 @@ import com.trackr.app.ui.screens.social.SharedListsScreen
 import com.trackr.app.ui.screens.profile.ProfileScreen
 import com.trackr.app.ui.screens.profile.SettingsScreen
 import com.trackr.app.ui.screens.search.SearchScreen
+import com.trackr.app.ui.screens.calendar.CalendarScreen
 
 /** Switch top-level tab. [restore] = false when the destination must honour fresh arguments (Explore / See all). */
 private fun NavHostController.goTop(route: String, restore: Boolean = true) = navigate(route) {
@@ -127,7 +128,11 @@ fun TrackrNavHost(
                     onOpenEntry = { e -> nav.navigate(Routes.detail(e.source.key, e.mediaType.key, e.externalId)) },
                     onOpenProfile = { nav.goTop(Routes.PROFILE) },
                     onDiscover = { nav.goTop(Routes.SEARCH) },
+                    onOpenCalendar = { nav.navigate(Routes.CALENDAR) },
                 )
+            }
+            composable(Routes.CALENDAR) {
+                CalendarScreen(onBack = { nav.popBackStack() }, onOpen = { s, t, id -> nav.navigate(Routes.detail(s, t, id)) })
             }
             composable(Routes.FRIENDS) {
                 FriendsScreen(

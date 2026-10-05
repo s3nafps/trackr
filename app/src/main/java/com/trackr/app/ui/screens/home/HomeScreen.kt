@@ -161,7 +161,10 @@ fun HomeContent(
                             SectionHeader("Continue Watching", icon = Icons.Outlined.PlayCircle, actionLabel = "See all (${state.continueWatching.size})", onAction = onSeeAllWatching)
                             LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 items(state.continueWatching, key = { it.key }) { e ->
-                                    ContinueWatchingCard(e, onClick = { onOpenEntry(e.source.key, e.mediaType.key, e.externalId) }, onPlusOne = { onPlusOne(e) })
+                                    ContinueWatchingCard(
+                                        e, onClick = { onOpenEntry(e.source.key, e.mediaType.key, e.externalId) }, onPlusOne = { onPlusOne(e) },
+                                        seasons = state.seasons[e.key].orEmpty(),
+                                    )
                                 }
                             }
                         }
