@@ -5,9 +5,11 @@ import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.model.TitleMeta
 import com.trackr.app.widget.UpNext
 import com.trackr.app.widget.UpNextRow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneOffset
@@ -34,7 +36,8 @@ class UpNextTest {
         assertEquals("Tomorrow", label(at(1, 9), dateOnly = true))
         val in3 = now.plusDays(3)
         assertTrue(label(at(3, 18)).startsWith(in3.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.US) + " "))
-        assertEquals("Oct 15", label(at(10, 9), dateOnly = true))
+        assertEquals("Next Thu", label(at(10, 9))) // Mon Oct 5 + 10 days: Thursday of next week
+        assertEquals("Oct 25", label(at(20, 9), dateOnly = true))
     }
 
     @Test fun `airing shows tracked titles from today through the next week, soonest first and capped`() {
@@ -80,6 +83,63 @@ class UpNextTest {
             ),
             rows,
         )
+    }
+
+    // A show with four aired seasons of ten episodes; season 5 isn't out yet.
+    private val fourSeasons = TitleMeta(emptyList(), listOf(10, 10, 10, 10), fetchedAt = 0, airedEpisodes = 40)
+    private fun watching(progress: Int, meta: TitleMeta?, vararg airing: AiringEntity, total: Int? = null) =
+        UpNext.build(
+            listOf(entry("1", ListStatus.WATCHING, progress = progress, total = total)), airing.toList(),
+            now.toInstant().toEpochMilli(), zone, Locale.US, meta = meta?.let { mapOf("tmdb:1" to it) }.orEmpty(),
+        ).watching.single()
+
+    @Test fun `caught up on a show waits for the next episode instead of offering one that isn't out`() {
+        val row = watching(40, fourSeasons)
+        assertEquals("Caught up", row.line)
+        assertFalse(row.canIncrement)
+    }
+
+    @Test fun `caught up with the next episode announced says when it comes, next week included`() {
+        val nextWed = airing("1", at(9, 9), episode = 1, precision = "DATE").copy(season = 5)
+        val row = watching(40, fourSeasons, nextWed)
+        assertEquals("S5 E1 · Next Wed", row.line)
+        assertFalse(row.canIncrement)
+        assertEquals("S5 E1 · Fri", watching(40, fourSeasons, nextWed.copy(airAt = at(4, 9))).line)
+    }
+
+    @Test fun `episodes still to watch read by season, with +1`() {
+        val row = watching(15, fourSeasons)
+        assertEquals("Next: S2 E6", row.line)
+        assertTrue(row.canIncrement)
+    }
+
+    @Test fun `a total that counts announced episodes doesn't hide being caught up`() {
+        // TMDB's episode total can include announced episodes: 50 here, with 40 out.
+        assertEquals("Caught up", watching(40, fourSeasons, total = 50).line)
+        // Once season 5 premieres it's listed with its episodes, and its first one is next.
+        assertEquals("Next: S5 E1", watching(40, fourSeasons.copy(seasonEpisodes = listOf(10, 10, 10, 10, 10), airedEpisodes = 41), total = 50).line)
+    }
+
+    @Test fun `the airing schedule alone tells what's out, for anime numbered across the show`() {
+        val next = airing("1", at(1, 18), episode = 8) // episode 8 airs tomorrow, so 7 are out
+        val caughtUp = watching(7, null, next, total = 12)
+        assertTrue(caughtUp.line.startsWith("Ep 8 · Tomorrow"))
+        assertFalse(caughtUp.canIncrement)
+        assertEquals("Next: Ep 6 of 12", watching(5, null, next, total = 12).line)
+        // Once it has aired today, it counts as out.
+        val aired = watching(7, null, next.copy(airAt = at(0, 8)), total = 12)
+        assertEquals("Next: Ep 8 of 12", aired.line)
+        assertTrue(aired.canIncrement)
+    }
+
+    @Test fun `aired count takes the freshest of the schedule and the stored details`() {
+        val n = now.toInstant().toEpochMilli()
+        val nextS5 = airing("1", at(3, 9), episode = 2).copy(season = 5)
+        assertEquals(41, UpNext.airedEpisodes(fourSeasons, nextS5, listOf(10, 10, 10, 10, 8), n))
+        assertEquals(40, UpNext.airedEpisodes(fourSeasons, null, listOf(10, 10, 10, 10), n))
+        // A within-season episode number can't be placed without season sizes; the stored count still answers.
+        assertEquals(40, UpNext.airedEpisodes(fourSeasons, nextS5, emptyList(), n))
+        assertEquals(null, UpNext.airedEpisodes(null, null, emptyList(), n))
     }
 
     @Test fun `nothing tracked means an empty widget`() {

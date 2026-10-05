@@ -100,6 +100,7 @@ data class TmdbDetail(
     @SerialName("release_dates") val releaseDates: TmdbReleaseDates? = null,
     @SerialName("content_ratings") val contentRatings: TmdbContentRatings? = null,
     @SerialName("next_episode_to_air") val nextEpisodeToAir: TmdbEpisodeStub? = null,
+    @SerialName("last_episode_to_air") val lastEpisodeToAir: TmdbEpisodeStub? = null,
     @SerialName("watch/providers") val watchProviders: TmdbWatchProviders? = null,
     val videos: TmdbVideos? = null,
     val recommendations: TmdbPage<TmdbResult>? = null,
