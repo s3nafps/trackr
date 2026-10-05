@@ -3,6 +3,7 @@ package com.trackr.app.data.local
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.trackr.app.ui.theme.ThemeMode
@@ -19,6 +20,8 @@ class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context
     private val recentKey = stringPreferencesKey("recent_searches")
     private val themeKey = stringPreferencesKey("theme_mode")
     private val airingKey = booleanPreferencesKey("airing_enabled")
+    private val updateCheckedKey = longPreferencesKey("update_last_check")
+    private val updateDismissedKey = stringPreferencesKey("update_dismissed")
     private val sep = "\u001F"
 
     val recentSearches: Flow<List<String>> = ctx.dataStore.data.map { p ->
@@ -51,4 +54,14 @@ class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context
     suspend fun clearRecent() = ctx.dataStore.edit { it.remove(recentKey) }
 
     suspend fun setThemeMode(mode: ThemeMode) = ctx.dataStore.edit { it[themeKey] = mode.name }
+
+    /** When GitHub was last asked for a newer release (epoch millis, 0 = never). */
+    val lastUpdateCheck: Flow<Long> = ctx.dataStore.data.map { it[updateCheckedKey] ?: 0L }
+
+    suspend fun setLastUpdateCheck(at: Long) = ctx.dataStore.edit { it[updateCheckedKey] = at }
+
+    /** The release version the user chose "Later" for. */
+    val dismissedUpdate: Flow<String?> = ctx.dataStore.data.map { it[updateDismissedKey] }
+
+    suspend fun setDismissedUpdate(version: String) = ctx.dataStore.edit { it[updateDismissedKey] = version }
 }
