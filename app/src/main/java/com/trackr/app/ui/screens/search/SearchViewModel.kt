@@ -106,6 +106,9 @@ class SearchViewModel @Inject constructor(
     fun removeRecent(q: String) { viewModelScope.launch { prefs.removeRecent(q) } }
     fun clearRecents() { viewModelScope.launch { prefs.clearRecent() } }
 
+    /** Season sizes of [item], so the sheet can offer progress by season (see [MediaRepository.seasonsOf]). */
+    suspend fun seasonsFor(item: MediaItem): List<Int> = media.seasonsOf(item)
+
     /** Adds [item] with the status, rating and progress picked in the sheet (or updates it if it's already listed). */
     fun track(item: MediaItem, status: ListStatus, rating: Int?, progress: Int) {
         viewModelScope.launch { lists.save(item, status, rating, progress) }

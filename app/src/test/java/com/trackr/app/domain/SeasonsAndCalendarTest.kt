@@ -36,6 +36,45 @@ class SeasonsAndCalendarTest {
         }
     }
 
+    @Test fun `finished seasons count only completely watched ones`() {
+        assertEquals(0, SeasonProgress.finished(0, seasons))
+        assertEquals(0, SeasonProgress.finished(9, seasons))
+        assertEquals(1, SeasonProgress.finished(10, seasons)) // exactly the end of season 1
+        assertEquals(1, SeasonProgress.finished(17, seasons)) // season 2 started, not finished
+        assertEquals(2, SeasonProgress.finished(18, seasons))
+        assertEquals(3, SeasonProgress.finished(24, seasons))
+        assertEquals(3, SeasonProgress.finished(40, seasons)) // more than the listed seasons
+        assertEquals(0, SeasonProgress.finished(5, emptyList()))
+    }
+
+    @Test fun `through gives the episodes of the first seasons`() {
+        assertEquals(0, SeasonProgress.through(0, seasons))
+        assertEquals(10, SeasonProgress.through(1, seasons))
+        assertEquals(18, SeasonProgress.through(2, seasons))
+        assertEquals(24, SeasonProgress.through(3, seasons))
+        assertEquals(24, SeasonProgress.through(9, seasons))
+        assertEquals(0, SeasonProgress.through(-1, seasons))
+        for (n in 0..3) assertEquals(n, SeasonProgress.finished(SeasonProgress.through(n, seasons), seasons))
+    }
+
+    @Test fun `the season in progress follows the finished ones`() {
+        assertEquals(1 to 0, SeasonProgress.inProgress(0, seasons))
+        assertEquals(1 to 4, SeasonProgress.inProgress(4, seasons))
+        assertEquals(2 to 0, SeasonProgress.inProgress(10, seasons)) // season 1 done, season 2 not started
+        assertEquals(2 to 5, SeasonProgress.inProgress(15, seasons))
+        assertEquals(3 to 0, SeasonProgress.inProgress(18, seasons))
+        assertNull(SeasonProgress.inProgress(24, seasons)) // everything watched
+    }
+
+    @Test fun `the summary names the seasons watched`() {
+        assertEquals("Not started", SeasonProgress.summary(0, seasons))
+        assertEquals("Watched season 1", SeasonProgress.summary(10, seasons))
+        assertEquals("Watched seasons 1–2", SeasonProgress.summary(18, seasons))
+        assertEquals("Watched all 3 seasons", SeasonProgress.summary(24, seasons))
+        assertEquals("Season 1 · episode 4", SeasonProgress.summary(4, seasons))
+        assertEquals("Season 2 · episode 5", SeasonProgress.summary(15, seasons))
+    }
+
     @Test fun `labels use seasons only for shows with several`() {
         assertEquals("S2 · E5", SeasonProgress.label(15, 24, seasons))
         assertEquals("Not started", SeasonProgress.label(0, 24, seasons))

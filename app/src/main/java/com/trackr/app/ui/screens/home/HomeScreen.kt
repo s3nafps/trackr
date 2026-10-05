@@ -102,6 +102,7 @@ fun HomeScreen(
         onDiscoverFilter = vm::setDiscoverFilter, onDiscoverGenre = vm::setDiscoverGenre, onDiscoverMore = vm::discoverMore, onDiscoverRetry = vm::retryDiscover,
         onOpenDetail = onOpenDetail, onOpenEntry = onOpenEntry, onSeeAllWatching = onSeeAllWatching,
         onExplore = onExplore, onOpenProfile = onOpenProfile,
+        seasonsFor = vm::seasonsFor,
     )
 }
 
@@ -125,6 +126,8 @@ fun HomeContent(
     onSeeAllWatching: () -> Unit,
     onExplore: (MediaType?) -> Unit,
     onOpenProfile: () -> Unit,
+    /** Season sizes of a TV show, to pick progress by season in the status sheet. */
+    seasonsFor: suspend (MediaItem) -> List<Int> = { emptyList() },
 ) {
     val columns = maxOf(3, (LocalConfiguration.current.screenWidthDp - 20) / 116)
     val discoverRows = remember(state.discover.items, columns) { state.discover.items.chunked(columns) }
@@ -235,9 +238,13 @@ fun HomeContent(
         }
     }
     tracking?.let { item ->
+        // The title's seasons arrive a moment after the sheet opens; until then it just counts episodes.
+        var seasons by remember(item.key) { mutableStateOf(emptyList<Int>()) }
+        LaunchedEffect(item.key) { seasons = seasonsFor(item) }
         TrackSheet(
             item, entry = null, onDismiss = { tracking = null },
             onSave = { status, rating, progress -> onTrack(item, status, rating, progress); tracking = null },
+            seasons = seasons,
         )
     }
 }

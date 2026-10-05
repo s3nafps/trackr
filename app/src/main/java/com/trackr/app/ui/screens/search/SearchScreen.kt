@@ -88,6 +88,7 @@ fun SearchScreen(
                 if (status == ListStatus.WATCHING) ensureNotifications {}
             },
             vm::markCompleted, vm::retry, vm::loadMoreResults, vm::loadMoreSuggestions,
+            seasonsFor = vm::seasonsFor,
         ),
         onOpenDetail, onOpenProfile,
     )
@@ -105,6 +106,8 @@ class SearchActions(
     val retry: () -> Unit,
     val loadMoreResults: () -> Unit,
     val loadMoreSuggestions: () -> Unit,
+    /** Season sizes of a TV show, to pick progress by season in the status sheet. */
+    val seasonsFor: suspend (MediaItem) -> List<Int> = { emptyList() },
 )
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -190,9 +193,13 @@ fun SearchContent(
         }
     }
     tracking?.let { item ->
+        // The title's seasons arrive a moment after the sheet opens; until then it just counts episodes.
+        var seasons by remember(item.key) { mutableStateOf(emptyList<Int>()) }
+        LaunchedEffect(item.key) { seasons = vm.seasonsFor(item) }
         TrackSheet(
             item, state.entries[item.key], onDismiss = { tracking = null },
             onSave = { status, rating, progress -> vm.track(item, status, rating, progress); tracking = null },
+            seasons = seasons,
         )
     }
 }
