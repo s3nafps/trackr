@@ -75,7 +75,16 @@ object AniListMapper {
                 .filter { it.isAdult != true && it.id != m.mediaFields.id }
                 .map { toItem(it) }
                 .distinctBy { it.key },
+            airedEpisodes = airedEpisodes(m.mediaFields.status?.rawValue, m.mediaFields.nextAiringEpisode?.episode, base.totalEpisodes),
         )
+    }
+
+    /** Episodes out: the one before the next to air while airing, all of them once finished, none before the premiere. */
+    fun airedEpisodes(status: String?, nextEpisode: Int?, episodes: Int?): Int? = when {
+        nextEpisode != null -> (nextEpisode - 1).coerceAtLeast(0)
+        status == "NOT_YET_RELEASED" -> 0
+        status == "FINISHED" -> episodes
+        else -> null // releasing without a schedule, on hiatus, cancelled: unknown
     }
 
     fun trailer(id: String?, site: String?, thumbnail: String?): Trailer? = when {
