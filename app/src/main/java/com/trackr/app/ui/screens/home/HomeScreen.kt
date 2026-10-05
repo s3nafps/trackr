@@ -53,6 +53,7 @@ import com.trackr.app.ui.components.ContinueWatchingCard
 import com.trackr.app.ui.components.ErrorState
 import com.trackr.app.ui.components.GenreChips
 import com.trackr.app.ui.components.LocalProfile
+import com.trackr.app.ui.components.OfflineNote
 import com.trackr.app.ui.components.PagingFooter
 import com.trackr.app.ui.components.PosterCard
 import com.trackr.app.ui.components.PosterCarouselSkeleton
@@ -154,6 +155,8 @@ fun HomeContent(
                         }
                     }
                 }
+
+                if (state.offline) item("offline") { OfflineNote(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) }
 
                 if (state.continueWatching.isNotEmpty()) {
                     item("continue") {

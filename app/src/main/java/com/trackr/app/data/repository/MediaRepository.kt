@@ -1,5 +1,6 @@
 package com.trackr.app.data.repository
 
+import com.trackr.app.data.cache.PageStore
 import com.trackr.app.data.mapper.TmdbMapper
 import com.trackr.app.data.remote.anilist.AniListClient
 import com.trackr.app.data.remote.tmdb.TmdbApi
@@ -13,6 +14,7 @@ import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaPage
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -43,19 +45,28 @@ fun Throwable.userMessage(): String = when (this) {
 class MediaRepository @Inject constructor(
     private val tmdb: TmdbApi,
     private val anilist: AniListClient,
+    /** The last copy of each page, for when the sources can't be reached (offline, or the app was closed meanwhile). */
+    private val saved: PageStore = PageStore.None,
 ) {
     private val lists = TtlCache<String, MediaPage>(ttlMillis = 5 * 60_000)
     private val details = TtlCache<String, MediaDetail>(ttlMillis = 10 * 60_000)
 
-    /** Cached fetch; on failure serves a stale copy when one exists, otherwise rethrows. */
+    /**
+     * Cached fetch. Each page fetched is also saved on the device; when fetching fails, the stale in-memory copy or the
+     * saved one is served instead (marked [MediaPage.fromCache]), otherwise the error is rethrown.
+     */
     private suspend fun cached(key: String, force: Boolean, load: suspend () -> MediaPage): MediaPage {
         if (!force) lists.get(key)?.let { return it }
         return try {
-            load().also { lists.put(key, it) }
+            load().also { lists.put(key, it); saved.put(key, it) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            lists.getStale(key) ?: throw e
+            fallback(key) ?: throw e
         }
     }
+
+    private suspend fun fallback(key: String): MediaPage? = (lists.getStale(key) ?: saved.get(key))?.copy(fromCache = true)
 
     private fun TmdbPage<TmdbResult>.toPage(type: MediaType?) = MediaPage(results.mapNotNull { TmdbMapper.toItem(it, type) }, hasMore)
 
@@ -118,8 +129,14 @@ class MediaRepository @Inject constructor(
         }
         val aniSearch: (suspend () -> MediaPage)? =
             if (filter == SearchFilter.ALL || filter == SearchFilter.ANIME) suspend { anilist.search(q, page) } else null
-        return merged(listOfNotNull(tmdbSearch, aniSearch)) { filter == SearchFilter.ALL && isTmdbAnime(it) }
-            .also { lists.put(key, it) }
+        return try {
+            merged(listOfNotNull(tmdbSearch, aniSearch)) { filter == SearchFilter.ALL && isTmdbAnime(it) }
+                .also { lists.put(key, it); saved.put(key, it) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            fallback(key) ?: throw e
+        }
     }
 
     /** Mixed lists take anime from AniList, so TMDB's copies of the same shows are dropped there. */
@@ -133,7 +150,7 @@ class MediaRepository @Inject constructor(
         val results = loads.map { async { runCatching { it() } } }.awaitAll()
         val ok = results.mapNotNull { it.getOrNull() }
         if (ok.isEmpty()) throw results.firstOrNull()?.exceptionOrNull() ?: IOException("Request failed")
-        MediaPage(interleave(ok.map { p -> p.items.filterNot(drop) }), hasMore = ok.any { it.hasMore })
+        MediaPage(interleave(ok.map { p -> p.items.filterNot(drop) }), hasMore = ok.any { it.hasMore }, fromCache = ok.any { it.fromCache })
     }
 
     /** [region] picks the TMDB watch-provider country; it defaults to the device's country. */
