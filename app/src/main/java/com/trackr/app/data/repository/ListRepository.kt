@@ -5,6 +5,7 @@ import com.trackr.app.data.local.ListEntryDao
 import com.trackr.app.data.mapper.ListEntryMapper.toDomain
 import com.trackr.app.data.mapper.ListEntryMapper.toEntity
 import com.trackr.app.data.remote.supabase.ListEntryDto
+import com.trackr.app.data.remote.supabase.toRow
 import com.trackr.app.data.sync.ListRemote
 import com.trackr.app.data.sync.ListSyncer
 import com.trackr.app.data.sync.SyncScheduler
@@ -26,7 +27,7 @@ class SupabaseListRemote @Inject constructor(private val supabase: SupabaseClien
         supabase.from("list_entries").select { filter { eq("user_id", userId) } }.decodeList()
 
     override suspend fun upsert(dto: ListEntryDto) {
-        supabase.from("list_entries").upsert(dto) { onConflict = "user_id,source,external_id" }
+        supabase.from("list_entries").upsert(dto.toRow()) { onConflict = "user_id,source,external_id" }
     }
 
     override suspend fun delete(userId: String, source: String, externalId: String) {
