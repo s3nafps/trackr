@@ -22,4 +22,9 @@ class AiringNotifierTest {
     @Test fun `episode null means movie copy`() {
         assertEquals("Odd Show is out today", AiringNotifier.message(row("Odd Show", null, "tv")).second)
     }
+
+    @Test fun `tv episodes numbered by season say which season`() {
+        val row = AiringEntity("tmdb", "2", "tv", "Severance", 3, 0L, "DATE", season = 2)
+        assertEquals("Severance · Season 2, episode 3 is out", AiringNotifier.message(row).second)
+    }
 }

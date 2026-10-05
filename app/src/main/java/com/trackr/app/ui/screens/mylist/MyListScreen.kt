@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.outlined.CalendarMonth
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaType
@@ -67,18 +68,21 @@ import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.color
 import com.trackr.app.ui.theme.shortLabel
+import com.trackr.app.domain.util.SeasonProgress
 
 @Composable
 fun MyListScreen(
     onOpenEntry: (ListEntry) -> Unit,
     onOpenProfile: () -> Unit,
     onDiscover: () -> Unit,
+    onOpenCalendar: () -> Unit = {},
     vm: MyListViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     MyListContent(
         state, LocalProfile.current?.avatarUrl, onOpenProfile, onDiscover, onOpenEntry,
         vm::setStatus, vm::setType, vm::setSort, vm::toggleGrid, { vm.refresh() }, vm::plusOne, vm::remove, vm::save,
+        onOpenCalendar,
     )
 }
 
@@ -98,12 +102,19 @@ fun MyListContent(
     onPlusOne: (ListEntry) -> Unit,
     onRemove: (ListEntry) -> Unit,
     onSave: (ListEntry, ListStatus, Int?, Int) -> Unit,
+    onOpenCalendar: () -> Unit = {},
 ) {
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
     val editEntry = state.items.firstOrNull { it.key == editing }
 
     Column(Modifier.fillMaxSize()) {
-        TrackrTopBar("My List", avatarUrl, onOpenProfile)
+        TrackrTopBar("My List", avatarUrl, onOpenProfile) {
+            Icon(
+                Icons.Outlined.CalendarMonth, "Upcoming episodes",
+                Modifier.padding(end = 12.dp).size(40.dp).clip(CircleShape).clickable(onClick = onOpenCalendar).padding(8.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
         PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
             val header: @Composable () -> Unit = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -199,6 +210,7 @@ fun MyListContent(
                         ListEntryCard(
                             e, Modifier.padding(horizontal = 16.dp), onClick = { onOpenEntry(e) }, onPlusOne = { onPlusOne(e) },
                             onEdit = { editing = e.key }, onRemove = { onRemove(e) }, airsIn = state.airsIn[e.key],
+                            seasons = state.seasons[e.key].orEmpty(),
                         )
                     }
                 }
@@ -213,6 +225,7 @@ fun MyListContent(
             onDismiss = { editing = null },
             onSave = { s, r, p -> onSave(editEntry, s, r, p); editing = null },
             onRemove = { onRemove(editEntry); editing = null },
+            seasons = state.seasons[editEntry.key].orEmpty(),
         )
     }
 }
@@ -246,6 +259,7 @@ fun ListEntryCard(
     onEdit: () -> Unit,
     onRemove: () -> Unit,
     airsIn: String? = null,
+    seasons: List<Int> = emptyList(),
 ) {
     var menu by remember { mutableStateOf(false) }
     Row(
@@ -282,7 +296,7 @@ fun ListEntryCard(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(
-                            buildString { append("Ep "); append(e.progress); e.totalEpisodes?.let { append(" of $it") } },
+                            SeasonProgress.label(e.progress, e.totalEpisodes, seasons),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         if (e.totalEpisodes != null) Text("${(e.fraction * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)

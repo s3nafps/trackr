@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,7 @@ import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.model.MediaItem
+import com.trackr.app.domain.util.SeasonProgress
 import com.trackr.app.ui.theme.RatingAmber
 import com.trackr.app.ui.theme.SheetShape
 import com.trackr.app.ui.theme.color
@@ -67,6 +69,8 @@ fun TrackSheet(
     onDismiss: () -> Unit,
     onSave: (status: ListStatus, rating: Int?, progress: Int) -> Unit,
     onRemove: (() -> Unit)? = null,
+    /** Episode counts of a TV show's seasons: with more than one, progress is picked as season + episode. */
+    seasons: List<Int> = emptyList(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var status by rememberSaveable { mutableStateOf(initial?.status ?: ListStatus.PLAN_TO_WATCH) }
@@ -136,7 +140,9 @@ fun TrackSheet(
                 }
             }
 
-            if (showProgress) {
+            if (showProgress && SeasonProgress.bySeason(seasons)) {
+                SeasonEpisodePicker(progress, seasons) { progress = it }
+            } else if (showProgress) {
                 Row(
                     Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
@@ -177,11 +183,67 @@ fun TrackSheet(
 
 /** [TrackSheet] for a title picked from a list (a search result or a poster): its status, rating and progress are chosen before it is saved. */
 @Composable
-fun TrackSheet(item: MediaItem, entry: ListEntry?, onDismiss: () -> Unit, onSave: (status: ListStatus, rating: Int?, progress: Int) -> Unit) =
-    TrackSheet(
-        title = item.title, initial = entry, totalEpisodes = entry?.totalEpisodes ?: item.totalEpisodes,
-        showProgress = item.type != MediaType.MOVIE, onDismiss = onDismiss, onSave = onSave,
-    )
+fun TrackSheet(
+    item: MediaItem,
+    entry: ListEntry?,
+    onDismiss: () -> Unit,
+    onSave: (status: ListStatus, rating: Int?, progress: Int) -> Unit,
+    seasons: List<Int> = emptyList(),
+) = TrackSheet(
+    title = item.title, initial = entry, totalEpisodes = entry?.totalEpisodes ?: item.totalEpisodes,
+    showProgress = item.type != MediaType.MOVIE, onDismiss = onDismiss, onSave = onSave, seasons = seasons,
+)
+
+/**
+ * Season and episode steppers over the show-wide episode count. Changing season starts it (episode 0); stepping past a
+ * season's last episode moves on to the next season.
+ */
+@Composable
+private fun SeasonEpisodePicker(progress: Int, seasons: List<Int>, onChange: (Int) -> Unit) {
+    var season by rememberSaveable { mutableIntStateOf(SeasonProgress.position(progress, seasons)?.first ?: 1) }
+    val start = SeasonProgress.absolute(season, 0, seasons)
+    val inSeason = seasons.getOrElse(season - 1) { 0 }
+    val episode = (progress - start).coerceIn(0, inSeason)
+    // Progress set from outside (choosing Completed fills it in): show the season it lands in.
+    LaunchedEffect(progress) {
+        if (progress !in start..start + inSeason) season = SeasonProgress.position(progress, seasons)?.first ?: 1
+    }
+    Column(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Column {
+                Text("Season", style = MaterialTheme.typography.titleSmall)
+                Text("of ${seasons.size} seasons", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Stepper(
+                value = season,
+                onMinus = { if (season > 1) { season--; onChange(SeasonProgress.absolute(season, 0, seasons)) } },
+                onPlus = { if (season < seasons.size) { season++; onChange(SeasonProgress.absolute(season, 0, seasons)) } },
+            )
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Column {
+                Text("Episode", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    if (episode == 0) "not started · $inSeason episodes" else "of $inSeason",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Stepper(
+                value = episode,
+                onMinus = { if (episode > 0) onChange(start + episode - 1) },
+                onPlus = {
+                    when {
+                        episode < inSeason -> onChange(start + episode + 1)
+                        season < seasons.size -> { season++; onChange(SeasonProgress.absolute(season, 1, seasons)) }
+                    }
+                },
+            )
+        }
+    }
+}
 
 /** Dual-button segmented module: − value +. */
 @Composable

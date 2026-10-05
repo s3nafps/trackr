@@ -2,6 +2,7 @@ package com.trackr.app.data
 
 import androidx.lifecycle.SavedStateHandle
 import com.trackr.app.data.local.UserPrefs
+import com.trackr.app.data.meta.TitleMetaRepository
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.MediaRepository
 import com.trackr.app.data.repository.SearchFilter
@@ -57,9 +58,10 @@ class EndlessBrowsingTest {
     }
     private val lists = mockk<ListRepository>(relaxed = true) { every { entries } returns flowOf(emptyList()) }
     private val prefs = mockk<UserPrefs>(relaxed = true) { every { recentSearches } returns flowOf(emptyList()) }
+    private val meta = mockk<TitleMetaRepository> { every { all } returns flowOf(emptyMap()) }
 
     @Test fun `home loads the carousels, not the discover feed, until it is scrolled to`() = runTest(main) {
-        val vm = HomeViewModel(media, lists)
+        val vm = HomeViewModel(media, lists, meta)
         backgroundScope.launch { vm.state.collect {} }
         assertEquals(listOf("movie1", "movie2"), ids(vm.state.value.section(HomeSection.MOVIES).items))
         assertTrue(vm.state.value.discover.firstLoad)
@@ -71,7 +73,7 @@ class EndlessBrowsingTest {
     }
 
     @Test fun `the discover feed pages endlessly and restarts when its filter changes`() = runTest(main) {
-        val vm = HomeViewModel(media, lists)
+        val vm = HomeViewModel(media, lists, meta)
         backgroundScope.launch { vm.state.collect {} }
         vm.discoverMore(); vm.discoverMore()
         assertEquals(listOf("pop-all-1", "pop-all-2", "pop-all-3", "pop-all-4"), ids(vm.state.value.discover.items))
@@ -82,7 +84,7 @@ class EndlessBrowsingTest {
     }
 
     @Test fun `pull to refresh reloads from page 1 without the cache`() = runTest(main) {
-        val vm = HomeViewModel(media, lists)
+        val vm = HomeViewModel(media, lists, meta)
         backgroundScope.launch { vm.state.collect {} }
         vm.loadMore(HomeSection.TV)
         vm.refresh()
@@ -112,12 +114,12 @@ class EndlessBrowsingTest {
         val show = item("show", 1)
         SearchViewModel(SavedStateHandle(), media, lists, prefs).track(show, ListStatus.WATCHING, 8, 3)
         coVerify { lists.save(show, ListStatus.WATCHING, 8, 3) }
-        HomeViewModel(media, lists).track(show, ListStatus.COMPLETED, null, 0)
+        HomeViewModel(media, lists, meta).track(show, ListStatus.COMPLETED, null, 0)
         coVerify { lists.save(show, ListStatus.COMPLETED, null, 0) }
     }
 
     @Test fun `discover genres narrow the feed and are dropped when the type doesn't have them`() = runTest(main) {
-        val vm = HomeViewModel(media, lists)
+        val vm = HomeViewModel(media, lists, meta)
         backgroundScope.launch { vm.state.collect {} }
         vm.setDiscoverGenre(Genre.CRIME)
         assertEquals(listOf("pop-all-crime-1", "pop-all-crime-2"), ids(vm.state.value.discover.items))
@@ -130,7 +132,7 @@ class EndlessBrowsingTest {
         val liked = ListEntry(MediaSource.TMDB, "dune", MediaType.MOVIE, "Dune", null, null, ListStatus.COMPLETED, 9, 0, null, 1)
         val listed = ListEntry(MediaSource.TMDB, "common0", MediaType.MOVIE, "Listed", null, null, ListStatus.PLAN_TO_WATCH, null, 0, null, 2)
         every { lists.entries } returns flowOf(listOf(liked, listed))
-        val vm = HomeViewModel(media, lists)
+        val vm = HomeViewModel(media, lists, meta)
         backgroundScope.launch { vm.state.collect {} }
         val row = vm.state.value.forYou
         assertEquals(listOf("Dune"), row.because)

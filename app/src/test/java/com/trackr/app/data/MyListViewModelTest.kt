@@ -16,6 +16,8 @@ import com.trackr.app.ui.screens.mylist.MyListViewModel
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
+import com.trackr.app.data.meta.TitleMetaRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -30,6 +32,7 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MyListViewModelTest {
+    private val meta = mockk<TitleMetaRepository> { every { all } returns flowOf(emptyMap()) }
     private val dao = FakeDao()
     private val auth = mockk<AuthRepository>(relaxed = true)
     private val repo = ListRepository(dao, mockk<SupabaseListRemote>(relaxed = true), auth, mockk<SyncScheduler>(relaxed = true), mockk(relaxed = true))
@@ -42,7 +45,7 @@ class MyListViewModelTest {
     @Test fun `watching_card_gets_airs_in_label`() = runTest {
         repo.save(item("1", MediaType.TV, "Alpha"), ListStatus.WATCHING, null, 2)
         rows.value = listOf(row("1", 2 * 86_400_000L + 3_600_000L))
-        val vm = MyListViewModel(SavedStateHandle(), repo, airing())
+        val vm = MyListViewModel(SavedStateHandle(), repo, airing(), meta)
         vm.state.test {
             var s = awaitItem()
             while (s.airsIn.isEmpty()) s = awaitItem()
@@ -53,7 +56,7 @@ class MyListViewModelTest {
 
     @Test fun `plan_card_has_no_label_without_row`() = runTest {
         repo.save(item("1", MediaType.TV, "Alpha"), ListStatus.PLAN_TO_WATCH, null, 0)
-        val vm = MyListViewModel(SavedStateHandle(mapOf("status" to "plan_to_watch")), repo, airing())
+        val vm = MyListViewModel(SavedStateHandle(mapOf("status" to "plan_to_watch")), repo, airing(), meta)
         vm.state.test {
             var s = awaitItem()
             while (s.items.isEmpty()) s = awaitItem()
@@ -65,7 +68,7 @@ class MyListViewModelTest {
     @Test fun `upcoming_sort_orders_soonest_first_and_none_last`() = runTest {
         listOf("1", "2", "3").forEach { repo.save(item(it, MediaType.TV, "T$it"), ListStatus.WATCHING, null, 0) }
         rows.value = listOf(row("1", 5 * 3_600_000L), row("3", 1 * 3_600_000L))
-        val vm = MyListViewModel(SavedStateHandle(mapOf("s" to "UPCOMING")), repo, airing())
+        val vm = MyListViewModel(SavedStateHandle(mapOf("s" to "UPCOMING")), repo, airing(), meta)
         vm.state.test {
             var s = awaitItem()
             while (s.airsIn.size < 2) s = awaitItem()
@@ -82,7 +85,7 @@ class MyListViewModelTest {
     @Test fun `opens on the requested tab and reflects list changes`() = runTest {
         repo.save(item("1", MediaType.TV, "Alpha"), ListStatus.WATCHING, null, 2)
         repo.save(item("2", MediaType.MOVIE, "Beta"), ListStatus.COMPLETED, 9, 0)
-        val vm = MyListViewModel(SavedStateHandle(mapOf("status" to "completed")), repo, airing())
+        val vm = MyListViewModel(SavedStateHandle(mapOf("status" to "completed")), repo, airing(), meta)
         vm.state.test {
             var s = awaitItem()
             while (s.total < 2) s = awaitItem()
@@ -98,7 +101,7 @@ class MyListViewModelTest {
 
     @Test fun `plus one updates progress through the repository`() = runTest {
         repo.save(item("1", MediaType.TV, "Alpha"), ListStatus.WATCHING, null, 2)
-        val vm = MyListViewModel(SavedStateHandle(), repo, airing())
+        val vm = MyListViewModel(SavedStateHandle(), repo, airing(), meta)
         vm.plusOne(repo.entry(MediaSource.TMDB.key, "1").first()!!)
         assertEquals(3, dao.get("tmdb", "1")!!.progress)
     }

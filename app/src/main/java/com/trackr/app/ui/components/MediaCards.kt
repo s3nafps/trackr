@@ -31,6 +31,7 @@ import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.util.SeasonProgress
 import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.StatusCompleted
 import com.trackr.app.ui.theme.StatusDropped
@@ -124,6 +125,7 @@ fun ContinueWatchingCard(
     onPlusOne: () -> Unit,
     modifier: Modifier = Modifier,
     width: Dp = 300.dp,
+    seasons: List<Int> = emptyList(),
 ) {
     Column(
         modifier.width(width).clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)
@@ -137,7 +139,7 @@ fun ContinueWatchingCard(
                     MediaTypePill(entry.mediaType)
                     Text(entry.title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                     Text(
-                        entry.totalEpisodes?.let { "Ep ${entry.progress} of $it" } ?: "Ep ${entry.progress}",
+                        SeasonProgress.label(entry.progress, entry.totalEpisodes, seasons),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -204,7 +206,7 @@ fun AiringCard(item: MediaItem, onClick: () -> Unit, modifier: Modifier = Modifi
                 }
             }
             Text(item.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            item.airingEpisode?.let { Text("Episode $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            SeasonProgress.upcoming(item.airingSeason, item.airingEpisode)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }

@@ -82,8 +82,14 @@ class AiringNotifier @Inject constructor(
         const val EXTRA_OPEN_ID = "open_id"
         const val EXTRA_OPEN_TYPE = "open_type"
 
-        /** (title, text). Episode rows read "<title> · Episode n is out"; episode-less rows are releases. */
-        fun message(row: AiringEntity): Pair<String, String> =
-            row.title to (row.episode?.let { "${row.title} · Episode $it is out" } ?: "${row.title} is out today")
+        /**
+         * (title, text). Episode rows read "<title> · Episode n is out" ("Season s, episode n" for TV numbered by
+         * season); episode-less rows are releases.
+         */
+        fun message(row: AiringEntity): Pair<String, String> = row.title to when {
+            row.episode == null -> "${row.title} is out today"
+            row.season != null -> "${row.title} · Season ${row.season}, episode ${row.episode} is out"
+            else -> "${row.title} · Episode ${row.episode} is out"
+        }
     }
 }

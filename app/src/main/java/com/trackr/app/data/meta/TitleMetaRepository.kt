@@ -9,6 +9,7 @@ import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.model.SeasonInfo
 import com.trackr.app.domain.model.TitleMeta
+import com.trackr.app.domain.util.SeasonProgress
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -30,7 +31,7 @@ class TitleMetaRepository @Inject constructor(private val dao: TitleMetaDao, pri
             TitleMetaEntity(
                 item.source.key, item.externalId,
                 genres = item.genres.joinToString(SEP),
-                seasonEpisodes = regularSeasons(seasons).joinToString(","),
+                seasonEpisodes = SeasonProgress.regular(seasons).joinToString(","),
                 fetchedAt = now,
             ),
         )
@@ -63,10 +64,6 @@ class TitleMetaRepository @Inject constructor(private val dao: TitleMetaDao, pri
         const val MAX_PER_RUN = 120
         const val SEASON_REFRESH_MS = 7L * 24 * 60 * 60 * 1000
         private const val SEP = "\u001F"
-
-        /** Episode counts of the numbered seasons in order; season 0 is specials. */
-        fun regularSeasons(seasons: List<SeasonInfo>): List<Int> =
-            seasons.filter { it.number > 0 && it.episodeCount > 0 }.sortedBy { it.number }.map { it.episodeCount }
 
         fun TitleMetaEntity.toDomain() = TitleMeta(
             genres = genres.split(SEP).filter { it.isNotBlank() },

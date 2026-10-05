@@ -2,6 +2,7 @@ package com.trackr.app.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trackr.app.data.meta.TitleMetaRepository
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.MediaRepository
 import com.trackr.app.data.repository.SearchFilter
@@ -53,6 +54,8 @@ data class HomeUiState(
     val discoverGenre: Genre? = null,
     val forYou: ForYouRow = ForYouRow(),
     val continueWatching: List<ListEntry> = emptyList(),
+    /** Season episode counts per entry key, for "S2 · E5" on Continue Watching. */
+    val seasons: Map<String, List<Int>> = emptyMap(),
     val listKeys: Set<String> = emptySet(),
     val streak: Int = 0,
 ) {
@@ -66,6 +69,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val media: MediaRepository,
     private val lists: ListRepository,
+    titleMeta: TitleMetaRepository,
 ) : ViewModel() {
     private fun paginator(fetch: suspend (page: Int, force: Boolean) -> MediaPage) =
         Paginator(viewModelScope, { it.userMessage() }, fetch)
@@ -115,8 +119,8 @@ class HomeViewModel @Inject constructor(
     private val discoverOptions = combine(discoverFilter, discoverGenre) { f, g -> f to g }
 
     val state: StateFlow<HomeUiState> = combine(
-        sectionStates, discover.state, discoverOptions, lists.entries, forYouRecs,
-    ) { secs, feed, (filter, genre), entries, (seeds, recs) ->
+        sectionStates, discover.state, discoverOptions, combine(lists.entries, titleMeta.all, ::Pair), forYouRecs,
+    ) { secs, feed, (filter, genre), (entries, meta), (seeds, recs) ->
         val listKeys = entries.map { it.key }.toSet()
         HomeUiState(
             sections = secs,
@@ -129,6 +133,7 @@ class HomeViewModel @Inject constructor(
                 loading = recs is Load.Loading && seeds.isNotEmpty(),
             ),
             continueWatching = entries.filter { it.status == ListStatus.WATCHING }.sortedByDescending { it.updatedAt },
+            seasons = meta.mapValues { it.value.seasonEpisodes }.filterValues { it.isNotEmpty() },
             listKeys = listKeys,
             streak = computeStreak(entries.map { it.updatedAt }),
         )

@@ -13,4 +13,6 @@ data class AiringEntity(
     val airAt: Long,
     val precision: String,
     val notified: Boolean = false,
+    /** See MediaItem.airingSeason. */
+    val season: Int? = null,
 )

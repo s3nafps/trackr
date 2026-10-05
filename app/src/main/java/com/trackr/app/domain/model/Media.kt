@@ -17,6 +17,8 @@ data class MediaItem(
     val runtimeMinutes: Int? = null,
     /** Extra line: studio, network, "3 Seasons", ... */
     val subtitle: String? = null,
+    /** TMDB numbers episodes within a season: the season of [airingEpisode]. Null when numbered across the show (AniList). */
+    val airingSeason: Int? = null,
     val airingEpisode: Int? = null,
     /** Epoch seconds. */
     val airingAtEpoch: Long? = null,

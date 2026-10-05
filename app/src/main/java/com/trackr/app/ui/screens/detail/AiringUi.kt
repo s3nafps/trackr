@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.trackr.app.domain.util.SeasonProgress
 
 enum class BellState { Hidden, Off, On }
 
@@ -22,7 +23,7 @@ fun airingLine(
 
     if (item.type == MediaType.MOVIE) return "Releases ${fmt("MMM d")}"
 
-    val ep = item.airingEpisode?.let { "Ep $it · " }.orEmpty()
+    val ep = SeasonProgress.upcoming(item.airingSeason, item.airingEpisode)?.let { "$it · " }.orEmpty()
     val `when` = if (item.airingDateOnly) {
         fmt("EEE, MMM d")
     } else {
