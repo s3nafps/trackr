@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Recommend
 import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -37,10 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.data.repository.SearchFilter
+import com.trackr.app.domain.model.Genre
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaType
@@ -48,6 +51,7 @@ import com.trackr.app.domain.util.PageState
 import com.trackr.app.ui.components.AiringCard
 import com.trackr.app.ui.components.ContinueWatchingCard
 import com.trackr.app.ui.components.ErrorState
+import com.trackr.app.ui.components.GenreChips
 import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.PagingFooter
 import com.trackr.app.ui.components.PosterCard
@@ -94,7 +98,7 @@ fun HomeScreen(
             if (status == ListStatus.WATCHING) ensureNotifications {}
         },
         onPlusOne = vm::plusOne,
-        onDiscoverFilter = vm::setDiscoverFilter, onDiscoverMore = vm::discoverMore, onDiscoverRetry = vm::retryDiscover,
+        onDiscoverFilter = vm::setDiscoverFilter, onDiscoverGenre = vm::setDiscoverGenre, onDiscoverMore = vm::discoverMore, onDiscoverRetry = vm::retryDiscover,
         onOpenDetail = onOpenDetail, onOpenEntry = onOpenEntry, onSeeAllWatching = onSeeAllWatching,
         onExplore = onExplore, onOpenProfile = onOpenProfile,
     )
@@ -112,6 +116,7 @@ fun HomeContent(
     onTrack: (MediaItem, ListStatus, rating: Int?, progress: Int) -> Unit,
     onPlusOne: (com.trackr.app.domain.model.ListEntry) -> Unit,
     onDiscoverFilter: (SearchFilter) -> Unit,
+    onDiscoverGenre: (Genre?) -> Unit,
     onDiscoverMore: () -> Unit,
     onDiscoverRetry: () -> Unit,
     onOpenDetail: (MediaItem) -> Unit,
@@ -163,6 +168,31 @@ fun HomeContent(
                     }
                 }
 
+                val forYou = state.forYou
+                if (forYou.items.isNotEmpty() || forYou.loading) {
+                    item("for-you") {
+                        Column(Modifier.padding(top = SectionGap), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                SectionHeader("For You", icon = Icons.Outlined.Recommend)
+                                if (forYou.because.isNotEmpty()) {
+                                    Text(
+                                        "Because you liked ${forYou.because.take(3).joinToString(", ")}",
+                                        Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                            if (forYou.items.isEmpty()) {
+                                PosterCarouselSkeleton()
+                            } else {
+                                LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    items(forYou.items, key = { it.key }) { item -> MediaPoster(item, item.key in state.listKeys, onOpenDetail, onAdd) }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 item("movies") {
                     PosterSection("Trending Movies", Icons.Outlined.Movie, "Explore", { onExplore(MediaType.MOVIE) }, state.section(HomeSection.MOVIES), state.listKeys, { onRetry(HomeSection.MOVIES) }, { onLoadMore(HomeSection.MOVIES) }, onOpenDetail, onAdd)
                 }
@@ -194,7 +224,7 @@ fun HomeContent(
                     }
                 }
 
-                discoverFeed(state, discoverRows, columns, onDiscoverFilter, onDiscoverMore, onDiscoverRetry, onOpenDetail, onAdd)
+                discoverFeed(state, discoverRows, columns, onDiscoverFilter, onDiscoverGenre, onDiscoverMore, onDiscoverRetry, onOpenDetail, onAdd)
             }
         }
     }
@@ -212,6 +242,7 @@ private fun LazyListScope.discoverFeed(
     rows: List<List<MediaItem>>,
     columns: Int,
     onFilter: (SearchFilter) -> Unit,
+    onGenre: (Genre?) -> Unit,
     onMore: () -> Unit,
     onRetry: () -> Unit,
     onOpen: (MediaItem) -> Unit,
@@ -224,6 +255,7 @@ private fun LazyListScope.discoverFeed(
             LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(SearchFilter.entries) { f -> TrackrChip(f.label, selected = state.discoverFilter == f, onClick = { onFilter(f) }) }
             }
+            GenreChips(state.discoverFilter.type, state.discoverGenre, onGenre)
         }
     }
     when {

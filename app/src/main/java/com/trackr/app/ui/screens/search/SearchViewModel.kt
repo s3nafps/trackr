@@ -8,6 +8,7 @@ import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.MediaRepository
 import com.trackr.app.data.repository.SearchFilter
 import com.trackr.app.data.repository.userMessage
+import com.trackr.app.domain.model.Genre
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaItem
@@ -29,6 +30,8 @@ import javax.inject.Inject
 data class SearchUiState(
     val query: String = "",
     val filter: SearchFilter = SearchFilter.ALL,
+    /** Narrows both lists; null means every genre. */
+    val genre: Genre? = null,
     /** Results for a non-blank query, a page at a time. */
     val results: PageState = PageState.of(emptyList()),
     /** Trending titles shown while the query is blank, also paged. */
@@ -50,38 +53,52 @@ class SearchViewModel @Inject constructor(
         saved.get<String>("f")?.let { runCatching { SearchFilter.valueOf(it) }.getOrNull() } ?: SearchFilter.ALL,
     )
 
+    private val genre = MutableStateFlow(saved.get<String>("g")?.let { runCatching { Genre.valueOf(it) }.getOrNull() })
+
     private val results = Paginator(viewModelScope, { it.userMessage() }) { _, _ -> MediaPage(emptyList(), hasMore = false) }
 
+    // Trending can't be narrowed by genre, so a genre switches the blank screen to that genre's popular titles.
     private val suggestions = Paginator(viewModelScope, { it.userMessage() }) { page, force ->
-        when (val type = filter.value.type) {
-            null -> media.trendingAll(page, force)
+        val type = filter.value.type
+        val g = genre.value
+        when {
+            g != null -> media.popular(type, page, force, g)
+            type == null -> media.trendingAll(page, force)
             else -> media.trending(type, page, force)
         }
     }
 
     init {
         viewModelScope.launch {
-            combine(query.debounce(400), filter) { q, f -> q.trim() to f }.distinctUntilChanged().collect { (q, f) ->
+            combine(query.debounce(400), filter, genre) { q, f, g -> Triple(q.trim(), f, g) }.distinctUntilChanged().collect { (q, f, g) ->
                 if (q.length < 2) {
                     results.clear()
                 } else {
                     results.reset { page, _ ->
-                        media.search(q, f, page).also { if (page == 1 && it.items.isNotEmpty()) prefs.addRecent(q) }
+                        val found = media.search(q, f, page)
+                        if (page == 1 && found.items.isNotEmpty()) prefs.addRecent(q)
+                        // Search APIs can't filter by genre, so results are narrowed here, page by page.
+                        if (g == null) found else found.copy(items = found.items.filter(g::matches))
                     }
                 }
             }
         }
-        viewModelScope.launch { filter.collect { suggestions.reset() } }
+        viewModelScope.launch { combine(filter, genre) { f, g -> f to g }.distinctUntilChanged().collect { suggestions.reset() } }
     }
 
     val state: StateFlow<SearchUiState> = combine(
-        query, filter, results.state, suggestions.state, combine(prefs.recentSearches, lists.entries) { r, e -> r to e },
-    ) { q, f, res, sug, (recents, entries) ->
-        SearchUiState(q, f, if (q.trim().length < 2) PageState.of(emptyList()) else res, sug, recents, entries.associateBy { it.key })
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState(query.value, filter.value))
+        combine(query, filter, genre, ::Triple), results.state, suggestions.state, prefs.recentSearches, lists.entries,
+    ) { (q, f, g), res, sug, recents, entries ->
+        SearchUiState(q, f, g, if (q.trim().length < 2) PageState.of(emptyList()) else res, sug, recents, entries.associateBy { it.key })
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState(query.value, filter.value, genre.value))
 
     fun setQuery(q: String) { query.value = q; saved["q"] = q }
-    fun setFilter(f: SearchFilter) { filter.value = f; saved["f"] = f.name }
+    fun setFilter(f: SearchFilter) {
+        // Drop a genre the new type doesn't have (e.g. Crime for anime) before the lists reload.
+        if (genre.value?.appliesTo(f.type) == false) setGenre(null)
+        filter.value = f; saved["f"] = f.name
+    }
+    fun setGenre(g: Genre?) { genre.value = g; saved["g"] = g?.name }
     fun retry() { results.retry(); suggestions.retry() }
     fun loadMoreResults() = results.loadMore()
     fun loadMoreSuggestions() = suggestions.loadMore()
