@@ -20,6 +20,8 @@ data class PageState(
     val endReached: Boolean = false,
     /** Pages loaded since the last reset; 0 until the first one arrives. */
     val pages: Int = 0,
+    /** Some of [items] are the copy saved on the device because the source couldn't be reached. */
+    val stale: Boolean = false,
 ) {
     /** Nothing to show yet because the first page hasn't arrived. */
     val firstLoad: Boolean get() = items.isEmpty() && pages == 0 && error == null && !endReached
@@ -72,7 +74,10 @@ class Paginator(
                 // Page 1 replaces whatever a refresh kept on screen.
                 val base = if (page == 1) emptyList() else s.items
                 val seen = base.mapTo(HashSet()) { it.key }
-                s.copy(items = base + next.items.filter { seen.add(it.key) }, loading = false, pages = page, endReached = !next.hasMore)
+                s.copy(
+                    items = base + next.items.filter { seen.add(it.key) }, loading = false, pages = page, endReached = !next.hasMore,
+                    stale = next.fromCache || (page > 1 && s.stale),
+                )
             }
         }
     }

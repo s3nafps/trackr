@@ -112,4 +112,16 @@ class PaginatorTest {
         p.loadMore()
         assertEquals(1, calls)
     }
+
+    @Test fun `a page from the saved copy marks the list stale until a fresh page 1 arrives`() = runTest {
+        var offline = true
+        val p = paginator { n, _ -> MediaPage(listOf(item(n)), hasMore = true, fromCache = offline) }
+        p.loadMore()
+        assertTrue(p.state.value.stale)
+        offline = false
+        p.loadMore()
+        assertTrue("page 1 is still the saved copy", p.state.value.stale)
+        p.reset(force = true, keepItems = true)
+        assertFalse(p.state.value.stale)
+    }
 }

@@ -111,6 +111,7 @@ APK's signing SHA-1; it must match the one registered for the Android OAuth clie
 - Only Google accounts listed as OAuth test users can sign in while the consent screen is in *Testing* mode.
 - Genre breakdown isn't shown (genres aren't stored in the list); the profile shows a status breakdown and rating distribution.
   Screen time is an estimate (movie 2h, TV 45 min/ep, anime 24 min/ep).
+- Home and Search show the last results saved on the phone when offline; title pages still need a connection.
 - Your list syncs on open/refresh and pushes after changes (WorkManager, needs network). Friends' activity, reactions,
   comments, recommendations and shared lists update live (Supabase Realtime) only while their screen is open; there are no
   push notifications for social activity yet. Followers and email login are not implemented.

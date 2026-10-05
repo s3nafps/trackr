@@ -1,6 +1,10 @@
 package com.trackr.app.domain.model
 
-/** Unified summary model for TMDB movies/TV and AniList anime. */
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+
+/** Unified summary model for TMDB movies/TV and AniList anime. Serializable so browse results can be saved offline. */
+@Serializable
 data class MediaItem(
     val source: MediaSource,
     val externalId: String,
@@ -76,8 +80,12 @@ data class MediaDetail(
 )
 
 /** Result wrapper so UI can render loading/error/content without exceptions leaking. */
-/** One page of a paged list; [hasMore] says whether asking for the next page is worthwhile. */
-data class MediaPage(val items: List<MediaItem>, val hasMore: Boolean)
+/**
+ * One page of a paged list; [hasMore] says whether asking for the next page is worthwhile. [fromCache] marks a page
+ * served from the copy saved on the device because the source couldn't be reached.
+ */
+@Serializable
+data class MediaPage(val items: List<MediaItem>, val hasMore: Boolean, @Transient val fromCache: Boolean = false)
 
 sealed interface Load<out T> {
     data object Loading : Load<Nothing>
