@@ -9,6 +9,9 @@ import com.trackr.app.data.repository.ProfileRepository
 import com.trackr.app.domain.model.Profile
 import com.trackr.app.domain.model.ProfileStats
 import com.trackr.app.domain.model.StatsCalculator
+import com.trackr.app.domain.util.GenreBreakdown
+import com.trackr.app.domain.util.GenreStats
+import com.trackr.app.data.meta.TitleMetaRepository
 import com.trackr.app.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +26,7 @@ import javax.inject.Inject
 data class ProfileUiState(
     val me: Profile? = null,
     val stats: ProfileStats = StatsCalculator.compute(emptyList()),
+    val genres: GenreBreakdown = GenreBreakdown(),
     val theme: ThemeMode = ThemeMode.DARK,
     val editBusy: Boolean = false,
     val editError: String? = null,
@@ -38,11 +42,17 @@ class ProfileViewModel @Inject constructor(
     private val lists: ListRepository,
     private val prefs: UserPrefs,
     private val airingRefresh: AiringRefreshScheduler,
+    private val titleMeta: TitleMetaRepository,
 ) : ViewModel() {
     private val local = MutableStateFlow(ProfileUiState())
 
-    val state: StateFlow<ProfileUiState> = combine(local, profiles.me, lists.entries, prefs.themeMode, prefs.airingEnabled) { l, me, entries, theme, airing ->
-        l.copy(me = me, stats = StatsCalculator.compute(entries), theme = theme, airingEnabled = airing)
+    val state: StateFlow<ProfileUiState> = combine(
+        local, profiles.me, combine(lists.entries, titleMeta.all, ::Pair), prefs.themeMode, prefs.airingEnabled,
+    ) { l, me, (entries, meta), theme, airing ->
+        l.copy(
+            me = me, stats = StatsCalculator.compute(entries), genres = GenreStats.breakdown(entries, meta),
+            theme = theme, airingEnabled = airing,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileUiState())
 
     fun setTheme(mode: ThemeMode) { viewModelScope.launch { prefs.setThemeMode(mode) } }

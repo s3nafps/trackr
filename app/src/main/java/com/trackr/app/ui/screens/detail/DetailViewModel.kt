@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trackr.app.data.local.UserPrefs
+import com.trackr.app.data.meta.TitleMetaRepository
 import com.trackr.app.data.realtime.LiveFollower
 import com.trackr.app.data.realtime.LiveTables
 import com.trackr.app.data.realtime.LiveUpdates
@@ -65,6 +66,7 @@ class DetailViewModel @Inject constructor(
     private val friendsRepo: FriendsRepository,
     private val sharedLists: SharedListsRepository,
     live: LiveUpdates,
+    private val titleMeta: TitleMetaRepository,
 ) : ViewModel() {
     private val liveFollower = LiveFollower(live, LiveTables.REACTIONS, LiveTables.COMMENTS)
 
@@ -121,6 +123,10 @@ class DetailViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Load.Failure(e.userMessage())
+            }
+            // A listed title's genres and seasons are now at hand: store them for stats and season progress.
+            (detail.value as? Load.Success)?.data?.let { d ->
+                if (lists.entry(source.key, id).first() != null) runCatching { titleMeta.record(d.item, d.seasons) }
             }
         }
         viewModelScope.launch {
@@ -231,8 +237,11 @@ class DetailViewModel @Inject constructor(
     fun closeComments() = commentsCtl.close()
 
     fun save(status: ListStatus, rating: Int?, progress: Int) {
-        val item = (detail.value as? Load.Success)?.data?.item ?: return
-        viewModelScope.launch { lists.save(item, status, rating, progress) }
+        val d = (detail.value as? Load.Success)?.data ?: return
+        viewModelScope.launch {
+            lists.save(d.item, status, rating, progress)
+            runCatching { titleMeta.record(d.item, d.seasons) }
+        }
     }
 
     fun remove() {

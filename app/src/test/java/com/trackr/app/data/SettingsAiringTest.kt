@@ -33,7 +33,7 @@ class SettingsAiringTest {
         val profiles = mockk<ProfileRepository>(relaxed = true)
         val lists = mockk<ListRepository>(relaxed = true)
         every { lists.entries } returns emptyFlow()
-        val vm = ProfileViewModel(profiles, lists, prefs, refresh)
+        val vm = ProfileViewModel(profiles, lists, prefs, refresh, mockk(relaxed = true))
         vm.setAiringEnabled(false)
         coVerify { prefs.setAiringEnabled(false) }
         verify { refresh.refreshNow() }
