@@ -6,6 +6,8 @@ import com.trackr.app.data.remote.tmdb.TmdbApi
 import com.trackr.app.data.remote.tmdb.TmdbPage
 import com.trackr.app.data.remote.tmdb.TmdbResult
 import com.trackr.app.data.util.TtlCache
+import com.trackr.app.domain.model.Genre
+import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaPage
@@ -70,17 +72,27 @@ class MediaRepository @Inject constructor(
         }
     }
 
-    /** Popular titles of one type (all of them when [type] is null), for browsing. */
-    suspend fun popular(type: MediaType?, page: Int, force: Boolean = false): MediaPage = when (type) {
-        null -> merged(MediaType.entries.map { t -> suspend { popular(t, page, force) } }, ::isTmdbAnime)
-        else -> cached("p:$type:$page", force) {
+    /**
+     * Popular titles of one type (all of them when [type] is null), for browsing. With a [genre], only the sources that
+     * have that genre are asked.
+     */
+    suspend fun popular(type: MediaType?, page: Int, force: Boolean = false, genre: Genre? = null): MediaPage = when (type) {
+        null -> merged(
+            MediaType.entries.filter { genre?.appliesTo(it) != false }.map { t -> suspend { popular(t, page, force, genre) } },
+            ::isTmdbAnime,
+        )
+        else -> cached("p:$type:${genre?.name}:$page", force) {
             when (type) {
-                MediaType.MOVIE -> tmdb.discoverMovies(page).toPage(MediaType.MOVIE)
-                MediaType.TV -> tmdb.discoverTv(page).toPage(MediaType.TV)
-                MediaType.ANIME -> anilist.popular(page)
+                MediaType.MOVIE -> tmdb.discoverMovies(page, withGenres = genre?.tmdbMovie?.toString()).toPage(MediaType.MOVIE)
+                MediaType.TV -> tmdb.discoverTv(page, withGenres = genre?.tmdbTv?.toString()).toPage(MediaType.TV)
+                MediaType.ANIME -> anilist.popular(page, genre = genre?.anilist)
             }
         }
     }
+
+    /** What TMDB or AniList recommends for a title in the list (from its cached detail). */
+    suspend fun recommendationsFor(entry: ListEntry, force: Boolean = false): List<MediaItem> =
+        detail(entry.source, entry.externalId, entry.mediaType, force).recommendations
 
     /** All types interleaved: page [page] of each, as one page. */
     suspend fun trendingAll(page: Int, force: Boolean = false): MediaPage =

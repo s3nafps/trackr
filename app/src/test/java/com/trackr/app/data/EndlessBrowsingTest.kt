@@ -5,6 +5,8 @@ import com.trackr.app.data.local.UserPrefs
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.MediaRepository
 import com.trackr.app.data.repository.SearchFilter
+import com.trackr.app.domain.model.Genre
+import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaPage
@@ -46,7 +48,10 @@ class EndlessBrowsingTest {
     private val media = mockk<MediaRepository> {
         coEvery { trending(any(), any(), any()) } answers { page(firstArg<MediaType>().key, secondArg()) }
         coEvery { airingThisWeek(any(), any()) } returns emptyList()
-        coEvery { popular(any(), any(), any()) } answers { page("pop-${firstArg<MediaType?>()?.key ?: "all"}-", secondArg()) }
+        coEvery { popular(any(), any(), any(), any()) } answers {
+            page("pop-${firstArg<MediaType?>()?.key ?: "all"}-${arg<Genre?>(3)?.name?.lowercase()?.plus("-").orEmpty()}", secondArg())
+        }
+        coEvery { recommendationsFor(any(), any()) } answers { listOf(item("rec-${firstArg<ListEntry>().externalId}-", 1), item("common", 0)) }
         coEvery { trendingAll(any(), any()) } answers { page("all", firstArg()) }
         coEvery { search(any(), any(), any<Int>()) } answers { page("q-${firstArg<String>()}-", thirdArg()) }
     }
@@ -58,7 +63,7 @@ class EndlessBrowsingTest {
         backgroundScope.launch { vm.state.collect {} }
         assertEquals(listOf("movie1", "movie2"), ids(vm.state.value.section(HomeSection.MOVIES).items))
         assertTrue(vm.state.value.discover.firstLoad)
-        coVerify(exactly = 0) { media.popular(any(), any(), any()) }
+        coVerify(exactly = 0) { media.popular(any(), any(), any(), any()) }
 
         vm.loadMore(HomeSection.MOVIES)
         assertEquals(listOf("movie1", "movie2", "movie3", "movie4"), ids(vm.state.value.section(HomeSection.MOVIES).items))
@@ -83,7 +88,7 @@ class EndlessBrowsingTest {
         vm.refresh()
         coVerify { media.trending(MediaType.TV, 1, true) }
         assertEquals(listOf("tv1", "tv2"), ids(vm.state.value.section(HomeSection.TV).items))
-        coVerify(exactly = 0) { media.popular(any(), any(), any()) }
+        coVerify(exactly = 0) { media.popular(any(), any(), any(), any()) }
     }
 
     @Test fun `search results keep paging for the same query, and trending fills the blank screen`() = runTest(main) {
@@ -109,5 +114,40 @@ class EndlessBrowsingTest {
         coVerify { lists.save(show, ListStatus.WATCHING, 8, 3) }
         HomeViewModel(media, lists).track(show, ListStatus.COMPLETED, null, 0)
         coVerify { lists.save(show, ListStatus.COMPLETED, null, 0) }
+    }
+
+    @Test fun `discover genres narrow the feed and are dropped when the type doesn't have them`() = runTest(main) {
+        val vm = HomeViewModel(media, lists)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.setDiscoverGenre(Genre.CRIME)
+        assertEquals(listOf("pop-all-crime-1", "pop-all-crime-2"), ids(vm.state.value.discover.items))
+        vm.setDiscoverFilter(SearchFilter.ANIME)
+        assertEquals(null, vm.state.value.discoverGenre)
+        assertEquals(listOf("pop-anime-1", "pop-anime-2"), ids(vm.state.value.discover.items))
+    }
+
+    @Test fun `for you merges recommendations for liked titles and hides what's already listed`() = runTest(main) {
+        val liked = ListEntry(MediaSource.TMDB, "dune", MediaType.MOVIE, "Dune", null, null, ListStatus.COMPLETED, 9, 0, null, 1)
+        val listed = ListEntry(MediaSource.TMDB, "common0", MediaType.MOVIE, "Listed", null, null, ListStatus.PLAN_TO_WATCH, null, 0, null, 2)
+        every { lists.entries } returns flowOf(listOf(liked, listed))
+        val vm = HomeViewModel(media, lists)
+        backgroundScope.launch { vm.state.collect {} }
+        val row = vm.state.value.forYou
+        assertEquals(listOf("Dune"), row.because)
+        assertEquals(listOf("rec-dune-1"), ids(row.items))
+        assertTrue(!row.loading)
+    }
+
+    @Test fun `a search genre filters results and switches the blank screen to that genre's popular titles`() = runTest(main) {
+        coEvery { media.search(any(), any(), any<Int>()) } returns MediaPage(
+            listOf(item("x", 1).copy(genres = listOf("Comedy")), item("x", 2).copy(genres = listOf("Drama"))), hasMore = false,
+        )
+        val vm = SearchViewModel(SavedStateHandle(), media, lists, prefs)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.setGenre(Genre.COMEDY)
+        assertEquals(listOf("pop-all-comedy-1", "pop-all-comedy-2"), ids(vm.state.value.suggestions.items))
+        vm.setQuery("funny")
+        advanceTimeBy(500)
+        assertEquals(listOf("x1"), ids(vm.state.value.results.items))
     }
 }
