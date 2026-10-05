@@ -1,5 +1,6 @@
 package com.trackr.app.data
 
+import com.trackr.app.data.cache.PageStore
 import com.trackr.app.data.remote.anilist.AniListClient
 import com.trackr.app.data.remote.tmdb.TmdbApi
 import com.trackr.app.data.remote.tmdb.TmdbPage
@@ -143,5 +144,38 @@ class MediaRepositoryTest {
 
         coEvery { anilist.popular(1, any(), "Sci-Fi") } returns MediaPage(listOf(anime("5")), hasMore = true)
         assertEquals(listOf("anilist:5"), repo.popular(MediaType.ANIME, 1, genre = Genre.SCI_FI).items.map { it.key })
+    }
+
+    private class MemoryStore : PageStore {
+        val pages = mutableMapOf<String, MediaPage>()
+        override suspend fun get(key: String) = pages[key]
+        override suspend fun put(key: String, page: MediaPage) { pages[key] = page }
+    }
+
+    @Test fun `pages are saved, and served from the saved copy when offline after a restart`() = runTest {
+        val store = MemoryStore()
+        coEvery { tmdb.trendingMovies(1) } returns TmdbPage(page = 1, results = listOf(result(1, "A")), totalPages = 2)
+        val online = MediaRepository(tmdb, anilist, store).trending(MediaType.MOVIE, 1)
+        assertTrue(!online.fromCache)
+
+        coEvery { tmdb.trendingMovies(1) } throws UnknownHostException()
+        val restarted = MediaRepository(tmdb, anilist, store) // nothing in memory any more
+        val offline = restarted.trending(MediaType.MOVIE, 1)
+        assertEquals(listOf("tmdb:1"), offline.items.map { it.key })
+        assertTrue(offline.fromCache)
+        assertTrue(offline.hasMore)
+    }
+
+    @Test fun `searches fall back to the saved copy too, and fail when there is none`() = runTest {
+        val store = MemoryStore()
+        coEvery { tmdb.searchMulti("dune", 1, any()) } returns TmdbPage(results = listOf(result(5, "Dune")))
+        coEvery { anilist.search("dune", 1, any()) } returns MediaPage(emptyList(), hasMore = false)
+        MediaRepository(tmdb, anilist, store).search("dune", SearchFilter.ALL, 1)
+
+        coEvery { tmdb.searchMulti(any(), any(), any()) } throws UnknownHostException()
+        coEvery { anilist.search(any(), any(), any()) } throws UnknownHostException()
+        val restarted = MediaRepository(tmdb, anilist, store)
+        assertEquals(listOf("tmdb:5"), restarted.search("dune", SearchFilter.ALL, 1).items.map { it.key })
+        try { restarted.search("never searched", SearchFilter.ALL, 1); fail() } catch (e: UnknownHostException) { /* expected */ }
     }
 }

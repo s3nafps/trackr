@@ -59,6 +59,7 @@ import com.trackr.app.ui.components.GenreChips
 import com.trackr.app.ui.components.ListRowSkeleton
 import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.MediaResultCard
+import com.trackr.app.ui.components.OfflineNote
 import com.trackr.app.ui.components.PagingFooter
 import com.trackr.app.ui.components.rememberNotificationPermission
 import com.trackr.app.ui.components.TrackSheet
@@ -144,6 +145,7 @@ fun SearchContent(
         GenreChips(state.filter.type, state.genre, vm.setGenre, Modifier.padding(bottom = 12.dp))
 
         val blank = state.query.trim().length < 2
+        if ((if (blank) state.suggestions else state.results).stale) OfflineNote(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (blank) {
                 if (state.recents.isNotEmpty()) item("recents") {

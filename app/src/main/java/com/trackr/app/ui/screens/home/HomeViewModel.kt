@@ -62,6 +62,9 @@ data class HomeUiState(
     fun section(s: HomeSection): PageState = sections[s] ?: PageState()
 
     val refreshing: Boolean get() = sections.values.any { it.refreshing } || discover.refreshing
+
+    /** Some of what's shown is the saved copy, because the sources couldn't be reached. */
+    val offline: Boolean get() = sections.values.any { it.stale } || discover.stale
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
