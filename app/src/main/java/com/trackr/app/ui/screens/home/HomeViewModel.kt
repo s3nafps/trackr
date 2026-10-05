@@ -101,8 +101,9 @@ class HomeViewModel @Inject constructor(
         discover.reset()
     }
 
-    fun quickAdd(item: MediaItem) {
-        viewModelScope.launch { lists.save(item, ListStatus.PLAN_TO_WATCH, null, 0) }
+    /** Adds [item] with the status, rating and progress picked in the sheet. */
+    fun track(item: MediaItem, status: ListStatus, rating: Int?, progress: Int) {
+        viewModelScope.launch { lists.save(item, status, rating, progress) }
     }
 
     fun plusOne(entry: ListEntry) {

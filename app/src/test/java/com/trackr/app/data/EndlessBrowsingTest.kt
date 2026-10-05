@@ -5,6 +5,7 @@ import com.trackr.app.data.local.UserPrefs
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.MediaRepository
 import com.trackr.app.data.repository.SearchFilter
+import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaPage
 import com.trackr.app.domain.model.MediaSource
@@ -100,5 +101,13 @@ class EndlessBrowsingTest {
         vm.setQuery("")
         advanceTimeBy(500)
         assertTrue(vm.state.value.results.items.isEmpty())
+    }
+
+    @Test fun `adding from search or home saves the status, rating and progress picked in the sheet`() = runTest(main) {
+        val show = item("show", 1)
+        SearchViewModel(SavedStateHandle(), media, lists, prefs).track(show, ListStatus.WATCHING, 8, 3)
+        coVerify { lists.save(show, ListStatus.WATCHING, 8, 3) }
+        HomeViewModel(media, lists).track(show, ListStatus.COMPLETED, null, 0)
+        coVerify { lists.save(show, ListStatus.COMPLETED, null, 0) }
     }
 }
