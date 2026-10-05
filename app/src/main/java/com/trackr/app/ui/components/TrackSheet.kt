@@ -43,6 +43,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
+import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.ui.theme.RatingAmber
 import com.trackr.app.ui.theme.SheetShape
 import com.trackr.app.ui.theme.color
@@ -172,6 +174,14 @@ fun TrackSheet(
         }
     }
 }
+
+/** [TrackSheet] for a title picked from a list (a search result or a poster): its status, rating and progress are chosen before it is saved. */
+@Composable
+fun TrackSheet(item: MediaItem, entry: ListEntry?, onDismiss: () -> Unit, onSave: (status: ListStatus, rating: Int?, progress: Int) -> Unit) =
+    TrackSheet(
+        title = item.title, initial = entry, totalEpisodes = entry?.totalEpisodes ?: item.totalEpisodes,
+        showProgress = item.type != MediaType.MOVIE, onDismiss = onDismiss, onSave = onSave,
+    )
 
 /** Dual-button segmented module: − value +. */
 @Composable

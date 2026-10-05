@@ -55,7 +55,8 @@ fun MediaResultCard(
     item: MediaItem,
     entry: ListEntry?,
     onClick: () -> Unit,
-    onQuickAdd: () -> Unit,
+    /** "Add to List" (no entry yet) or a tap on the status badge: choose status, rating and progress. */
+    onTrack: () -> Unit,
     onMarkCompleted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -90,7 +91,7 @@ fun MediaResultCard(
                     )
                     Row(
                         Modifier.height(36.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.primaryContainer)
-                            .clickable(onClick = onQuickAdd).padding(horizontal = 12.dp),
+                            .clickable(onClick = onTrack).padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Icon(Icons.Outlined.BookmarkAdd, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -99,6 +100,7 @@ fun MediaResultCard(
                 } else {
                     StatusBadge(
                         entry.status,
+                        Modifier.clip(PillShape).clickable(onClickLabel = "Change status", onClick = onTrack),
                         suffix = if (entry.status == ListStatus.WATCHING && entry.totalEpisodes != null && entry.mediaType != MediaType.MOVIE)
                             "Ep ${entry.progress}/${entry.totalEpisodes}" else null,
                     )
