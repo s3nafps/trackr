@@ -66,6 +66,34 @@ class TmdbMapperTest {
         assertEquals(45, d.item.runtimeMinutes)
         assertEquals(listOf("Drama"), d.item.genres)
     }
+
+    @Test fun `aired episodes count the regular seasons before the last aired episode`() {
+        val seasons = TmdbMapper.toDetail(
+            TmdbDetail(
+                id = 1, name = "Show",
+                seasons = listOf(
+                    TmdbSeasonDto(0, "Specials", 3), TmdbSeasonDto(1, "S1", 10), TmdbSeasonDto(2, "S2", 10),
+                    TmdbSeasonDto(3, "S3", 10), TmdbSeasonDto(4, "S4", 10), TmdbSeasonDto(5, "S5", 8), // S5 announced
+                ),
+                lastEpisodeToAir = TmdbEpisodeStub(airDate = "2025-06-01", episodeNumber = 10, seasonNumber = 4),
+            ),
+            MediaType.TV,
+        )
+        assertEquals(40, seasons.airedEpisodes)
+        assertEquals(13, TmdbMapper.airedEpisodes(TmdbEpisodeStub(episodeNumber = 3, seasonNumber = 2), seasons.seasons))
+        assertNull(TmdbMapper.airedEpisodes(TmdbEpisodeStub(episodeNumber = 1, seasonNumber = 0), seasons.seasons)) // a special
+        assertNull(TmdbMapper.airedEpisodes(null, seasons.seasons))
+        assertNull(TmdbMapper.toDetail(TmdbDetail(id = 2, title = "Film"), MediaType.MOVIE).airedEpisodes)
+    }
+
+    @Test fun `anime aired episodes come from the next airing episode or the status`() {
+        assertEquals(7, AniListMapper.airedEpisodes("RELEASING", nextEpisode = 8, episodes = 12))
+        assertEquals(0, AniListMapper.airedEpisodes("NOT_YET_RELEASED", nextEpisode = null, episodes = 12))
+        assertEquals(0, AniListMapper.airedEpisodes("NOT_YET_RELEASED", nextEpisode = 1, episodes = 12))
+        assertEquals(12, AniListMapper.airedEpisodes("FINISHED", nextEpisode = null, episodes = 12))
+        assertNull(AniListMapper.airedEpisodes("RELEASING", nextEpisode = null, episodes = null))
+        assertNull(AniListMapper.airedEpisodes("HIATUS", nextEpisode = null, episodes = 24))
+    }
 }
 
 class UtilTest {

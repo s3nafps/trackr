@@ -126,7 +126,7 @@ class DetailViewModel @Inject constructor(
             }
             // A listed title's genres and seasons are now at hand: store them for stats and season progress.
             (detail.value as? Load.Success)?.data?.let { d ->
-                if (lists.entry(source.key, id).first() != null) runCatching { titleMeta.record(d.item, d.seasons) }
+                if (lists.entry(source.key, id).first() != null) runCatching { titleMeta.record(d.item, d.seasons, d.airedEpisodes) }
             }
         }
         viewModelScope.launch {
@@ -240,7 +240,7 @@ class DetailViewModel @Inject constructor(
         val d = (detail.value as? Load.Success)?.data ?: return
         viewModelScope.launch {
             lists.save(d.item, status, rating, progress)
-            runCatching { titleMeta.record(d.item, d.seasons) }
+            runCatching { titleMeta.record(d.item, d.seasons, d.airedEpisodes) }
         }
     }
 

@@ -25,32 +25,34 @@ class TitleMetaRepository @Inject constructor(private val dao: TitleMetaDao, pri
     /** Keyed like [ListEntry.key] ("source:externalId"). */
     val all: Flow<Map<String, TitleMeta>> = dao.observeAll().map { rows -> rows.associate { "${it.source}:${it.externalId}" to it.toDomain() } }
 
-    /** Stores what a title's detail says: its genres and, for TV, its regular seasons' episode counts. */
-    suspend fun record(item: MediaItem, seasons: List<SeasonInfo>, now: Long = System.currentTimeMillis()) {
+    /** Stores what a title's detail says: its genres, for TV its regular seasons' episode counts, and how many episodes are out. */
+    suspend fun record(item: MediaItem, seasons: List<SeasonInfo>, airedEpisodes: Int? = null, now: Long = System.currentTimeMillis()) {
         dao.upsert(
             TitleMetaEntity(
                 item.source.key, item.externalId,
                 genres = item.genres.joinToString(SEP),
                 seasonEpisodes = SeasonProgress.regular(seasons).joinToString(","),
                 fetchedAt = now,
+                airedEpisodes = airedEpisodes,
             ),
         )
     }
 
     /**
-     * Fetches details for listed titles with nothing stored yet, and refreshes the seasons of TV shows being watched
-     * (new seasons appear) once a week. Titles that fail are skipped until the next run. Returns how many are still due.
+     * Fetches details for listed titles with nothing stored yet, and refreshes shows and anime being watched: once a
+     * week (new seasons appear), or once a day when you're caught up, so the next episode shows up soon after it airs.
+     * Titles that fail are skipped until the next run. Returns how many are still due.
      */
     suspend fun backfill(entries: List<ListEntry>, now: Long = System.currentTimeMillis(), max: Int = MAX_PER_RUN): Int {
         val stored = dao.getAll().associateBy { it.source to it.externalId }
         val due = entries.filter { e ->
             val m = stored[e.source.key to e.externalId]
-            m == null || (e.mediaType == MediaType.TV && e.status == ListStatus.WATCHING && now - m.fetchedAt > SEASON_REFRESH_MS)
+            m == null || (e.mediaType != MediaType.MOVIE && e.status == ListStatus.WATCHING && now - m.fetchedAt > refreshAfter(e, m))
         }
         for (e in due.take(max)) {
             try {
                 val d = media.detail(e.source, e.externalId, e.mediaType)
-                record(d.item, d.seasons, now)
+                record(d.item, d.seasons, d.airedEpisodes, now)
             } catch (c: CancellationException) {
                 throw c
             } catch (_: Exception) {
@@ -60,15 +62,23 @@ class TitleMetaRepository @Inject constructor(private val dao: TitleMetaDao, pri
         return (due.size - max).coerceAtLeast(0)
     }
 
+    /** Daily when caught up or when what's out isn't known yet (stored before it was recorded); otherwise weekly. */
+    private fun refreshAfter(e: ListEntry, m: TitleMetaEntity): Long {
+        val aired = m.airedEpisodes
+        return if (aired == null || e.progress >= aired) CAUGHT_UP_REFRESH_MS else SEASON_REFRESH_MS
+    }
+
     companion object {
         const val MAX_PER_RUN = 120
         const val SEASON_REFRESH_MS = 7L * 24 * 60 * 60 * 1000
+        const val CAUGHT_UP_REFRESH_MS = 20L * 60 * 60 * 1000
         private const val SEP = "\u001F"
 
         fun TitleMetaEntity.toDomain() = TitleMeta(
             genres = genres.split(SEP).filter { it.isNotBlank() },
             seasonEpisodes = seasonEpisodes.split(',').mapNotNull { it.trim().toIntOrNull() },
             fetchedAt = fetchedAt,
+            airedEpisodes = airedEpisodes,
         )
     }
 }

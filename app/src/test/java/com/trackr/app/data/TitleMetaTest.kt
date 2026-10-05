@@ -58,7 +58,8 @@ class TitleMetaTest {
 
     @Test fun `stored titles aren't fetched again, except watched TV shows after a week`() = runTest {
         coEvery { media.detail(any(), any(), any(), any(), any()) } answers {
-            detail(secondArg(), thirdArg(), listOf("Drama"), listOf(season(1, 10)))
+            // 10 out, and the entries are at episode 0: behind, so the weekly refresh applies.
+            detail(secondArg(), thirdArg(), listOf("Drama"), listOf(season(1, 10))).copy(airedEpisodes = 10)
         }
         val entries = listOf(entry("1", MediaType.TV, ListStatus.WATCHING), entry("2", MediaType.TV, ListStatus.COMPLETED))
         repo.backfill(entries, now = 0)
@@ -76,5 +77,32 @@ class TitleMetaTest {
         assertEquals(3, repo.backfill(entries, now = 1, max = 2))
         assertEquals(1, repo.backfill(entries, now = 1, max = 2))
         assertEquals(0, repo.backfill(entries, now = 1, max = 2))
+    }
+
+    @Test fun `caught-up shows and anime are refreshed daily, and the aired count is stored`() = runTest {
+        var aired = 10
+        coEvery { media.detail(any(), any(), any(), any(), any()) } answers {
+            detail(secondArg(), thirdArg(), listOf("Drama"), listOf(season(1, 10), season(2, 10))).copy(airedEpisodes = aired)
+        }
+        val caughtUp = entry("1", MediaType.ANIME, ListStatus.WATCHING).copy(progress = 10)
+        val behind = entry("2", MediaType.TV, ListStatus.WATCHING).copy(progress = 3)
+        repo.backfill(listOf(caughtUp, behind), now = 0)
+        assertEquals(10, repo.all.first()["tmdb:1"]!!.airedEpisodes)
+
+        aired = 11
+        repo.backfill(listOf(caughtUp, behind), now = TitleMetaRepository.CAUGHT_UP_REFRESH_MS + 1)
+        coVerify(exactly = 2) { media.detail(MediaSource.TMDB, "1", any(), any(), any()) }
+        coVerify(exactly = 1) { media.detail(MediaSource.TMDB, "2", any(), any(), any()) }
+        assertEquals(11, repo.all.first()["tmdb:1"]!!.airedEpisodes)
+    }
+
+    @Test fun `details stored without an aired count are refreshed daily until they have one`() = runTest {
+        coEvery { media.detail(any(), any(), any(), any(), any()) } answers {
+            detail(secondArg(), thirdArg(), listOf("Drama"), listOf(season(1, 10)))
+        }
+        val watching = listOf(entry("1", MediaType.TV, ListStatus.WATCHING))
+        repo.backfill(watching, now = 0)
+        repo.backfill(watching, now = TitleMetaRepository.CAUGHT_UP_REFRESH_MS + 1)
+        coVerify(exactly = 2) { media.detail(MediaSource.TMDB, "1", any(), any(), any()) }
     }
 }
