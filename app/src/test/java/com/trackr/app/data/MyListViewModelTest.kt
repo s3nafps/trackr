@@ -111,7 +111,7 @@ class MyListViewModelTest {
         val remote = mockk<SupabaseListRemote>()
         coEvery { remote.fetchAll(any()) } throws java.io.IOException("offline")
         val r = ListRepository(dao, remote, auth, mockk(relaxed = true), mockk(relaxed = true))
-        val vm = MyListViewModel(SavedStateHandle(), r, airing())
+        val vm = MyListViewModel(SavedStateHandle(), r, airing(), meta)
         vm.refresh(silent = false)
         vm.state.test {
             var s = awaitItem()
