@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.trackr.app.domain.model.ListStatus
+import com.trackr.app.domain.util.GenreBreakdown
 import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.RatingAmber
 import com.trackr.app.ui.theme.color
@@ -76,6 +77,29 @@ fun StatusBreakdown(counts: Map<ListStatus, Int>, modifier: Modifier = Modifier)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (c == 1) "1 title" else "$c titles", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("${c * 100 / total}%", style = MaterialTheme.typography.labelLarge, color = s.color(), modifier = Modifier.padding(start = 4.dp))
+                }
+            }
+        }
+    }
+}
+
+/** Horizontal bars for the most common genres, longest first; each shows the share of titles in that genre. */
+@Composable
+fun GenreChart(breakdown: GenreBreakdown, modifier: Modifier = Modifier) {
+    val max = (breakdown.top.maxOfOrNull { it.titles } ?: 0).coerceAtLeast(1)
+    val counted = breakdown.counted.coerceAtLeast(1)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        breakdown.top.forEachIndexed { i, g ->
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(g.genre, style = MaterialTheme.typography.bodyMedium)
+                    Text("${g.titles * 100 / counted}%", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
+                    Box(
+                        Modifier.fillMaxWidth(g.titles.toFloat() / max).fillMaxHeight().clip(PillShape)
+                            .background(if (i == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
+                    )
                 }
             }
         }
