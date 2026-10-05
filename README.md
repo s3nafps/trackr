@@ -65,7 +65,8 @@ Requirements: JDK 17, Android SDK (platform 35, build-tools 35). `export ANDROID
    SUPABASE_ANON_KEY=<anon/publishable key>
    GOOGLE_WEB_CLIENT_ID=<Google *Web* OAuth client id>
    ```
-2. Supabase: apply `supabase/migrations/*.sql` in order, enable the **Google** provider (web client id + secret; leave
+2. Supabase: apply `supabase/migrations/*.sql` in order (the last one adds the social tables to the `supabase_realtime`
+   publication for live updates), enable the **Google** provider (web client id + secret; leave
    *Skip nonce checks* off). `supabase/tests/rls_test.sql`, `social_test.sql` and `shared_lists_test.sql` verify RLS; each
    ends with an intentional error (`…_TESTS_PASSED`) so everything it creates is rolled back.
 3. Google Cloud: OAuth consent screen (Testing) with your friends' Gmail addresses as test users; a **Web** client
@@ -110,9 +111,9 @@ APK's signing SHA-1; it must match the one registered for the Android OAuth clie
 - Only Google accounts listed as OAuth test users can sign in while the consent screen is in *Testing* mode.
 - Genre breakdown isn't shown (genres aren't stored in the list); the profile shows a status breakdown and rating distribution.
   Screen time is an estimate (movie 2h, TV 45 min/ep, anime 24 min/ep).
-- Sync is pull-on-open/refresh + push after changes (WorkManager, needs network); there is no realtime, so friends' reactions,
-  comments and recommendations appear on refresh. Followers, push notifications for social activity and email login are not
-  implemented.
+- Your list syncs on open/refresh and pushes after changes (WorkManager, needs network). Friends' activity, reactions,
+  comments, recommendations and shared lists update live (Supabase Realtime) only while their screen is open; there are no
+  push notifications for social activity yet. Followers and email login are not implemented.
 - Shared TMDB/AniList links aren't verified App Links (those domains aren't ours): Android 12+ opens them in Trackr only after
   Settings → *Open links in Trackr*.
 - Trakt import isn't supported (no standard export; its API needs a registered client id).

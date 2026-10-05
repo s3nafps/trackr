@@ -4,6 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trackr.app.data.local.UserPrefs
+import com.trackr.app.data.realtime.LiveFollower
+import com.trackr.app.data.realtime.LiveTables
+import com.trackr.app.data.realtime.LiveUpdates
 import com.trackr.app.data.remote.supabase.ActivityDto
 import com.trackr.app.data.repository.FriendsRepository
 import com.trackr.app.data.repository.ListRepository
@@ -61,7 +64,10 @@ class DetailViewModel @Inject constructor(
     prefs: UserPrefs,
     private val friendsRepo: FriendsRepository,
     private val sharedLists: SharedListsRepository,
+    live: LiveUpdates,
 ) : ViewModel() {
+    private val liveFollower = LiveFollower(live, LiveTables.REACTIONS, LiveTables.COMMENTS)
+
     val source: MediaSource = MediaSource.fromKey(saved.get<String>("source").orEmpty())
     val type: MediaType = MediaType.fromKey(saved.get<String>("type").orEmpty())
     val id: String = saved.get<String>("id").orEmpty()
@@ -121,15 +127,23 @@ class DetailViewModel @Inject constructor(
             // Friends row is a nice-to-have: failures (offline, signed out) just hide it.
             friends.update { runCatching { social.friendsWhoTracked(source.key, id) }.getOrDefault(emptyList()) }
         }
-        viewModelScope.launch {
-            // Same for reactions on your own entry: only shown when there are some.
-            if (lists.entry(source.key, id).first() == null) return@launch
-            runCatching {
-                val entryId = social.myEntryId(source.key, id) ?: return@runCatching
-                val summary = social.socialFor(listOf(entryId))[entryId]
-                socialLocal.update { it.copy(ownEntryId = entryId, ownSocial = summary) }
-            }
+        viewModelScope.launch { loadOwnSocial() }
+    }
+
+    /** Friends' reactions and comments on your own entry: only shown when there are some, and failures just hide them. */
+    private suspend fun loadOwnSocial() {
+        if (lists.entry(source.key, id).first() == null) return
+        runCatching {
+            val entryId = social.myEntryId(source.key, id) ?: return@runCatching
+            val summary = social.socialFor(listOf(entryId))[entryId]
+            socialLocal.update { it.copy(ownEntryId = entryId, ownSocial = summary) }
         }
+    }
+
+    /** While visible: friends' reactions and comments on your entry update live, and so does the open comments sheet. */
+    suspend fun followLiveUpdates() = liveFollower.follow {
+        viewModelScope.launch { loadOwnSocial() }
+        commentsCtl.reload()
     }
 
     // ----- recommend to a friend -----

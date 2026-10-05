@@ -83,6 +83,7 @@ import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.UserAvatar
 import com.trackr.app.ui.components.formatRuntime
 import com.trackr.app.ui.components.metaLine
+import com.trackr.app.ui.components.FollowLiveUpdates
 import com.trackr.app.ui.navigation.DeepLinks
 import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.color
@@ -99,6 +100,7 @@ fun DetailScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val bell by vm.bellState.collectAsStateWithLifecycle()
     val social by vm.socialState.collectAsStateWithLifecycle()
+    FollowLiveUpdates { vm.followLiveUpdates() }
     val ensureNotifications = rememberNotificationPermission(vm::onPermissionResult)
     var showSheet by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
