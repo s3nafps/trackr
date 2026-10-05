@@ -32,7 +32,10 @@ enum class Genre(val label: String, val tmdbMovie: Int?, val tmdbTv: Int?, val a
     }
 
     /** Whether a title that is already loaded (a search result, say) is in this genre, going by its genre names. */
-    fun matches(item: MediaItem): Boolean = item.genres.any { it == label || it == anilist || it in aliases }
+    fun matches(item: MediaItem): Boolean = item.genres.any(::matchesName)
+
+    /** Whether a genre name from TMDB or AniList (e.g. "Sci-Fi & Fantasy") is, or includes, this genre. */
+    fun matchesName(name: String): Boolean = name == label || name == anilist || name in aliases
 
     companion object {
         fun forType(type: MediaType?): List<Genre> = entries.filter { it.appliesTo(type) }
