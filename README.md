@@ -67,7 +67,7 @@ Requirements: JDK 17, Android SDK (platform 35, build-tools 35). `export ANDROID
 3. Google Cloud: OAuth consent screen (Testing) with your friends' Gmail addresses as test users; a **Web** client
    (redirect `https://<project-ref>.supabase.co/auth/v1/callback`) and an **Android** client for package `com.trackr.app`
    with the SHA-1 of `trackr.keystore`:
-   `keytool -list -v -keystore trackr.keystore -alias trackr` (current: `DA:E5:D0:52:C0:24:25:DF:A8:14:DD:B9:E8:FC:45:78:8F:5F:E1:40`).
+   `keytool -list -v -keystore trackr.keystore -alias trackr` (current: `E0:8D:BF:F4:3E:6D:FE:B6:75:47:FD:A9:16:1C:9A:8A:22:FA:9D:4E`).
 4. Signing: `trackr.keystore` + `keystore.properties` (both gitignored) sign **debug and release** so the SHA-1 never changes.
    Keep a backup of the keystore – a new one means a new SHA-1 and an uninstall/reinstall.
 
