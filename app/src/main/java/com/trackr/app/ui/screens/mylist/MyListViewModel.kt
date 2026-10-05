@@ -7,7 +7,6 @@ import com.trackr.app.data.local.AiringEntity
 import com.trackr.app.data.repository.AiringRepository
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.meta.TitleMetaRepository
-import com.trackr.app.data.local.AiringEntity
 import com.trackr.app.domain.model.TitleMeta
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
