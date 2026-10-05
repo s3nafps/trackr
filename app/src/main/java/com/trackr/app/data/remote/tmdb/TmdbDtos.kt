@@ -4,7 +4,14 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class TmdbPage<T>(val page: Int = 1, val results: List<T> = emptyList())
+data class TmdbPage<T>(
+    val page: Int = 1,
+    val results: List<T> = emptyList(),
+    @SerialName("total_pages") val totalPages: Int = 1,
+) {
+    /** TMDB never serves pages past 500, whatever total_pages says. */
+    val hasMore: Boolean get() = page < totalPages && page < 500
+}
 
 @Serializable
 data class TmdbResult(
