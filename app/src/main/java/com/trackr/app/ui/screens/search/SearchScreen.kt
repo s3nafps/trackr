@@ -33,6 +33,9 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.data.repository.SearchFilter
+import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.util.PageState
 import com.trackr.app.ui.components.CountBadge
@@ -54,6 +58,8 @@ import com.trackr.app.ui.components.ListRowSkeleton
 import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.MediaResultCard
 import com.trackr.app.ui.components.PagingFooter
+import com.trackr.app.ui.components.rememberNotificationPermission
+import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.TrackrChip
 import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.theme.PillShape
@@ -67,12 +73,18 @@ fun SearchScreen(
     vm: SearchViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val ensureNotifications = rememberNotificationPermission {}
     LaunchedEffect(initialFilter) { initialFilter?.let(vm::setFilter) }
     SearchContent(
         state,
         SearchActions(
-            vm::setQuery, vm::setFilter, vm::applyRecent, vm::removeRecent, vm::clearRecents, vm::quickAdd, vm::markCompleted, vm::retry,
-            vm::loadMoreResults, vm::loadMoreSuggestions,
+            vm::setQuery, vm::setFilter, vm::applyRecent, vm::removeRecent, vm::clearRecents,
+            track = { item, status, rating, progress ->
+                vm.track(item, status, rating, progress)
+                // New-episode alerts are on for Watching titles, so ask now rather than when the first one is due.
+                if (status == ListStatus.WATCHING) ensureNotifications {}
+            },
+            vm::markCompleted, vm::retry, vm::loadMoreResults, vm::loadMoreSuggestions,
         ),
         onOpenDetail, onOpenProfile,
     )
@@ -84,7 +96,7 @@ class SearchActions(
     val applyRecent: (String) -> Unit,
     val removeRecent: (String) -> Unit,
     val clearRecents: () -> Unit,
-    val quickAdd: (MediaItem) -> Unit,
+    val track: (MediaItem, ListStatus, rating: Int?, progress: Int) -> Unit,
     val markCompleted: (MediaItem, com.trackr.app.domain.model.ListEntry) -> Unit,
     val retry: () -> Unit,
     val loadMoreResults: () -> Unit,
@@ -101,6 +113,8 @@ fun SearchContent(
     avatarUrl: String? = LocalProfile.current?.avatarUrl,
 ) {
     val focus = LocalFocusManager.current
+    // The title whose status sheet is open.
+    var tracking by remember { mutableStateOf<MediaItem?>(null) }
     Column(Modifier.fillMaxSize().imePadding()) {
         TrackrTopBar("Search", avatarUrl, onOpenProfile)
         TextField(
@@ -154,7 +168,7 @@ fun SearchContent(
                     }
                 }
                 item("trending-title") { Text("Trending now", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 4.dp)) }
-                resultItems(state.suggestions, state, onOpenDetail, vm, vm.loadMoreSuggestions, emptyText = "Nothing trending right now.")
+                resultItems(state.suggestions, state, onOpenDetail, { tracking = it }, vm, vm.loadMoreSuggestions, emptyText = "Nothing trending right now.")
             } else {
                 item("results-title") {
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -165,9 +179,15 @@ fun SearchContent(
                         Text("Sorted by relevance", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                     }
                 }
-                resultItems(state.results, state, onOpenDetail, vm, vm.loadMoreResults, emptyText = "No results for \"${state.query.trim()}\".")
+                resultItems(state.results, state, onOpenDetail, { tracking = it }, vm, vm.loadMoreResults, emptyText = "No results for \"${state.query.trim()}\".")
             }
         }
+    }
+    tracking?.let { item ->
+        TrackSheet(
+            item, state.entries[item.key], onDismiss = { tracking = null },
+            onSave = { status, rating, progress -> vm.track(item, status, rating, progress); tracking = null },
+        )
     }
 }
 
@@ -176,6 +196,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.resultItems(
     page: PageState,
     state: SearchUiState,
     onOpen: (MediaItem) -> Unit,
+    onTrack: (MediaItem) -> Unit,
     vm: SearchActions,
     onLoadMore: () -> Unit,
     emptyText: String,
@@ -191,7 +212,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.resultItems(
                 val entry = state.entries[item.key]
                 MediaResultCard(
                     item, entry, onClick = { onOpen(item) },
-                    onQuickAdd = { vm.quickAdd(item) },
+                    onTrack = { onTrack(item) },
                     onMarkCompleted = { entry?.let { vm.markCompleted(item, it) } },
                 )
             }
