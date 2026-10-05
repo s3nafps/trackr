@@ -2,6 +2,9 @@ package com.trackr.app.ui.screens.friends
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trackr.app.data.realtime.LiveFollower
+import com.trackr.app.data.realtime.LiveTables
+import com.trackr.app.data.realtime.LiveUpdates
 import com.trackr.app.data.repository.FriendsRepository
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.data.repository.SocialRepository
@@ -57,8 +60,13 @@ class FriendsViewModel @Inject constructor(
     private val repo: FriendsRepository,
     private val lists: ListRepository,
     private val social: SocialRepository,
+    live: LiveUpdates,
 ) : ViewModel() {
     private val remote = MutableStateFlow(FriendsUiState())
+
+    private val liveFollower = LiveFollower(
+        live, LiveTables.LIST_ENTRIES, LiveTables.REACTIONS, LiveTables.COMMENTS, LiveTables.RECOMMENDATIONS, LiveTables.FRIENDSHIPS,
+    )
 
     private val commentsCtl = CommentsController(viewModelScope, social) { id, delta ->
         remote.update { s ->
@@ -73,24 +81,43 @@ class FriendsViewModel @Inject constructor(
 
     init { refresh() }
 
-    fun refresh() {
+    /** Pull to refresh (with the spinner). */
+    fun refresh() = load(silent = false)
+
+    /**
+     * While the screen is visible: friends' new activity, reactions, comments, recommendations and requests appear
+     * without a refresh. The open comments sheet reloads too.
+     */
+    suspend fun followLiveUpdates() = liveFollower.follow {
+        load(silent = true)
+        commentsCtl.reload()
+    }
+
+    /** A silent reload (live update) shows no spinner and keeps what's on screen if a request fails. */
+    private fun load(silent: Boolean) {
         viewModelScope.launch {
-            remote.update { it.copy(refreshing = true) }
+            if (!silent) remote.update { it.copy(refreshing = true) }
             val a = launch {
                 val activity = attempt { repo.activity() }
-                remote.update { s -> s.copy(activity = activity) }
+                remote.update { s -> s.copy(activity = keep(s.activity, activity, silent)) }
                 // Reactions are extra: if they fail to load, the feed still shows (just without counts).
                 (activity as? Load.Success)?.data?.let { entries ->
                     runCatching { social.socialFor(entries.map { it.id }) }.onSuccess { m -> remote.update { s -> s.copy(social = m) } }
                 }
             }
-            val f = launch { remote.update { s -> s.copy(friends = attempt { repo.friends() }) } }
+            val f = launch {
+                val friends = attempt { repo.friends() }
+                remote.update { s -> s.copy(friends = keep(s.friends, friends, silent)) }
+            }
             val p = launch { runCatching { repo.pendingRequests() }.onSuccess { r -> remote.update { s -> s.copy(pending = r) } } }
             val i = launch { runCatching { social.inbox() }.onSuccess { r -> remote.update { s -> s.copy(inbox = r) } } }
             a.join(); f.join(); p.join(); i.join()
-            remote.update { it.copy(refreshing = false) }
+            if (!silent) remote.update { it.copy(refreshing = false) }
         }
     }
+
+    private fun <T> keep(current: Load<T>, new: Load<T>, silent: Boolean): Load<T> =
+        if (silent && new is Load.Failure && current is Load.Success) current else new
 
     private suspend fun <T> attempt(block: suspend () -> T): Load<T> = try {
         Load.Success(block())

@@ -10,6 +10,13 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
+# supabase-kt (Realtime messages, Auth/Postgrest models) are kotlinx-serialization classes too
+-keepclassmembers class io.github.jan.supabase.** {
+    *** Companion;
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep,includedescriptorclasses class io.github.jan.supabase.**$$serializer { *; }
+
 # Retrofit service interfaces (generic return types read reflectively)
 -keep interface com.trackr.app.data.remote.tmdb.TmdbApi { *; }
 -dontwarn retrofit2.KotlinExtensions

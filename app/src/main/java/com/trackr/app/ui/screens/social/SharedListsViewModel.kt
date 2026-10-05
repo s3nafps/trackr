@@ -3,6 +3,9 @@ package com.trackr.app.ui.screens.social
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trackr.app.data.realtime.LiveFollower
+import com.trackr.app.data.realtime.LiveTables
+import com.trackr.app.data.realtime.LiveUpdates
 import com.trackr.app.data.repository.FriendsRepository
 import com.trackr.app.data.repository.SharedListsRepository
 import com.trackr.app.data.repository.SocialException
@@ -49,17 +52,25 @@ data class SharedListsUiState(
 class SharedListsViewModel @Inject constructor(
     private val repo: SharedListsRepository,
     private val friends: FriendsRepository,
+    live: LiveUpdates,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SharedListsUiState())
     val state: StateFlow<SharedListsUiState> = _state.asStateFlow()
 
+    private val liveFollower = LiveFollower(live, LiveTables.SHARED_LIST_MEMBERS, LiveTables.SHARED_LIST_ITEMS)
+
     init { refresh() }
 
-    fun refresh() {
+    fun refresh() = load(silent = false)
+
+    /** While visible: a list a friend adds you to, or new titles in your lists, show up without a refresh. */
+    suspend fun followLiveUpdates() = liveFollower.follow { load(silent = true) }
+
+    private fun load(silent: Boolean) {
         viewModelScope.launch {
-            _state.update { it.copy(refreshing = true) }
+            if (!silent) _state.update { it.copy(refreshing = true) }
             val lists = attempt { repo.lists() }
-            _state.update { it.copy(lists = lists, refreshing = false) }
+            _state.update { s -> s.copy(lists = if (silent && lists is Load.Failure && s.lists is Load.Success) s.lists else lists, refreshing = false) }
         }
     }
 
@@ -121,19 +132,30 @@ class SharedListViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val repo: SharedListsRepository,
     private val friends: FriendsRepository,
+    live: LiveUpdates,
 ) : ViewModel() {
     val listId: String = saved.get<String>("id").orEmpty()
 
     private val _state = MutableStateFlow(SharedListUiState(me = repo.currentUserId))
     val state: StateFlow<SharedListUiState> = _state.asStateFlow()
 
+    private val liveFollower = LiveFollower(live, LiveTables.SHARED_LIST_ITEMS, LiveTables.SHARED_LIST_MEMBERS)
+
     init { refresh() }
 
-    fun refresh() {
+    fun refresh() = load(silent = false)
+
+    /** While visible: titles and members other people add or remove appear without a refresh. */
+    suspend fun followLiveUpdates() = liveFollower.follow { load(silent = true) }
+
+    /** A silent reload keeps what's on screen if a request fails. */
+    private fun load(silent: Boolean) {
         viewModelScope.launch {
             val list = attempt { repo.list(listId) ?: throw SocialException("This list no longer exists, or you're not in it.") }
             val items = attempt { repo.items(listId) }
-            _state.update { it.copy(list = list, items = items) }
+            _state.update {
+                if (silent && (list is Load.Failure || items is Load.Failure)) it else it.copy(list = list, items = items)
+            }
         }
     }
 

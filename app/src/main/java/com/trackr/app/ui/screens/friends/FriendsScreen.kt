@@ -80,6 +80,7 @@ import com.trackr.app.ui.components.TrackrProgressBar
 import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.components.UserAvatar
 import com.trackr.app.ui.components.relativeTime
+import com.trackr.app.ui.components.FollowLiveUpdates
 import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.RatingAmber
 
@@ -114,6 +115,7 @@ fun FriendsScreen(
     vm: FriendsViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    FollowLiveUpdates { vm.followLiveUpdates() }
     FriendsContent(
         state, LocalProfile.current?.avatarUrl, onOpenProfile, onOpenFriend, onOpenDetail,
         FriendsActions(

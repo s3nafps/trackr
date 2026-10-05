@@ -9,6 +9,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.realtime.Realtime
 import javax.inject.Singleton
 
 @Module
@@ -25,5 +26,7 @@ object SupabaseModule {
             autoLoadFromStorage = true
         }
         install(Postgrest)
+        // Live friend activity, reactions and comments; connects only while a screen follows changes.
+        install(Realtime)
     }
 }

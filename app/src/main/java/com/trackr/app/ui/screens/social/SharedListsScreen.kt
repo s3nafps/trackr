@@ -71,6 +71,7 @@ import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.PosterImage
 import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.components.UserAvatar
+import com.trackr.app.ui.components.FollowLiveUpdates
 
 // ---------------------------------------------------------------- all lists
 
@@ -78,6 +79,7 @@ import com.trackr.app.ui.components.UserAvatar
 fun SharedListsScreen(onBack: () -> Unit, onOpenList: (String) -> Unit, vm: SharedListsViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.openList) { state.openList?.let { onOpenList(it); vm.listOpened() } }
+    FollowLiveUpdates { vm.followLiveUpdates() }
     SharedListsContent(state, onBack, onOpenList, vm::refresh, vm::openCreate, vm::closeCreate, vm::create, vm::toastShown)
 }
 
@@ -221,6 +223,7 @@ class SharedListActions(
 fun SharedListScreen(onBack: () -> Unit, onOpenTitle: (MediaItem) -> Unit, vm: SharedListViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.closed) { if (state.closed) onBack() }
+    FollowLiveUpdates { vm.followLiveUpdates() }
     SharedListContent(
         state, onBack, onOpenTitle,
         SharedListActions(
