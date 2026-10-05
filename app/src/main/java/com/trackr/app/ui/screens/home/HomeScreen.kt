@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -102,6 +103,7 @@ fun HomeScreen(
         onDiscoverFilter = vm::setDiscoverFilter, onDiscoverGenre = vm::setDiscoverGenre, onDiscoverMore = vm::discoverMore, onDiscoverRetry = vm::retryDiscover,
         onOpenDetail = onOpenDetail, onOpenEntry = onOpenEntry, onSeeAllWatching = onSeeAllWatching,
         onExplore = onExplore, onOpenProfile = onOpenProfile,
+        seasonsFor = vm::seasonsFor,
     )
 }
 
@@ -125,6 +127,8 @@ fun HomeContent(
     onSeeAllWatching: () -> Unit,
     onExplore: (MediaType?) -> Unit,
     onOpenProfile: () -> Unit,
+    /** Season sizes of a TV show, to pick progress by season in the status sheet. */
+    seasonsFor: suspend (MediaItem) -> List<Int> = { emptyList() },
 ) {
     val columns = maxOf(3, (LocalConfiguration.current.screenWidthDp - 20) / 116)
     val discoverRows = remember(state.discover.items, columns) { state.discover.items.chunked(columns) }
@@ -235,9 +239,11 @@ fun HomeContent(
         }
     }
     tracking?.let { item ->
+        val seasons by produceState(emptyList<Int>(), item.key) { value = seasonsFor(item) }
         TrackSheet(
             item, entry = null, onDismiss = { tracking = null },
             onSave = { status, rating, progress -> onTrack(item, status, rating, progress); tracking = null },
+            seasons = seasons,
         )
     }
 }

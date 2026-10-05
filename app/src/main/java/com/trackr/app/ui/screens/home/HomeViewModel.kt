@@ -175,6 +175,9 @@ class HomeViewModel @Inject constructor(
         discover.reset()
     }
 
+    /** Season sizes of [item], so the sheet can offer progress by season (see [MediaRepository.seasonsOf]). */
+    suspend fun seasonsFor(item: MediaItem): List<Int> = media.seasonsOf(item)
+
     /** Adds [item] with the status, rating and progress picked in the sheet. */
     fun track(item: MediaItem, status: ListStatus, rating: Int?, progress: Int) {
         viewModelScope.launch { lists.save(item, status, rating, progress) }
