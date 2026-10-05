@@ -22,6 +22,7 @@ class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context
     private val airingKey = booleanPreferencesKey("airing_enabled")
     private val updateCheckedKey = longPreferencesKey("update_last_check")
     private val updateDismissedKey = stringPreferencesKey("update_dismissed")
+    private val notificationsAskedKey = booleanPreferencesKey("notifications_asked")
     private val sep = "\u001F"
 
     val recentSearches: Flow<List<String>> = ctx.dataStore.data.map { p ->
@@ -64,4 +65,9 @@ class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context
     val dismissedUpdate: Flow<String?> = ctx.dataStore.data.map { it[updateDismissedKey] }
 
     suspend fun setDismissedUpdate(version: String) = ctx.dataStore.edit { it[updateDismissedKey] = version }
+
+    /** Whether the first-launch notification prompt was shown (answered either way). */
+    val notificationsAsked: Flow<Boolean> = ctx.dataStore.data.map { it[notificationsAskedKey] ?: false }
+
+    suspend fun setNotificationsAsked() = ctx.dataStore.edit { it[notificationsAskedKey] = true }
 }
