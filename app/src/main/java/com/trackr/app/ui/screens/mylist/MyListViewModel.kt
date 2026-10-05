@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.trackr.app.data.local.AiringEntity
 import com.trackr.app.data.repository.AiringRepository
 import com.trackr.app.data.repository.ListRepository
+import com.trackr.app.data.meta.TitleMetaRepository
+import com.trackr.app.domain.model.TitleMeta
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaType
@@ -31,6 +33,8 @@ data class MyListUiState(
     val items: List<ListEntry> = emptyList(),
     /** "Airs in 2d" per entry key, only for titles with a scheduled next drop. */
     val airsIn: Map<String, String> = emptyMap(),
+    /** Season episode counts per entry key, for TV progress by season. */
+    val seasons: Map<String, List<Int>> = emptyMap(),
     val statusCounts: Map<ListStatus, Int> = emptyMap(),
     val typeCounts: Map<MediaType?, Int> = emptyMap(),
     val total: Int = 0,
@@ -63,11 +67,14 @@ fun airsInLabel(airAtMillis: Long, nowMillis: Long): String? {
     }
 }
 
+private data class Extras(val grid: Boolean, val sync: Pair<Boolean, String?>, val upcoming: List<AiringEntity>, val meta: Map<String, TitleMeta>)
+
 @HiltViewModel
 class MyListViewModel @Inject constructor(
     private val saved: SavedStateHandle,
     private val repo: ListRepository,
     airing: AiringRepository,
+    titleMeta: TitleMetaRepository,
 ) : ViewModel() {
     private val status = MutableStateFlow(
         saved.get<String>("status")?.let { ListStatus.fromKey(it) } ?: ListStatus.WATCHING,
@@ -77,7 +84,7 @@ class MyListViewModel @Inject constructor(
     private val grid = MutableStateFlow(saved.get<Boolean>("g") ?: false)
     private val sync = MutableStateFlow<Pair<Boolean, String?>>(false to null)
 
-    val state: StateFlow<MyListUiState> = combine(repo.entries, status, type, sort, combine(grid, sync, airing.upcoming) { g, s, up -> Triple(g, s, up) }) { all, st, ty, so, (g, sy, up) ->
+    val state: StateFlow<MyListUiState> = combine(repo.entries, status, type, sort, combine(grid, sync, airing.upcoming, titleMeta.all) { g, s, up, m -> Extras(g, s, up, m) }) { all, st, ty, so, (g, sy, up, meta) ->
         val airAt = up.associate { "${it.source}:${it.externalId}" to it.airAt }
         val now = System.currentTimeMillis()
         val inStatus = all.filter { it.status == st }
@@ -85,6 +92,7 @@ class MyListViewModel @Inject constructor(
             status = st, type = ty, sort = so, grid = g,
             items = applyListView(all, st, ty, so, airAt),
             airsIn = airAt.mapNotNull { (k, at) -> airsInLabel(at, now)?.let { k to it } }.toMap(),
+            seasons = meta.mapValues { it.value.seasonEpisodes }.filterValues { it.isNotEmpty() },
             statusCounts = ListStatus.entries.associateWith { s -> all.count { it.status == s } },
             typeCounts = buildMap {
                 put(null, inStatus.size)

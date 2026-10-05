@@ -49,7 +49,7 @@ object UpNext {
             .take(MAX_AIRING)
             .map { a ->
                 val label = whenLabel(a.airAt, a.precision == "DATE", now, zone, locale)
-                UpNextRow(a.source, a.externalId, a.mediaType, a.title, listOfNotNull(a.episode?.let { "Ep $it" }, label).joinToString(" · "))
+                UpNextRow(a.source, a.externalId, a.mediaType, a.title, listOfNotNull(a.episode?.let { e -> a.season?.let { "S$it E$e" } ?: "Ep $e" }, label).joinToString(" · "))
             }
         val watchingRows = entries
             .filter { it.status == ListStatus.WATCHING }

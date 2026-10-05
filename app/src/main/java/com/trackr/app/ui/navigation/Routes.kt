@@ -24,6 +24,7 @@ object Routes {
     const val WRAPPED = "wrapped"
     const val SHARED_LISTS = "shared_lists"
     const val SHARED_LIST = "shared_list/{id}"
+    const val CALENDAR = "calendar"
 
     fun detail(source: String, type: String, id: String) = "detail/$source/$type/$id"
     fun search(filter: String? = null) = if (filter == null) SEARCH_PATTERN.replace("?filter={filter}", "") else "search?filter=$filter"

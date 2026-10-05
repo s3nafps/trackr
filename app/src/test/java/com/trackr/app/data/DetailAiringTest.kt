@@ -49,6 +49,11 @@ class DetailAiringTest {
         assertEquals("Next episode: Ep 12 · Sat 18:30 (in 2d 4h)", airingLine(i, now, zone, Locale.ENGLISH))
     }
 
+    @Test fun airingLine_names_the_season_when_the_source_has_one() {
+        val i = item(at = epoch("2026-10-24T18:30:00Z")).copy(airingSeason = 2)
+        assertEquals("Next episode: S2 · E12 · Sat 18:30 (in 2d 4h)", airingLine(i, now, zone, Locale.ENGLISH))
+    }
+
     @Test fun airingLine_date_precision() {
         val i = item(at = epoch("2026-10-24T09:00:00Z"), dateOnly = true)
         assertEquals("Next episode: Ep 12 · Sat, Oct 24", airingLine(i, now, zone, Locale.ENGLISH))

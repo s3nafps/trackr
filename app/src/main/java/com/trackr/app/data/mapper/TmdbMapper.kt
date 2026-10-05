@@ -131,6 +131,7 @@ object TmdbMapper {
             runtimeMinutes = runtime?.takeIf { it > 0 },
             subtitle = d.networks.firstOrNull()?.name,
             airingEpisode = airingEpisode.takeIf { airingAt != null },
+            airingSeason = d.nextEpisodeToAir?.seasonNumber.takeIf { !isMovie && airingAt != null && airingEpisode != null },
             airingAtEpoch = airingAt,
             airingDateOnly = airingAt != null,
         )
