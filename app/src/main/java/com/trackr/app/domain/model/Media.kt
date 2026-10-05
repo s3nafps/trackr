@@ -77,6 +77,11 @@ data class MediaDetail(
     val trailer: Trailer? = null,
     val related: List<RelatedItem> = emptyList(),
     val recommendations: List<MediaItem> = emptyList(),
+    /**
+     * Episodes already out, counted across the show like progress (regular seasons only), or null when the source
+     * doesn't say. Lets the app tell "next episode" from "caught up, waiting for the next one".
+     */
+    val airedEpisodes: Int? = null,
 )
 
 /** Result wrapper so UI can render loading/error/content without exceptions leaking. */

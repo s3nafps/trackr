@@ -1,6 +1,7 @@
 package com.trackr.app.data.mapper
 
 import com.trackr.app.data.remote.tmdb.TmdbDetail
+import com.trackr.app.data.remote.tmdb.TmdbEpisodeStub
 import com.trackr.app.data.remote.tmdb.TmdbProvider
 import com.trackr.app.data.remote.tmdb.TmdbRegionProviders
 import com.trackr.app.data.remote.tmdb.TmdbResult
@@ -149,6 +150,18 @@ object TmdbMapper {
             watch = watchOptions(d.watchProviders?.results?.get(region), region),
             trailer = trailer(d.videos?.results.orEmpty()),
             recommendations = recommendations(d, type),
+            airedEpisodes = if (isMovie) null else airedEpisodes(d.lastEpisodeToAir, seasons),
         )
+    }
+
+    /**
+     * The show-wide count of episodes out, from the last aired episode ("S4 E10" = seasons 1-3 + 10). Counted over the
+     * same regular seasons as progress (SeasonProgress.regular); null when TMDB doesn't say, 0 before the premiere.
+     */
+    fun airedEpisodes(last: TmdbEpisodeStub?, seasons: List<SeasonInfo>): Int? {
+        val s = last?.seasonNumber ?: return null
+        val e = last.episodeNumber ?: return null
+        if (s <= 0) return null // a special: says nothing about the regular episodes
+        return seasons.filter { it.number in 1 until s && it.episodeCount > 0 }.sumOf { it.episodeCount } + e
     }
 }

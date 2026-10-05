@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [ListEntryEntity::class, AiringEntity::class, TitleMetaEntity::class], version = 5, exportSchema = false)
+@Database(entities = [ListEntryEntity::class, AiringEntity::class, TitleMetaEntity::class], version = 6, exportSchema = false)
 abstract class TrackrDatabase : RoomDatabase() {
     abstract fun listEntryDao(): ListEntryDao
     abstract fun airingDao(): AiringDao
@@ -44,5 +44,11 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE airing_schedule ADD COLUMN season INTEGER")
+    }
+}
+
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE title_meta ADD COLUMN airedEpisodes INTEGER")
     }
 }

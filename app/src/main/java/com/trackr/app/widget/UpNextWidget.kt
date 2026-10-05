@@ -43,6 +43,8 @@ import com.trackr.app.MainActivity
 import com.trackr.app.data.airing.AiringNotifier
 import com.trackr.app.data.local.AiringDao
 import com.trackr.app.data.local.ListEntryDao
+import com.trackr.app.data.local.TitleMetaDao
+import com.trackr.app.data.meta.TitleMetaRepository.Companion.toDomain
 import com.trackr.app.data.mapper.ListEntryMapper.toDomain
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.ui.theme.DarkScheme
@@ -58,6 +60,7 @@ import kotlinx.coroutines.flow.first
 interface WidgetEntryPoint {
     fun listDao(): ListEntryDao
     fun airingDao(): AiringDao
+    fun titleMetaDao(): TitleMetaDao
     fun lists(): ListRepository
 }
 
@@ -74,6 +77,7 @@ class UpNextWidget : GlanceAppWidget() {
             entries = ep.listDao().observeAll().first().map { it.toDomain() },
             airing = ep.airingDao().getAll(),
             now = System.currentTimeMillis(),
+            meta = ep.titleMetaDao().getAll().associate { "${it.source}:${it.externalId}" to it.toDomain() },
         )
         provideContent { GlanceTheme(colors = WidgetColors) { UpNextContent(state) } }
     }

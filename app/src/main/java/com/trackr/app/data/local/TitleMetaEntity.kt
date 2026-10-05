@@ -15,6 +15,7 @@ data class TitleMetaEntity(
     val genres: String,
     val seasonEpisodes: String,
     val fetchedAt: Long,
+    val airedEpisodes: Int? = null,
 )
 
 @Dao
