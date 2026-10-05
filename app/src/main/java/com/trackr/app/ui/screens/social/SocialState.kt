@@ -55,6 +55,15 @@ class CommentsController(
         _state.value = null
     }
 
+    /** Live update: fetches the open sheet's comments again, keeping the current ones if that fails. */
+    fun reload() {
+        val s = _state.value ?: return
+        scope.launch {
+            val fresh = runCatching { social.comments(s.entryId, s.entryOwner) }.getOrNull() ?: return@launch
+            updateIfOpen(s.entryId) { it.copy(comments = Load.Success(fresh)) }
+        }
+    }
+
     fun post(text: String) {
         val s = _state.value ?: return
         if (s.posting || text.isBlank()) return

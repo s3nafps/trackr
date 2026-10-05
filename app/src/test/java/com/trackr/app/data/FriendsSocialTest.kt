@@ -48,14 +48,14 @@ class FriendsSocialTest {
     private suspend fun FriendsViewModel.now() = state.first { it.activity is com.trackr.app.domain.model.Load.Success }
 
     @Test fun `the feed loads reactions and the inbox`() = runTest {
-        val vm = FriendsViewModel(friends, lists, social)
+        val vm = FriendsViewModel(friends, lists, social, mockk(relaxed = true))
         val s = vm.now()
         assertEquals(EntrySocial(mapOf("🔥" to 1), emptySet(), 1), s.social["e1"])
         assertEquals(listOf(rec), s.inbox)
     }
 
     @Test fun `reacting is optimistic and undone when the server refuses`() = runTest {
-        val vm = FriendsViewModel(friends, lists, social)
+        val vm = FriendsViewModel(friends, lists, social, mockk(relaxed = true))
         vm.now()
         vm.toggleReaction("e1", "🔥")
         coVerify { social.setReaction("e1", "🔥", true) }
@@ -69,7 +69,7 @@ class FriendsSocialTest {
     }
 
     @Test fun `opening a recommendation marks it seen, dismissing removes it`() = runTest {
-        val vm = FriendsViewModel(friends, lists, social)
+        val vm = FriendsViewModel(friends, lists, social, mockk(relaxed = true))
         vm.now()
         vm.openRecommendation(rec)
         coVerify { social.markSeen("r1") }
@@ -81,7 +81,7 @@ class FriendsSocialTest {
 
     @Test fun `posting a comment bumps the entry's comment count`() = runTest {
         coEvery { social.comments("e1", "ua") } returns emptyList()
-        val vm = FriendsViewModel(friends, lists, social)
+        val vm = FriendsViewModel(friends, lists, social, mockk(relaxed = true))
         vm.now()
         vm.openComments(entry)
         assertEquals("e1", vm.now().comments?.entryId)
