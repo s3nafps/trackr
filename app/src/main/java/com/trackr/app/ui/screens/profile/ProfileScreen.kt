@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.domain.model.ProfileStats
+import com.trackr.app.ui.components.GenreChart
 import com.trackr.app.ui.components.RatingDistributionChart
 import com.trackr.app.ui.components.StatusBreakdown
 import com.trackr.app.ui.components.TrackrTopBar
@@ -143,6 +144,14 @@ fun ProfileContent(
 
             Text("Analytics & Trends", style = MaterialTheme.typography.headlineSmall)
             Card("Status Breakdown", "${state.stats.total} cataloged titles") { StatusBreakdown(state.stats.statusCounts) }
+            val genres = state.genres
+            if (genres.top.isNotEmpty()) {
+                Card(
+                    "Top Genres",
+                    if (genres.counted < genres.watched) "From ${genres.counted} of ${genres.watched} watched titles so far"
+                    else "Across ${genres.watched} watched titles",
+                ) { GenreChart(genres) }
+            }
             Card(
                 "Rating Distribution",
                 state.stats.averageRating?.let { "Mean score: ${String.format(Locale.US, "%.1f", it)} ★" } ?: "No ratings yet",

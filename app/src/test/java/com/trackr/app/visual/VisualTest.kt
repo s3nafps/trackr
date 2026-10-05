@@ -28,6 +28,8 @@ import com.trackr.app.ui.screens.auth.AuthUiState
 import com.trackr.app.ui.screens.auth.LoginScreen
 import com.trackr.app.ui.screens.detail.DetailContent
 import com.trackr.app.ui.screens.detail.DetailUiState
+import com.trackr.app.domain.util.GenreBreakdown
+import com.trackr.app.domain.util.GenreShare
 import com.trackr.app.domain.util.PageState
 import com.trackr.app.ui.screens.home.ForYouRow
 import com.trackr.app.ui.screens.home.HomeContent
@@ -292,7 +294,10 @@ class VisualTest {
             entry("3", "C", MediaType.ANIME, ListStatus.COMPLETED, 12, 12), entry("4", "D", MediaType.ANIME, ListStatus.PLAN_TO_WATCH, 0, 12),
         ).mapIndexed { i, e -> e.copy(rating = listOf(8, 9, 9, 10)[i]) }
         ProfileContent(
-            ProfileUiState(me = Profile("me", "alexrivera", true, null, "TRACKR-ALEX"), stats = StatsCalculator.compute(entries)),
+            ProfileUiState(
+                me = Profile("me", "alexrivera", true, null, "TRACKR-ALEX"), stats = StatsCalculator.compute(entries),
+                genres = GenreBreakdown(listOf(GenreShare("Drama", 9), GenreShare("Sci-Fi", 6), GenreShare("Action", 5), GenreShare("Comedy", 3)), counted = 14, watched = 16),
+            ),
             {}, {}, {}, {}, {},
         )
     }
