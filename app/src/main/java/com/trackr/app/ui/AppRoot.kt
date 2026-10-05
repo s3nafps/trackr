@@ -26,11 +26,19 @@ fun AppRoot(
     onTargetOpened: () -> Unit = {},
     vm: AuthViewModel = hiltViewModel(),
     updates: UpdateViewModel = hiltViewModel(),
+    onboarding: NotificationOnboardingViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val me by vm.me.collectAsStateWithLifecycle()
     val update by updates.state.collectAsStateWithLifecycle()
-    update.available?.let { UpdateDialog(it, onDownload = updates::downloadStarted, onLater = updates::later) }
+    val onboardingDue by onboarding.due.collectAsStateWithLifecycle()
+    val signedIn = state.app is AppState.Ready
+    if (signedIn && onboardingDue == true) {
+        NotificationOnboarding(onDone = onboarding::done)
+    } else {
+        // One dialog at a time: an update offer waits until the notification prompt is answered.
+        update.available?.let { UpdateDialog(it, onDownload = updates::downloadStarted, onLater = updates::later) }
+    }
     when (val app = state.app) {
         AppState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         AppState.SignedOut -> LoginScreen(state, onGoogle = vm::signInWithGoogle)

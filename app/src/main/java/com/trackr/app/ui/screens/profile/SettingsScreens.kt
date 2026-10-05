@@ -1,6 +1,5 @@
 package com.trackr.app.ui.screens.profile
 
-import android.app.AlarmManager
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -46,6 +45,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.BuildConfig
 import com.trackr.app.ui.UpdateViewModel
+import com.trackr.app.ui.components.canScheduleExactAlarms
+import com.trackr.app.ui.components.openExactAlarmSettings
 import com.trackr.app.ui.components.BrandLogo
 import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.TrackrTopBar
@@ -190,8 +191,8 @@ fun AboutScreen(onBack: () -> Unit) {
 @Composable
 private fun NotificationSettings(enabled: Boolean, onToggle: (Boolean) -> Unit) {
     val context = LocalContext.current
-    var canExact by remember { mutableStateOf(canScheduleExact(context)) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { canExact = canScheduleExact(context) }
+    var canExact by remember { mutableStateOf(canScheduleExactAlarms(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { canExact = canScheduleExactAlarms(context) }
     Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -205,11 +206,7 @@ private fun NotificationSettings(enabled: Boolean, onToggle: (Boolean) -> Unit) 
                 Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
             )
         }
-        if (!canExact) SettingsLink("Allow exact timing") {
-            if (Build.VERSION.SDK_INT >= 31) {
-                context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")))
-            }
-        }
+        if (!canExact) SettingsLink("Allow exact timing") { openExactAlarmSettings(context) }
     }
 }
 
@@ -242,8 +239,6 @@ private fun SettingsLink(label: String, onClick: () -> Unit) {
     )
 }
 
-private fun canScheduleExact(context: Context): Boolean =
-    Build.VERSION.SDK_INT < 31 || (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
 
 private tailrec fun Context.findActivity(): ComponentActivity = when (this) {
     is ComponentActivity -> this
