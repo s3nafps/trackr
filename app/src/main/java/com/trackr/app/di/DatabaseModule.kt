@@ -7,6 +7,7 @@ import com.trackr.app.data.local.ListEntryDao
 import com.trackr.app.data.local.MIGRATION_1_2
 import com.trackr.app.data.local.MIGRATION_2_3
 import com.trackr.app.data.local.MIGRATION_3_4
+import com.trackr.app.data.local.MIGRATION_4_5
 import com.trackr.app.data.local.TitleMetaDao
 import com.trackr.app.data.local.TrackrDatabase
 import dagger.Module
@@ -21,7 +22,7 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Provides @Singleton
     fun db(@ApplicationContext ctx: Context): TrackrDatabase =
-        Room.databaseBuilder(ctx, TrackrDatabase::class.java, "trackr.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).fallbackToDestructiveMigration().build()
+        Room.databaseBuilder(ctx, TrackrDatabase::class.java, "trackr.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).fallbackToDestructiveMigration().build()
 
     @Provides
     fun listDao(db: TrackrDatabase): ListEntryDao = db.listEntryDao()

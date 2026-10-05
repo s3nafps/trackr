@@ -87,6 +87,7 @@ import com.trackr.app.ui.components.FollowLiveUpdates
 import com.trackr.app.ui.navigation.DeepLinks
 import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.color
+import com.trackr.app.domain.util.SeasonProgress
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -147,6 +148,7 @@ fun DetailScreen(
         TrackSheet(
             title = detail.item.title, initial = state.entry, totalEpisodes = detail.item.totalEpisodes,
             showProgress = detail.item.type != MediaType.MOVIE,
+            seasons = SeasonProgress.regular(detail.seasons),
             onDismiss = { showSheet = false },
             onSave = { s, r, p ->
                 vm.save(s, r, p); showSheet = false
@@ -289,7 +291,7 @@ fun DetailContent(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     StatusBadge(entry.status)
                     Text(
-                        entry.totalEpisodes?.let { "Episode ${entry.progress} of $it" } ?: "Episode ${entry.progress}",
+                        SeasonProgress.label(entry.progress, entry.totalEpisodes, SeasonProgress.regular(detail.seasons)),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

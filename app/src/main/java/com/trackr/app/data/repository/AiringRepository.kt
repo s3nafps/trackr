@@ -57,7 +57,8 @@ class AiringRepository @Inject constructor(
             val row = AiringEntity(
                 entry.source, entry.externalId, entry.mediaType, entry.title, item.airingEpisode, at * 1000,
                 if (item.airingDateOnly) "DATE" else "TIME",
-                notified = old != null && old.episode == item.airingEpisode && old.notified,
+                notified = old != null && old.episode == item.airingEpisode && old.season == item.airingSeason && old.notified,
+                season = item.airingSeason,
             )
             airingDao.upsert(row)
             upserted += row

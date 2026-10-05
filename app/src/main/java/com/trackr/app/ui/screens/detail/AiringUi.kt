@@ -22,7 +22,8 @@ fun airingLine(
 
     if (item.type == MediaType.MOVIE) return "Releases ${fmt("MMM d")}"
 
-    val ep = item.airingEpisode?.let { "Ep $it · " }.orEmpty()
+    // "S2 · E3" when the source numbers within seasons, otherwise the plain "Ep 12" as before.
+    val ep = item.airingEpisode?.let { n -> item.airingSeason?.let { "S$it · E$n · " } ?: "Ep $n · " }.orEmpty()
     val `when` = if (item.airingDateOnly) {
         fmt("EEE, MMM d")
     } else {

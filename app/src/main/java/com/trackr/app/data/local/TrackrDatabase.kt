@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [ListEntryEntity::class, AiringEntity::class, TitleMetaEntity::class], version = 4, exportSchema = false)
+@Database(entities = [ListEntryEntity::class, AiringEntity::class, TitleMetaEntity::class], version = 5, exportSchema = false)
 abstract class TrackrDatabase : RoomDatabase() {
     abstract fun listEntryDao(): ListEntryDao
     abstract fun airingDao(): AiringDao
@@ -37,5 +37,12 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
             "CREATE TABLE IF NOT EXISTS title_meta (source TEXT NOT NULL, externalId TEXT NOT NULL, genres TEXT NOT NULL, " +
                 "seasonEpisodes TEXT NOT NULL, fetchedAt INTEGER NOT NULL, PRIMARY KEY(source, externalId))",
         )
+    }
+}
+
+/** The season of the next TV episode, so it reads "S3 · E2" (TMDB numbers episodes within seasons). */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE airing_schedule ADD COLUMN season INTEGER")
     }
 }
