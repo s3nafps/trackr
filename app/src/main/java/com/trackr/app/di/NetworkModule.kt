@@ -49,6 +49,12 @@ object NetworkModule {
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build().create(TmdbApi::class.java)
 
+    /** Plain client for the GitHub releases API (update check); no credentials are sent. */
+    @Provides @Singleton @Named("github")
+    fun githubOkHttp(): OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS)
+        .build()
+
     @Provides @Singleton
     fun apollo(): ApolloClient = ApolloClient.Builder()
         .serverUrl("https://graphql.anilist.co")

@@ -2,11 +2,13 @@ package com.trackr.app.ui.screens.profile
 
 import android.app.AlarmManager
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.annotation.RequiresApi
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +45,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.BuildConfig
+import com.trackr.app.ui.UpdateViewModel
 import com.trackr.app.ui.components.BrandLogo
 import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.TrackrTopBar
@@ -155,6 +158,9 @@ private fun DeleteAccountDialog(deletion: AccountDeletion, onDismiss: () -> Unit
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    // The activity's instance, so an update found here opens the same dialog as the check on launch.
+    val updates: UpdateViewModel = hiltViewModel(context.findActivity())
+    val update by updates.state.collectAsStateWithLifecycle()
     fun open(url: String) = context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     Column(Modifier.fillMaxSize()) {
         TrackrTopBar("About", LocalProfile.current?.avatarUrl, {}, onBack = onBack)
@@ -162,6 +168,10 @@ fun AboutScreen(onBack: () -> Unit) {
             BrandLogo(80.dp)
             Text("Trackr", style = MaterialTheme.typography.displayMedium)
             Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick = updates::checkNow, enabled = !update.checking) {
+                Text(if (update.checking) "Checking…" else "Check for updates")
+            }
+            update.message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Text("Track movies, TV shows and anime with your friends.", style = MaterialTheme.typography.bodyMedium)
 
             Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -234,3 +244,9 @@ private fun SettingsLink(label: String, onClick: () -> Unit) {
 
 private fun canScheduleExact(context: Context): Boolean =
     Build.VERSION.SDK_INT < 31 || (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+
+private tailrec fun Context.findActivity(): ComponentActivity = when (this) {
+    is ComponentActivity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> error("About must be shown in an activity")
+}
