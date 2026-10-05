@@ -3,8 +3,10 @@ package com.trackr.app.data
 import com.trackr.app.data.cache.PageStore
 import com.trackr.app.data.remote.anilist.AniListClient
 import com.trackr.app.data.remote.tmdb.TmdbApi
+import com.trackr.app.data.remote.tmdb.TmdbDetail
 import com.trackr.app.data.remote.tmdb.TmdbPage
 import com.trackr.app.data.remote.tmdb.TmdbResult
+import com.trackr.app.data.remote.tmdb.TmdbSeasonDto
 import com.trackr.app.data.repository.MediaRepository
 import com.trackr.app.data.repository.SearchFilter
 import com.trackr.app.data.repository.userMessage
@@ -177,5 +179,29 @@ class MediaRepositoryTest {
         val restarted = MediaRepository(tmdb, anilist, store)
         assertEquals(listOf("tmdb:5"), restarted.search("dune", SearchFilter.ALL, 1).items.map { it.key })
         try { restarted.search("never searched", SearchFilter.ALL, 1); fail() } catch (e: UnknownHostException) { /* expected */ }
+    }
+
+    private fun tv(id: String) = MediaItem(MediaSource.TMDB, id, MediaType.TV, "Show $id", null)
+
+    @Test fun `seasons of a tv show come from its details, without specials`() = runTest {
+        coEvery { tmdb.tvDetail(7) } returns TmdbDetail(
+            id = 7, name = "Show",
+            seasons = listOf(
+                TmdbSeasonDto(0, "Specials", 3), TmdbSeasonDto(1, "Season 1", 10), TmdbSeasonDto(2, "Season 2", 8),
+            ),
+        )
+        assertEquals(listOf(10, 8), repo.seasonsOf(tv("7")))
+    }
+
+    @Test fun `movies and anime have no seasons to pick from, and nothing is fetched for them`() = runTest {
+        assertEquals(emptyList<Int>(), repo.seasonsOf(MediaItem(MediaSource.TMDB, "1", MediaType.MOVIE, "Film", null)))
+        assertEquals(emptyList<Int>(), repo.seasonsOf(anime("5")))
+        coVerify(exactly = 0) { tmdb.tvDetail(any()) }
+        coVerify(exactly = 0) { tmdb.movieDetail(any()) }
+    }
+
+    @Test fun `seasons are empty rather than an error when the details can't be loaded`() = runTest {
+        coEvery { tmdb.tvDetail(9) } throws UnknownHostException()
+        assertEquals(emptyList<Int>(), repo.seasonsOf(tv("9")))
     }
 }

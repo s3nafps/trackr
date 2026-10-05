@@ -14,6 +14,7 @@ import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaPage
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
+import com.trackr.app.domain.util.SeasonProgress
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -154,6 +155,22 @@ class MediaRepository @Inject constructor(
     }
 
     /** [region] picks the TMDB watch-provider country; it defaults to the device's country. */
+    /**
+     * Episode counts of a TV show's numbered seasons, for choosing progress by season when the title is tracked from a
+     * list. Empty for movies and anime (AniList lists every season as its own title) and when the details can't be
+     * loaded: the sheet then simply counts episodes.
+     */
+    suspend fun seasonsOf(item: MediaItem): List<Int> {
+        if (item.source != MediaSource.TMDB || item.type != MediaType.TV) return emptyList()
+        return try {
+            SeasonProgress.regular(detail(item.source, item.externalId, item.type).seasons)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     suspend fun detail(
         source: MediaSource, id: String, type: MediaType, force: Boolean = false, region: String = deviceRegion(),
     ): MediaDetail {
