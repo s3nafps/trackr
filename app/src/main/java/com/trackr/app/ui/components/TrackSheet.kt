@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -32,7 +33,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -102,7 +102,11 @@ fun TrackSheet(
                     options = ListStatus.entries, selected = status, label = { it.shortLabel },
                     onSelect = {
                         status = it
-                        if (it == ListStatus.COMPLETED && totalEpisodes != null) progress = totalEpisodes
+                        if (it == ListStatus.COMPLETED) {
+                            // With seasons known, every season is watched; otherwise the episode total.
+                            val all = if (showProgress && SeasonProgress.bySeason(seasons)) seasons.sum() else totalEpisodes
+                            if (all != null) progress = all
+                        }
                     },
                     textColor = { it.color() },
                 )
@@ -195,52 +199,48 @@ fun TrackSheet(
 )
 
 /**
- * Season and episode steppers over the show-wide episode count. Changing season starts it (episode 0); stepping past a
- * season's last episode moves on to the next season.
+ * Progress by season, over the show-wide episode count. The chips are "watched through this season" (tap S1 for a show
+ * dropped after its first season; tap the last chip again to undo it), and the stepper counts episodes of the season
+ * after the finished ones.
  */
 @Composable
 private fun SeasonEpisodePicker(progress: Int, seasons: List<Int>, onChange: (Int) -> Unit) {
-    var season by rememberSaveable { mutableIntStateOf(SeasonProgress.position(progress, seasons)?.first ?: 1) }
-    val start = SeasonProgress.absolute(season, 0, seasons)
-    val inSeason = seasons.getOrElse(season - 1) { 0 }
-    val episode = (progress - start).coerceIn(0, inSeason)
-    // Progress set from outside (choosing Completed fills it in): show the season it lands in.
-    LaunchedEffect(progress) {
-        if (progress !in start..start + inSeason) season = SeasonProgress.position(progress, seasons)?.first ?: 1
-    }
+    val done = SeasonProgress.finished(progress, seasons)
+    val current = SeasonProgress.inProgress(progress, seasons)
     Column(
         Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
-                Text("Season", style = MaterialTheme.typography.titleSmall)
-                Text("of ${seasons.size} seasons", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Stepper(
-                value = season,
-                onMinus = { if (season > 1) { season--; onChange(SeasonProgress.absolute(season, 0, seasons)) } },
-                onPlus = { if (season < seasons.size) { season++; onChange(SeasonProgress.absolute(season, 0, seasons)) } },
+        Column {
+            Text("Seasons watched", style = MaterialTheme.typography.titleSmall)
+            Text(
+                SeasonProgress.summary(progress, seasons),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
-                Text("Episode", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    if (episode == 0) "not started · $inSeason episodes" else "of $inSeason",
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(seasons.size) { i ->
+                val n = i + 1
+                TrackrChip(
+                    "S$n", selected = n <= done,
+                    onClick = { onChange(SeasonProgress.through(if (n == done) n - 1 else n, seasons)) },
                 )
             }
-            Stepper(
-                value = episode,
-                onMinus = { if (episode > 0) onChange(start + episode - 1) },
-                onPlus = {
-                    when {
-                        episode < inSeason -> onChange(start + episode + 1)
-                        season < seasons.size -> { season++; onChange(SeasonProgress.absolute(season, 1, seasons)) }
-                    }
-                },
-            )
+        }
+        if (current != null) {
+            val (season, episode) = current
+            val size = seasons[season - 1]
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Text("Season $season", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        if (episode == 0) "not started · $size episodes" else "of $size episodes",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                // Stepping past the last episode finishes the season, and the stepper moves on to the next one.
+                Stepper(value = episode, onMinus = { if (episode > 0) onChange(progress - 1) }, onPlus = { onChange(progress + 1) })
+            }
         }
     }
 }
