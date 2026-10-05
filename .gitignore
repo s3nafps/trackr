@@ -13,3 +13,4 @@ captures/
 *.zip
 /sdk/
 google-services.json
+client_secret*.json
