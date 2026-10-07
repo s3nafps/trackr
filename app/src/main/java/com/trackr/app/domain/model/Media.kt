@@ -32,15 +32,18 @@ data class MediaItem(
     val key: String get() = "${source.key}:$externalId"
 }
 
+@Serializable
 data class CastMember(val name: String, val role: String?, val imageUrl: String?)
 
 /** One place to watch a title. [url] opens it; [color] is the site's brand colour (hex) when the source gives one. */
+@Serializable
 data class WatchProvider(val name: String, val logoUrl: String?, val url: String?, val color: String? = null)
 
 /**
  * Where a title can be watched. TMDB data is per [region] (ISO 3166-1 country) and comes from JustWatch;
  * AniList streaming links are not region-specific, so [region] is null for them.
  */
+@Serializable
 data class WatchOptions(
     val region: String? = null,
     val stream: List<WatchProvider> = emptyList(),
@@ -52,6 +55,7 @@ data class WatchOptions(
 }
 
 /** A trailer video; [url] opens it in the YouTube app or the browser. */
+@Serializable
 data class Trailer(val url: String, val thumbnailUrl: String?) {
     companion object {
         fun youtube(key: String) = Trailer("https://www.youtube.com/watch?v=$key", "https://img.youtube.com/vi/$key/hqdefault.jpg")
@@ -59,10 +63,13 @@ data class Trailer(val url: String, val thumbnailUrl: String?) {
 }
 
 /** A title linked to another one; [relation] is a display label such as "Sequel". */
+@Serializable
 data class RelatedItem(val relation: String, val item: MediaItem)
 
+@Serializable
 data class SeasonInfo(val number: Int, val name: String, val episodeCount: Int, val year: Int?, val posterUrl: String?)
 
+@Serializable
 data class MediaDetail(
     val item: MediaItem,
     val tagline: String? = null,

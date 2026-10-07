@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -72,7 +73,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val media: MediaRepository,
     private val lists: ListRepository,
-    titleMeta: TitleMetaRepository,
+    private val titleMeta: TitleMetaRepository,
 ) : ViewModel() {
     private fun paginator(fetch: suspend (page: Int, force: Boolean) -> MediaPage) =
         Paginator(viewModelScope, { it.userMessage() }, fetch)
@@ -184,6 +185,6 @@ class HomeViewModel @Inject constructor(
     }
 
     fun plusOne(entry: ListEntry) {
-        viewModelScope.launch { lists.incrementProgress(entry) }
+        viewModelScope.launch { lists.incrementProgress(entry, titleMeta.all.first()[entry.key]?.airedEpisodes) }
     }
 }

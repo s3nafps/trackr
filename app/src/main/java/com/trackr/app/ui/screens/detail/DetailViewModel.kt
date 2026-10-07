@@ -22,6 +22,7 @@ import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.Load
 import com.trackr.app.domain.model.MediaDetail
+import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.model.SharedList
@@ -45,7 +46,12 @@ data class DetailUiState(
     val detail: Load<MediaDetail> = Load.Loading,
     val entry: ListEntry? = null,
     val friends: List<ActivityDto> = emptyList(),
+    /** The sequel of a title you're watching or have finished: the next season, offered to add to the list. */
+    val nextSeason: MediaItem? = null,
 )
+
+/** The next season's sheet: the sequel, and its entry when it's already listed. */
+data class NextSeason(val item: MediaItem, val entry: ListEntry?)
 
 /** Recommend sheet, plus friends' reactions and comments on your own entry for this title (once it has synced). */
 data class DetailSocialState(
@@ -54,6 +60,7 @@ data class DetailSocialState(
     val ownSocial: EntrySocial? = null,
     val comments: CommentsState? = null,
     val addToShared: AddToSharedState? = null,
+    val nextSeason: NextSeason? = null,
 )
 
 @HiltViewModel
@@ -78,7 +85,9 @@ class DetailViewModel @Inject constructor(
     private val friends = MutableStateFlow<List<ActivityDto>>(emptyList())
 
     val state: StateFlow<DetailUiState> = combine(detail, lists.entry(source.key, id), friends) { d, e, f ->
-        DetailUiState(d, e, f)
+        val next = (d as? Load.Success)?.data?.related?.firstOrNull { it.relation == "Sequel" }?.item
+            ?.takeIf { e != null && (e.status == ListStatus.COMPLETED || e.status == ListStatus.WATCHING) }
+        DetailUiState(d, e, f, nextSeason = next)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DetailUiState())
 
     private val socialLocal = MutableStateFlow(DetailSocialState())
@@ -185,6 +194,23 @@ class DetailViewModel @Inject constructor(
                 socialLocal.update { s -> s.copy(recommend = s.recommend?.copy(sending = null, error = message)) }
             }
         }
+    }
+
+    // ----- the next season (an anime's sequel) -----
+
+    fun openNextSeason(item: MediaItem) {
+        viewModelScope.launch {
+            val entry = lists.entry(item.source.key, item.externalId).first()
+            socialLocal.update { it.copy(nextSeason = NextSeason(item, entry)) }
+        }
+    }
+
+    fun closeNextSeason() = socialLocal.update { it.copy(nextSeason = null) }
+
+    fun saveNextSeason(status: ListStatus, rating: Int?, progress: Int) {
+        val next = socialLocal.value.nextSeason ?: return
+        closeNextSeason()
+        viewModelScope.launch { lists.save(next.item, status, rating, progress) }
     }
 
     // ----- add to a shared list -----
