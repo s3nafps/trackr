@@ -1,5 +1,7 @@
 package com.trackr.app.ui.screens.detail
 
+import com.trackr.app.ui.components.AddToCalendar
+import androidx.compose.material.icons.outlined.CalendarMonth
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -133,6 +135,11 @@ fun DetailScreen(
                 ownSocial = social.ownSocial?.takeIf { it.reactions.isNotEmpty() || it.commentCount > 0 },
                 onOwnComments = vm::openOwnComments,
                 onAddToShared = vm::openAddToShared,
+                onAddToCalendar = {
+                    val i = d.data.item
+                    AddToCalendar.add(context, i.title, i.airingSeason, i.airingEpisode, (i.airingAtEpoch ?: 0L) * 1000, i.airingDateOnly)
+                },
+                onAddNextSeason = { state.nextSeason?.let(vm::openNextSeason) },
             )
         }
         // Floating back button
@@ -157,6 +164,9 @@ fun DetailScreen(
             onRemove = state.entry?.let { { vm.remove(); showSheet = false } },
         )
     }
+    social.nextSeason?.let { next ->
+        TrackSheet(item = next.item, entry = next.entry, onDismiss = vm::closeNextSeason, onSave = vm::saveNextSeason)
+    }
     social.recommend?.let { r -> detail?.let { RecommendSheet(it.item.title, r, vm::sendRecommendation, vm::closeRecommend) } }
     social.comments?.let { CommentsSheet(it, vm::postComment, vm::deleteComment, vm::closeComments) }
     social.addToShared?.let { s ->
@@ -177,6 +187,8 @@ fun DetailContent(
     ownSocial: EntrySocial? = null,
     onOwnComments: () -> Unit = {},
     onAddToShared: (() -> Unit)? = null,
+    onAddToCalendar: (() -> Unit)? = null,
+    onAddNextSeason: (() -> Unit)? = null,
 ) {
     val item = detail.item
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -286,6 +298,24 @@ fun DetailContent(
             }
             airingLine(item, nowMillis)?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+            if (onAddToCalendar != null && item.airingAtEpoch != null) {
+                Row(
+                    Modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onAddToCalendar).padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text("Add to calendar", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            if (state.nextSeason != null && onAddNextSeason != null) {
+                Row(
+                    Modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onAddNextSeason).padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text("Add next season to your list", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
             }
             if (entry != null && item.type != MediaType.MOVIE) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

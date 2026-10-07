@@ -11,6 +11,7 @@ import com.trackr.app.data.sync.ListSyncer
 import com.trackr.app.data.sync.SyncScheduler
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
+import com.trackr.app.domain.util.AiredProgress
 import com.trackr.app.domain.model.MediaItem
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
@@ -120,10 +121,14 @@ class ListRepository @Inject constructor(
         return added
     }
 
-    /** "+1 episode": auto-completes at the last episode, and moves Plan/Dropped to Watching. */
-    suspend fun incrementProgress(entry: ListEntry) {
+    /**
+     * "+1 episode": auto-completes at the last episode, and moves Plan/Dropped to Watching. [aired] (the episodes out so
+     * far, when known) caps it: an announced episode can't be marked watched before it airs.
+     */
+    suspend fun incrementProgress(entry: ListEntry, aired: Int? = null) {
         val total = entry.totalEpisodes
-        if (total != null && entry.progress >= total) return
+        val ceiling = AiredProgress.ceiling(total, aired)
+        if (ceiling != null && entry.progress >= ceiling) return
         val next = entry.progress + 1
         val status = when {
             total != null && next >= total -> ListStatus.COMPLETED

@@ -1,5 +1,6 @@
 package com.trackr.app.data.repository
 
+import com.trackr.app.data.cache.DetailStore
 import com.trackr.app.data.cache.PageStore
 import com.trackr.app.data.mapper.TmdbMapper
 import com.trackr.app.data.remote.anilist.AniListClient
@@ -48,6 +49,8 @@ class MediaRepository @Inject constructor(
     private val anilist: AniListClient,
     /** The last copy of each page, for when the sources can't be reached (offline, or the app was closed meanwhile). */
     private val saved: PageStore = PageStore.None,
+    /** Title pages kept on the device, served when the source can't be reached. */
+    private val savedDetails: DetailStore = DetailStore.None,
 ) {
     private val lists = TtlCache<String, MediaPage>(ttlMillis = 5 * 60_000)
     private val details = TtlCache<String, MediaDetail>(ttlMillis = 10 * 60_000)
@@ -184,9 +187,11 @@ class MediaRepository @Inject constructor(
                 }
                 MediaSource.ANILIST -> anilist.detail(id.toIntOrNull() ?: throw IOException("Invalid id"))
             }
-            details.put(key, d); d
+            details.put(key, d)
+            savedDetails.put(key, d)
+            d
         } catch (e: Exception) {
-            details.getStale(key) ?: throw e
+            details.getStale(key) ?: savedDetails.get(key) ?: throw e
         }
     }
 

@@ -1,5 +1,6 @@
 package com.trackr.app.data
 
+import com.trackr.app.data.cache.DetailStore
 import com.trackr.app.data.cache.PageStore
 import com.trackr.app.data.remote.anilist.AniListClient
 import com.trackr.app.data.remote.tmdb.TmdbApi
@@ -11,6 +12,7 @@ import com.trackr.app.data.repository.MediaRepository
 import com.trackr.app.data.repository.SearchFilter
 import com.trackr.app.data.repository.userMessage
 import com.trackr.app.domain.model.Genre
+import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaPage
 import com.trackr.app.domain.model.MediaSource
@@ -203,5 +205,32 @@ class MediaRepositoryTest {
     @Test fun `seasons are empty rather than an error when the details can't be loaded`() = runTest {
         coEvery { tmdb.tvDetail(9) } throws UnknownHostException()
         assertEquals(emptyList<Int>(), repo.seasonsOf(tv("9")))
+    }
+
+    private class DetailMemory : DetailStore {
+        val pages = mutableMapOf<String, MediaDetail>()
+        override suspend fun get(key: String) = pages[key]
+        override suspend fun put(key: String, detail: MediaDetail) { pages[key] = detail }
+    }
+
+    @Test fun `title pages are saved, and served from the saved copy when offline after a restart`() = runTest {
+        val store = DetailMemory()
+        coEvery { tmdb.tvDetail(7) } returns TmdbDetail(id = 7, name = "Show", seasons = listOf(TmdbSeasonDto(1, "Season 1", 10)))
+        val online = MediaRepository(tmdb, anilist, PageStore.None, store).detail(MediaSource.TMDB, "7", MediaType.TV, region = "US")
+        assertEquals("Show", online.item.title)
+
+        coEvery { tmdb.tvDetail(7) } throws UnknownHostException()
+        val restarted = MediaRepository(tmdb, anilist, PageStore.None, store) // nothing in memory any more
+        val offline = restarted.detail(MediaSource.TMDB, "7", MediaType.TV, region = "US")
+        assertEquals("Show", offline.item.title)
+        assertEquals(listOf(10), offline.seasons.map { it.episodeCount })
+    }
+
+    @Test fun `a title never opened online still fails offline`() = runTest {
+        coEvery { tmdb.tvDetail(8) } throws UnknownHostException()
+        try {
+            MediaRepository(tmdb, anilist, PageStore.None, DetailMemory()).detail(MediaSource.TMDB, "8", MediaType.TV, region = "US")
+            fail("expected exception")
+        } catch (e: UnknownHostException) { /* expected */ }
     }
 }

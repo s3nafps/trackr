@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -74,7 +75,7 @@ class MyListViewModel @Inject constructor(
     private val saved: SavedStateHandle,
     private val repo: ListRepository,
     airing: AiringRepository,
-    titleMeta: TitleMetaRepository,
+    private val titleMeta: TitleMetaRepository,
 ) : ViewModel() {
     private val status = MutableStateFlow(
         saved.get<String>("status")?.let { ListStatus.fromKey(it) } ?: ListStatus.WATCHING,
@@ -121,7 +122,7 @@ class MyListViewModel @Inject constructor(
         }
     }
 
-    fun plusOne(e: ListEntry) { viewModelScope.launch { repo.incrementProgress(e) } }
+    fun plusOne(e: ListEntry) { viewModelScope.launch { repo.incrementProgress(e, titleMeta.all.first()[e.key]?.airedEpisodes) } }
     fun remove(e: ListEntry) { viewModelScope.launch { repo.remove(e) } }
     fun save(e: ListEntry, s: ListStatus, rating: Int?, progress: Int) { viewModelScope.launch { repo.update(e, s, rating, progress) } }
     fun dismissMessage() { sync.update { it.first to null } }

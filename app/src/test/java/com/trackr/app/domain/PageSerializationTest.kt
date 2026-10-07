@@ -1,5 +1,6 @@
 package com.trackr.app.domain
 
+import com.trackr.app.domain.model.MediaDetail
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaPage
 import com.trackr.app.domain.model.MediaSource
@@ -35,5 +36,18 @@ class PageSerializationTest {
         val saved = json.encodeToString(MediaPage.serializer(), MediaPage(listOf(bare), hasMore = false, fromCache = true))
         assertFalse(saved.contains("fromCache"))
         assertFalse(json.decodeFromString(MediaPage.serializer(), saved).fromCache)
+    }
+
+    @Test fun `a title page survives being saved and read back`() {
+        val detail = MediaDetail(
+            item = full,
+            tagline = "Tagline",
+            seasons = listOf(com.trackr.app.domain.model.SeasonInfo(1, "Season 1", 10, 2020, null)),
+            related = listOf(com.trackr.app.domain.model.RelatedItem("Sequel", bare)),
+            trailer = com.trackr.app.domain.model.Trailer("https://www.youtube.com/watch?v=x", null),
+            airedEpisodes = 10,
+        )
+        val saved = json.encodeToString(MediaDetail.serializer(), detail)
+        assertEquals(detail, json.decodeFromString(MediaDetail.serializer(), saved))
     }
 }

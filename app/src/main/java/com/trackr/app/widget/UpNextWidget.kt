@@ -93,7 +93,9 @@ class IncrementEpisodeAction : ActionCallback {
         val source = parameters[SourceKey] ?: return
         val id = parameters[IdKey] ?: return
         val lists = context.widgetEntryPoint().lists()
-        lists.entry(source, id).first()?.let { lists.incrementProgress(it) }
+        val entry = lists.entry(source, id).first() ?: return
+        val aired = context.widgetEntryPoint().titleMetaDao().get(source, id)?.airedEpisodes
+        lists.incrementProgress(entry, aired)
         UpNextWidget().update(context, glanceId)
     }
 
