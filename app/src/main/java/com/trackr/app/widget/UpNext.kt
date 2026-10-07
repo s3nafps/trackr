@@ -22,16 +22,37 @@ data class UpNextRow(
     val title: String,
     val line: String,
     val canIncrement: Boolean = false,
+) {
+    /** The title's key, as [ListEntry.key] builds it. */
+    val key: String get() = "$source:$externalId"
+}
+
+/** One cell of the hero's progress bar. */
+enum class ProgressCell { WATCHED, TO_WATCH, UPCOMING }
+
+/** The title the widget leads with: the episode the +1 marks, where you are in the show, and the progress bar. */
+data class UpNextHero(
+    val row: UpNextRow,
+    /** What the +1 marks ("E14", "S2 E6"), or the next episode out of reach; null when there's neither. */
+    val episode: String?,
+    /** "Ep 13 of 28 · 1 to watch", "S2 · E5 · 25 to watch" or "Movie". */
+    val status: String,
+    /** One cell per episode, up to [UpNext.MAX_CELLS]; empty when the total isn't known. */
+    val cells: List<ProgressCell>,
 )
 
-data class UpNextState(val airing: List<UpNextRow>, val watching: List<UpNextRow>) {
+data class UpNextState(val airing: List<UpNextRow>, val watching: List<UpNextRow>, val hero: UpNextHero? = null) {
     val isEmpty: Boolean get() = airing.isEmpty() && watching.isEmpty()
+
+    /** The airing rows, without the title the hero already leads with. */
+    val coming: List<UpNextRow> get() = airing.filter { it.key != hero?.row?.key }
 }
 
 /** What the "Up next" widget shows: episodes dropping this week, then what you're in the middle of. */
 object UpNext {
     const val MAX_AIRING = 4
     const val MAX_WATCHING = 6
+    const val MAX_CELLS = 30
     private const val WINDOW_DAYS = 7L
 
     /** [meta] is keyed like [ListEntry.key]: season sizes and how many episodes are out, per title. */
@@ -56,12 +77,18 @@ object UpNext {
                 UpNextRow(a.source, a.externalId, a.mediaType, a.title, listOfNotNull(a.episode?.let { e -> a.season?.let { "S$it E$e" } ?: "Ep $e" }, label).joinToString(" · "))
             }
         val nextAiring = airing.associateBy { it.source to it.externalId }
-        val watchingRows = entries
+        val watchingEntries = entries
             .filter { it.status == ListStatus.WATCHING }
             .sortedByDescending { it.updatedAt }
             .take(MAX_WATCHING)
-            .map { e -> watchingRow(e, meta[e.key], nextAiring[e.source.key to e.externalId], now, zone, locale) }
-        return UpNextState(airingRows, watchingRows)
+        val watchingRows = watchingEntries.map { e -> watchingRow(e, meta[e.key], nextAiring[e.source.key to e.externalId], now, zone, locale) }
+        // The hero is the most recent title with an episode to mark, else simply the most recent title.
+        val heroAt = watchingRows.indexOfFirst { it.canIncrement }.takeIf { it >= 0 } ?: watchingRows.indices.firstOrNull()
+        val hero = heroAt?.let { i ->
+            val e = watchingEntries[i]
+            heroOf(e, watchingRows[i], meta[e.key], nextAiring[e.source.key to e.externalId], now)
+        }
+        return UpNextState(airingRows, watchingRows, hero)
     }
 
     /**
@@ -91,6 +118,48 @@ object UpNext {
             else -> "Next: ${episodeLabel(e.progress + 1)}"
         }
         return UpNextRow(e.source.key, e.externalId, e.mediaType.key, e.title, line, canIncrement = canIncrement)
+    }
+
+    /**
+     * The hero for [e], a row from [watchingRow]: the episode the +1 marks (or else the next one out of reach), the status
+     * line and the progress bar. Movies have no progress.
+     */
+    fun heroOf(e: ListEntry, row: UpNextRow, meta: TitleMeta?, next: AiringEntity?, now: Long): UpNextHero {
+        if (e.mediaType == MediaType.MOVIE) return UpNextHero(row, episode = null, status = "Movie", cells = emptyList())
+        val seasons = meta?.seasonEpisodes.orEmpty()
+        val total = e.totalEpisodes
+        val aired = airedEpisodes(meta, next, seasons, now)
+        val upcoming = next?.takeIf { it.airAt > now }?.let { u -> u.episode?.let { n -> u.season?.let { "S$it E$n" } ?: "E$n" } }
+        val episode = if (row.canIncrement) episodeTag(e.progress + 1, seasons) else upcoming
+        val where = if (e.progress == 0) "Not started" else SeasonProgress.label(e.progress, total, seasons)
+        val toWatch = aired?.let { it - e.progress }?.takeIf { it > 0 }
+        val status = listOfNotNull(where, toWatch?.let { "$it to watch" }).joinToString(" · ")
+        val cells = total?.takeIf { it > 0 }?.let { progressCells(it, e.progress, aired) }.orEmpty()
+        return UpNextHero(row, episode, status, cells)
+    }
+
+    /** "S2 E6" for a show with seasons, else "E14": anime and single-season shows number across the show. */
+    private fun episodeTag(n: Int, seasons: List<Int>): String =
+        SeasonProgress.position(n, seasons)?.takeIf { SeasonProgress.bySeason(seasons) }?.let { (s, ep) -> "S$s E$ep" } ?: "E$n"
+
+    /**
+     * The progress bar: one cell per episode, or per run of episodes past [maxCells]. A cell is watched once most of its
+     * episodes are, to watch when some of them are out and not yet watched, and upcoming otherwise.
+     */
+    fun progressCells(total: Int, watched: Int, aired: Int?, maxCells: Int = MAX_CELLS): List<ProgressCell> {
+        val count = minOf(total, maxCells)
+        return (0 until count).map { i ->
+            val start = i * total / count
+            val end = (i + 1) * total / count
+            val size = end - start
+            val done = (minOf(watched, end) - start).coerceIn(0, size)
+            val out = (minOf(aired ?: 0, end) - start).coerceIn(0, size)
+            when {
+                done * 2 >= size -> ProgressCell.WATCHED
+                out > done -> ProgressCell.TO_WATCH
+                else -> ProgressCell.UPCOMING
+            }
+        }
     }
 
     /**

@@ -7,9 +7,11 @@ import com.trackr.app.domain.model.MediaSource
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.model.TitleMeta
 import com.trackr.app.widget.UpNext
+import com.trackr.app.widget.ProgressCell
 import com.trackr.app.widget.UpNextRow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneOffset
@@ -140,6 +142,76 @@ class UpNextTest {
         // A within-season episode number can't be placed without season sizes; the stored count still answers.
         assertEquals(40, UpNext.airedEpisodes(fourSeasons, nextS5, emptyList(), n))
         assertEquals(null, UpNext.airedEpisodes(null, null, emptyList(), n))
+    }
+
+    private fun build(vararg entries: ListEntry, meta: TitleMeta? = null, airing: List<AiringEntity> = emptyList()) =
+        UpNext.build(
+            entries.toList(), airing, now.toInstant().toEpochMilli(), zone, Locale.US,
+            meta = meta?.let { mapOf("tmdb:1" to it) }.orEmpty(),
+        )
+
+    @Test fun `the hero is the most recent title with an episode to mark, not just the most recent title`() {
+        val state = build(
+            entry("caught", ListStatus.WATCHING, progress = 12, total = 12, updatedAt = 5),
+            entry("next", ListStatus.WATCHING, progress = 3, total = 12, updatedAt = 1),
+        )
+        assertEquals("next", state.hero?.row?.externalId)
+        assertEquals("E4", state.hero?.episode)
+    }
+
+    @Test fun `with nothing to mark the hero is the most recent title, and coming up leaves it out`() {
+        val state = build(
+            entry("a", ListStatus.WATCHING, progress = 4, total = null, updatedAt = 5),
+            entry("c", ListStatus.PLAN_TO_WATCH),
+            airing = listOf(airing("a", at(1, 9), episode = 5), airing("c", at(2, 9))),
+        )
+        assertEquals("a", state.hero?.row?.externalId)
+        assertEquals("E5", state.hero?.episode) // the next episode, out of reach until tomorrow
+        assertEquals(listOf("c"), state.coming.map { it.externalId })
+    }
+
+    @Test fun `with nothing being watched there is no hero and everything airing is coming up`() {
+        val state = build(entry("1", ListStatus.PLAN_TO_WATCH), airing = listOf(airing("1", at(1, 20))))
+        assertNull(state.hero)
+        assertEquals(listOf("1"), state.coming.map { it.externalId })
+    }
+
+    @Test fun `the progress bar shows watched, out but unwatched, and still to come, one cell per episode`() {
+        val cells = UpNext.progressCells(total = 28, watched = 13, aired = 14)
+        assertEquals(28, cells.size)
+        assertEquals(13, cells.count { it == ProgressCell.WATCHED })
+        assertEquals(ProgressCell.TO_WATCH, cells[13])
+        assertEquals(ProgressCell.UPCOMING, cells[14])
+    }
+
+    @Test fun `long shows are grouped into at most MAX_CELLS cells`() {
+        val cells = UpNext.progressCells(total = 1000, watched = 500, aired = 500)
+        assertEquals(UpNext.MAX_CELLS, cells.size)
+        assertEquals(15, cells.count { it == ProgressCell.WATCHED }) // half of the 30 cells
+        assertEquals(ProgressCell.WATCHED, cells.first())
+        assertEquals(ProgressCell.UPCOMING, cells.last())
+    }
+
+    @Test fun `the hero shows the episode the +1 marks, the season, and how many are waiting`() {
+        val hero = build(entry("1", ListStatus.WATCHING, progress = 15, total = 40), meta = fourSeasons).hero!!
+        assertEquals("S2 E6", hero.episode)
+        assertEquals("S2 · E5 · 25 to watch", hero.status)
+        assertEquals(UpNext.MAX_CELLS, hero.cells.size)
+    }
+
+    @Test fun `the progress bar takes the aired count from the schedule`() {
+        val hero = build(entry("1", ListStatus.WATCHING, progress = 13, total = 28), airing = listOf(airing("1", at(-1, 9), episode = 14))).hero!!
+        assertEquals("E14", hero.episode)
+        assertEquals("Ep 13 of 28 · 1 to watch", hero.status)
+        assertEquals(ProgressCell.TO_WATCH, hero.cells[13])
+        assertEquals(ProgressCell.UPCOMING, hero.cells[14])
+    }
+
+    @Test fun `a movie's hero says so and has no progress bar`() {
+        val hero = build(entry("1", ListStatus.WATCHING, total = 1, type = MediaType.MOVIE)).hero!!
+        assertEquals("Movie", hero.status)
+        assertNull(hero.episode)
+        assertTrue(hero.cells.isEmpty())
     }
 
     @Test fun `nothing tracked means an empty widget`() {
