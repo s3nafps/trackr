@@ -1,5 +1,11 @@
 package com.trackr.app.ui.screens.calendar
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import com.trackr.app.ui.components.AddToCalendar
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -132,6 +138,7 @@ fun CalendarContent(
 
 @Composable
 private fun EpisodeRow(ep: UpcomingEpisode, zone: ZoneId, onClick: () -> Unit) {
+    val context = LocalContext.current
     Row(
         Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick).padding(10.dp),
@@ -152,5 +159,10 @@ private fun EpisodeRow(ep: UpcomingEpisode, zone: ZoneId, onClick: () -> Unit) {
                 style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface,
             )
         }
+        Icon(
+            Icons.Outlined.CalendarMonth, "Add to calendar",
+            Modifier.size(36.dp).clip(CircleShape).clickable { AddToCalendar.add(context, ep.title, ep.season, ep.episode, ep.airAt, !ep.exactTime) }.padding(8.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
     }
 }

@@ -15,9 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.trackr.app.BuildConfig
+import com.trackr.app.data.update.ApkInstaller
 import com.trackr.app.data.update.UpdateInfo
 
-/** "Trackr 1.4.0 is available": Download opens the APK (or the release page) in the browser. */
+/** "Trackr 1.4.0 is available": Download fetches the APK with the system downloader and opens the installer; the release page is the fallback. */
 @Composable
 fun UpdateDialog(info: UpdateInfo, onDownload: () -> Unit, onLater: () -> Unit) {
     val context = LocalContext.current
@@ -36,7 +37,8 @@ fun UpdateDialog(info: UpdateInfo, onDownload: () -> Unit, onLater: () -> Unit) 
         },
         confirmButton = {
             TextButton(onClick = {
-                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkUrl ?: info.pageUrl))) }
+                val started = info.apkUrl?.let { ApkInstaller.download(context, it, info.version) } == true
+                if (!started) runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkUrl ?: info.pageUrl))) }
                 onDownload()
             }) { Text("Download") }
         },
