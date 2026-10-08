@@ -207,6 +207,21 @@ class UpNextTest {
         assertEquals(ProgressCell.UPCOMING, hero.cells[14])
     }
 
+    @Test fun `the progress bar also says how far through the show you are, in words`() {
+        val hero = build(entry("1", ListStatus.WATCHING, progress = 13, total = 28), airing = listOf(airing("1", at(-1, 9), episode = 14))).hero!!
+        assertEquals("13 of 28 watched, 1 aired and unwatched", hero.progressDescription)
+    }
+
+    @Test fun `the other titles in progress follow the hero, which is left out of them`() {
+        val state = build(
+            entry("a", ListStatus.WATCHING, progress = 0, total = 12, updatedAt = 5), // can mark an episode: the hero
+            entry("b", ListStatus.WATCHING, progress = 12, total = 12, updatedAt = 4), // caught up
+            entry("c", ListStatus.WATCHING, total = 1, updatedAt = 3, type = MediaType.MOVIE),
+        )
+        assertEquals("a", state.hero?.row?.externalId)
+        assertEquals(listOf("b", "c"), state.alsoInProgress.map { it.externalId })
+    }
+
     @Test fun `a movie's hero says so and has no progress bar`() {
         val hero = build(entry("1", ListStatus.WATCHING, total = 1, type = MediaType.MOVIE)).hero!!
         assertEquals("Movie", hero.status)

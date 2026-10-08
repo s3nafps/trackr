@@ -36,6 +36,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.material3.ColorProviders
 import androidx.glance.semantics.contentDescription
@@ -134,11 +135,11 @@ private fun UpNextContent(state: UpNextState) {
                 GlanceModifier.clickable(openApp),
                 style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp),
             )
-            hero == null -> ComingUp(state.coming, GlanceModifier.fillMaxSize())
+            hero == null -> ComingUp(state.coming, state.alsoInProgress, GlanceModifier.fillMaxSize())
             wide -> Row(GlanceModifier.fillMaxSize()) {
                 HeroView(hero, GlanceModifier.defaultWeight().fillMaxHeight())
                 Spacer(GlanceModifier.width(12.dp))
-                ComingUp(state.coming, GlanceModifier.defaultWeight().fillMaxHeight())
+                ComingUp(state.coming, state.alsoInProgress, GlanceModifier.defaultWeight().fillMaxHeight())
             }
             else -> HeroView(hero, GlanceModifier.fillMaxSize())
         }
@@ -153,9 +154,9 @@ private fun HeroView(hero: UpNextHero, modifier: GlanceModifier) {
         Text("Watch next", style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Medium))
         Text(hero.row.title, maxLines = 1, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold))
         Text(hero.status, maxLines = 1, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp))
-        if (hero.cells.isNotEmpty()) {
+        hero.progressDescription?.let { description ->
             Spacer(GlanceModifier.height(6.dp))
-            ProgressBar(hero.cells)
+            ProgressBar(hero.cells, description)
         }
         Spacer(GlanceModifier.defaultWeight())
         hero.episode?.let {
@@ -177,8 +178,8 @@ private fun HeroView(hero: UpNextHero, modifier: GlanceModifier) {
 
 /** One equal cell per entry of [cells]: Glance can't weight cells by size, so the bar is built from equal ones. */
 @Composable
-private fun ProgressBar(cells: List<ProgressCell>) {
-    Row(GlanceModifier.fillMaxWidth().height(6.dp)) {
+private fun ProgressBar(cells: List<ProgressCell>, description: String) {
+    Row(GlanceModifier.fillMaxWidth().height(6.dp).semantics { contentDescription = description }) {
         cells.forEach { cell ->
             val color = when (cell) {
                 ProgressCell.WATCHED -> GlanceTheme.colors.primary
@@ -190,15 +191,19 @@ private fun ProgressBar(cells: List<ProgressCell>) {
     }
 }
 
-/** What's airing this week, soonest first. */
+/** What's airing this week, soonest first, then the other titles in progress, each with its +1 when it has one. */
 @Composable
-private fun ComingUp(rows: List<UpNextRow>, modifier: GlanceModifier) {
+private fun ComingUp(airing: List<UpNextRow>, inProgress: List<UpNextRow>, modifier: GlanceModifier) {
     LazyColumn(modifier) {
         item { SectionLabel("Coming up") }
-        if (rows.isEmpty()) {
+        if (airing.isNotEmpty()) {
+            items(airing) { UpNextRowView(it) }
+        } else if (inProgress.isEmpty()) {
             item { Text("Nothing else airing this week.", style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp)) }
-        } else {
-            items(rows) { UpNextRowView(it) }
+        }
+        if (inProgress.isNotEmpty()) {
+            item { SectionLabel("Also in progress") }
+            items(inProgress) { WatchingRowView(it) }
         }
     }
 }
@@ -217,6 +222,29 @@ private fun UpNextRowView(row: UpNextRow) {
     Column(GlanceModifier.fillMaxWidth().padding(vertical = 5.dp).clickable(actionStartActivity(openTitleIntent(context, row)))) {
         Text(row.title, maxLines = 1, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium))
         Text(row.line, maxLines = 1, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp))
+    }
+}
+
+/** A title in progress: its line, and a +1 when there's an episode to mark. */
+@Composable
+private fun WatchingRowView(row: UpNextRow) {
+    val context = LocalContext.current
+    Row(GlanceModifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(GlanceModifier.defaultWeight().clickable(actionStartActivity(openTitleIntent(context, row)))) {
+            Text(row.title, maxLines = 1, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium))
+            Text(row.line, maxLines = 1, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp))
+        }
+        if (row.canIncrement) {
+            Spacer(GlanceModifier.width(8.dp))
+            Box(
+                GlanceModifier.size(30.dp).cornerRadius(15.dp).background(GlanceTheme.colors.primaryContainer)
+                    .clickable(actionRunCallback<IncrementEpisodeAction>(actionParametersOf(IncrementEpisodeAction.SourceKey to row.source, IncrementEpisodeAction.IdKey to row.externalId)))
+                    .semantics { contentDescription = "Mark next episode of ${row.title} watched" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("+1", style = TextStyle(color = GlanceTheme.colors.onPrimaryContainer, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+            }
+        }
     }
 }
 
