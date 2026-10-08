@@ -39,6 +39,8 @@ data class UpNextHero(
     val status: String,
     /** One cell per episode, up to [UpNext.MAX_CELLS]; empty when the total isn't known. */
     val cells: List<ProgressCell>,
+    /** The progress bar in words for screen readers: "13 of 28 watched, 1 aired and unwatched". */
+    val progressDescription: String? = null,
 )
 
 data class UpNextState(val airing: List<UpNextRow>, val watching: List<UpNextRow>, val hero: UpNextHero? = null) {
@@ -46,6 +48,9 @@ data class UpNextState(val airing: List<UpNextRow>, val watching: List<UpNextRow
 
     /** The airing rows, without the title the hero already leads with. */
     val coming: List<UpNextRow> get() = airing.filter { it.key != hero?.row?.key }
+
+    /** The other titles in progress, without the hero. */
+    val alsoInProgress: List<UpNextRow> get() = watching.filter { it.key != hero?.row?.key }
 }
 
 /** What the "Up next" widget shows: episodes dropping this week, then what you're in the middle of. */
@@ -135,7 +140,10 @@ object UpNext {
         val toWatch = aired?.let { it - e.progress }?.takeIf { it > 0 }
         val status = listOfNotNull(where, toWatch?.let { "$it to watch" }).joinToString(" · ")
         val cells = total?.takeIf { it > 0 }?.let { progressCells(it, e.progress, aired) }.orEmpty()
-        return UpNextHero(row, episode, status, cells)
+        val description = total?.takeIf { it > 0 }?.let { t ->
+            listOfNotNull("${e.progress} of $t watched", toWatch?.let { "$it aired and unwatched" }).joinToString(", ")
+        }
+        return UpNextHero(row, episode, status, cells, description)
     }
 
     /** "S2 E6" for a show with seasons, else "E14": anime and single-season shows number across the show. */
