@@ -33,9 +33,13 @@ class UpdateCheckTest {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
+    private val sha = "a".repeat(64)
     private fun release(tag: String, body: String? = null) = GithubRelease(
         tag, "https://github.com/s3nafps/trackr/releases/tag/$tag", body,
-        listOf(GithubAsset("notes.txt", "https://x/notes.txt"), GithubAsset("trackr-$tag.apk", "https://x/trackr-$tag.apk")),
+        listOf(
+            GithubAsset("notes.txt", "https://github.com/s3nafps/trackr/releases/download/$tag/notes.txt"),
+            GithubAsset("trackr-$tag.apk", "https://github.com/s3nafps/trackr/releases/download/$tag/trackr-$tag.apk", "sha256:$sha"),
+        ),
     )
 
     private val releases = mockk<GithubReleases>()
@@ -56,10 +60,19 @@ class UpdateCheckTest {
         val notes = "Intro\n\n## Install\n- Download it\n\n## What's new\n- **For You** on Home.\n- Genres in Search.\n\n## Notes\n- Not this"
         val info = UpdateRepository.toUpdate(release("v1.4.0", notes), current = "1.3.0")!!
         assertEquals("1.4.0", info.version)
-        assertEquals("https://x/trackr-v1.4.0.apk", info.apkUrl)
+        assertEquals("https://github.com/s3nafps/trackr/releases/download/v1.4.0/trackr-v1.4.0.apk", info.apkUrl)
+        assertEquals(sha, info.apkSha256)
         assertEquals(listOf("For You on Home.", "Genres in Search."), info.highlights)
         assertNull(UpdateRepository.toUpdate(release("v1.3.0"), current = "1.3.0"))
         assertNull(UpdateRepository.toUpdate(release("v1.2.9"), current = "1.3.0"))
+    }
+
+    @Test fun `an apk is offered only from github over https with a published checksum`() {
+        fun apk(url: String, digest: String?) = GithubRelease("v9.0.0", "https://github.com/r", null, listOf(GithubAsset("trackr-v9.0.0.apk", url, digest)))
+        assertNull(UpdateRepository.toUpdate(apk("https://evil.example/trackr.apk", "sha256:$sha"), "1.0.0")!!.apkUrl)
+        assertNull(UpdateRepository.toUpdate(apk("https://github.com/a.apk", null), "1.0.0")!!.apkUrl)
+        assertNull(UpdateRepository.toUpdate(apk("http://github.com/a.apk", "sha256:$sha"), "1.0.0")!!.apkUrl)
+        assertNull(UpdateRepository.toUpdate(apk("https://github.com/a.apk", "md5:abc"), "1.0.0")!!.apkUrl)
     }
 
     @Test fun `github's release json decodes`() {

@@ -28,6 +28,17 @@ class DeepLinksTest {
         assertEquals(DetailTarget("anilist", "anime", "1"), DeepLinks.parse(" http://www.anilist.co/anime/1 "))
     }
 
+    @Test fun `notification and widget extras open only titles we open`() {
+        assertEquals(DetailTarget("tmdb", "tv", "1399"), DeepLinks.target("tmdb", "tv", "1399"))
+        assertEquals(DetailTarget("anilist", "anime", "154587"), DeepLinks.target("anilist", "anime", "154587"))
+        assertNull(DeepLinks.target(null, "tv", "1"))
+        assertNull(DeepLinks.target("tmdb", "tv", null))
+        assertNull(DeepLinks.target("tmdb", "anime", "1"))
+        assertNull(DeepLinks.target("anilist", "tv", "1"))
+        assertNull(DeepLinks.target("tmdb", "tv", "1/../../x"))
+        assertNull(DeepLinks.target("tmdb", "tv", "12x"))
+    }
+
     @Test fun `anything else is ignored`() {
         listOf(
             null, "", "not a url", "https://www.themoviedb.org/person/500-tom-cruise", "https://www.themoviedb.org/movie/",

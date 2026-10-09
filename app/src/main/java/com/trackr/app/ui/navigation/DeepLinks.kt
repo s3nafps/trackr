@@ -28,15 +28,7 @@ object DeepLinks {
         val host = uri.host?.lowercase()
         val path = uri.path.orEmpty().split('/').filter { it.isNotEmpty() }
         return when {
-            uri.scheme == "trackr" && host == "title" && path.size == 3 -> {
-                val (source, type, id) = path
-                val valid = when (source) {
-                    MediaSource.TMDB.key -> type == MediaType.MOVIE.key || type == MediaType.TV.key
-                    MediaSource.ANILIST.key -> type == MediaType.ANIME.key
-                    else -> false
-                }
-                if (valid && id.isNumericId()) DetailTarget(source, type, id) else null
-            }
+            uri.scheme == "trackr" && host == "title" && path.size == 3 -> target(path[0], path[1], path[2])
             uri.isWeb() && host in tmdbHosts && path.size >= 2 && path[0] in setOf("movie", "tv") ->
                 // TMDB slugs the id: /movie/438631-dune
                 path[1].takeWhile { it.isDigit() }.takeIf { it.isNumericId() }
@@ -45,6 +37,20 @@ object DeepLinks {
                 path[1].takeIf { it.isNumericId() }?.let { DetailTarget(MediaSource.ANILIST.key, MediaType.ANIME.key, it) }
             else -> null
         }
+    }
+
+    /**
+     * The title named by its parts: a trackr:// link's, or a notification's or widget's extras. Null unless it's a
+     * title we open, so an app that starts Trackr with other extras can't reach anything else.
+     */
+    fun target(source: String?, type: String?, id: String?): DetailTarget? {
+        if (source == null || type == null || id == null) return null
+        val valid = when (source) {
+            MediaSource.TMDB.key -> type == MediaType.MOVIE.key || type == MediaType.TV.key
+            MediaSource.ANILIST.key -> type == MediaType.ANIME.key
+            else -> false
+        }
+        return if (valid && id.isNumericId()) DetailTarget(source, type, id) else null
     }
 
     private fun URI.isWeb() = scheme == "https" || scheme == "http"
