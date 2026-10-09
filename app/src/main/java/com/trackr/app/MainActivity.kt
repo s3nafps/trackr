@@ -30,10 +30,12 @@ class MainActivity : ComponentActivity() {
     /** Notification/widget extras, or a shared title link (trackr://, TMDB or AniList page). */
     private fun readTarget(intent: Intent?): DetailTarget? {
         if (intent?.action == Intent.ACTION_VIEW) DeepLinks.parse(intent.dataString)?.let { return it }
-        val source = intent?.getStringExtra(AiringNotifier.EXTRA_OPEN_SOURCE) ?: return null
-        val id = intent.getStringExtra(AiringNotifier.EXTRA_OPEN_ID) ?: return null
-        val type = intent.getStringExtra(AiringNotifier.EXTRA_OPEN_TYPE) ?: return null
-        return DetailTarget(source, type, id)
+        // The extras come from any app that starts this activity, so they're checked like a link.
+        return DeepLinks.target(
+            intent?.getStringExtra(AiringNotifier.EXTRA_OPEN_SOURCE),
+            intent?.getStringExtra(AiringNotifier.EXTRA_OPEN_TYPE),
+            intent?.getStringExtra(AiringNotifier.EXTRA_OPEN_ID),
+        )
     }
 
     override fun onNewIntent(intent: Intent) {
