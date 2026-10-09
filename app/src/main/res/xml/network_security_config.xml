@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Trackr only talks to HTTPS endpoints (TMDB, AniList, Supabase, GitHub, image hosts). Android 9+ already refuses
+     cleartext by default; this covers Android 8, where it isn't. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

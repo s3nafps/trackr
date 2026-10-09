@@ -37,7 +37,9 @@ fun UpdateDialog(info: UpdateInfo, onDownload: () -> Unit, onLater: () -> Unit) 
         },
         confirmButton = {
             TextButton(onClick = {
-                val started = info.apkUrl?.let { ApkInstaller.download(context, it, info.version) } == true
+                val url = info.apkUrl
+                val sha256 = info.apkSha256
+                val started = url != null && sha256 != null && ApkInstaller.download(context, url, info.version, sha256)
                 if (!started) runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkUrl ?: info.pageUrl))) }
                 onDownload()
             }) { Text("Download") }

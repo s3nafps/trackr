@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import java.net.URI
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -25,10 +26,21 @@ data class GithubRelease(
 )
 
 @Serializable
-data class GithubAsset(val name: String, @SerialName("browser_download_url") val downloadUrl: String)
+data class GithubAsset(
+    val name: String,
+    @SerialName("browser_download_url") val downloadUrl: String,
+    /** GitHub's checksum for the file, as "sha256:<hex>". */
+    val digest: String? = null,
+)
 
-/** A newer release than the installed app. */
-data class UpdateInfo(val version: String, val pageUrl: String, val apkUrl: String?, val highlights: List<String>)
+/** A newer release than the installed app. [apkSha256] is the checksum the downloaded APK must match. */
+data class UpdateInfo(
+    val version: String,
+    val pageUrl: String,
+    val apkUrl: String?,
+    val highlights: List<String>,
+    val apkSha256: String? = null,
+)
 
 sealed interface UpdateCheck {
     data class Available(val info: UpdateInfo) : UpdateCheck
@@ -80,16 +92,24 @@ class UpdateRepository @Inject constructor(private val releases: GithubReleases,
     companion object {
         const val CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000L
 
+        /** An APK we'll offer to install: from GitHub over HTTPS, with the SHA-256 GitHub publishes for it. */
+        private fun GithubAsset.isInstallable(): Boolean {
+            val fromGithub = runCatching { URI(downloadUrl) }.getOrNull()?.let { it.scheme == "https" && it.host == "github.com" } == true
+            return fromGithub && digest?.startsWith("sha256:") == true
+        }
+
         /** The release as an update, or null when it isn't newer than [current] (or its tag isn't a version). */
         fun toUpdate(release: GithubRelease, current: String): UpdateInfo? {
             val latest = AppVersion.parse(release.tag) ?: return null
             val installed = AppVersion.parse(current) ?: return null
             if (latest <= installed) return null
+            val apk = release.assets.firstOrNull { it.name.endsWith(".apk") && it.isInstallable() }
             return UpdateInfo(
                 version = latest.toString(),
                 pageUrl = release.pageUrl,
-                apkUrl = release.assets.firstOrNull { it.name.endsWith(".apk") }?.downloadUrl,
+                apkUrl = apk?.downloadUrl,
                 highlights = highlights(release.body.orEmpty()),
+                apkSha256 = apk?.digest?.removePrefix("sha256:"),
             )
         }
 
