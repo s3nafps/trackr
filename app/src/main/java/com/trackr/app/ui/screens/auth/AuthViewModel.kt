@@ -30,6 +30,8 @@ data class AuthUiState(
     val error: String? = null,
     val deletingAccount: Boolean = false,
     val deleteError: String? = null,
+    /** Sign-out stopped because this many edits couldn't be saved to the account (offline); null otherwise. */
+    val unsyncedOnSignOut: Int? = null,
 )
 
 @HiltViewModel
@@ -123,16 +125,29 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun signOut() {
+    /**
+     * Pushes pending edits, then signs out and wipes this account's data from the device. When edits are still unsaved
+     * (offline), it stops and asks first ([AuthUiState.unsyncedOnSignOut]); [force] signs out anyway.
+     */
+    fun signOut(force: Boolean = false) {
         // Login stays disabled (busy) until the wipe finishes, so a new account can't sign in and then be wiped.
-        _state.update { it.copy(busy = true) }
+        _state.update { it.copy(busy = true, unsyncedOnSignOut = null) }
         viewModelScope.launch {
-            // Best effort: push pending edits first so nothing is lost, then wipe local data of this account.
             runCatching { lists.sync() }
+            if (!force) {
+                val pending = runCatching { lists.pendingChanges() }.getOrDefault(0)
+                if (pending > 0) {
+                    _state.update { it.copy(busy = false, unsyncedOnSignOut = pending) }
+                    return@launch
+                }
+            }
             runCatching { auth.signOut() }
             wipeLocal()
         }
     }
+
+    /** "Stay signed in" on the unsaved-changes warning. */
+    fun keepSignedIn() = _state.update { it.copy(unsyncedOnSignOut = null) }
 
     /** Permanently deletes the account; on success wipes this device like [signOut], on failure keeps everything. */
     fun deleteAccount() {

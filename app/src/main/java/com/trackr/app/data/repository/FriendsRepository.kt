@@ -17,6 +17,7 @@ import com.trackr.app.domain.model.Profile
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
+import com.trackr.app.data.sync.fetchAllPages
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
@@ -104,9 +105,13 @@ class FriendsRepository @Inject constructor(
     }
 
     /** A friend's list (RLS only returns it for accepted friends). */
-    suspend fun entriesOf(userId: String): List<ListEntry> =
-        supabase.from("list_entries").select { filter { eq("user_id", userId) } }.decodeList<ListEntryDto>()
-            .map { it.toEntity().toDomain() }
+    suspend fun entriesOf(userId: String): List<ListEntry> = fetchAllPages { from, to ->
+        supabase.from("list_entries").select {
+            filter { eq("user_id", userId) }
+            order("id", Order.ASCENDING)
+            range(from, to)
+        }.decodeList<ListEntryDto>()
+    }.map { it.toEntity().toDomain() }
 
     suspend fun find(query: String): Profile? = profiles.findByUsernameOrCode(query)
 }
