@@ -44,9 +44,15 @@ class FakeRemote(initial: List<ListEntryDto> = emptyList()) : ListRemote {
     var duringUpsert: suspend () -> Unit = {}
     var duringDelete: suspend () -> Unit = {}
     override suspend fun fetchAll(userId: String) = data.values.toList()
-    override suspend fun upsert(dto: ListEntryDto) { data[dto.source to dto.externalId] = dto; duringUpsert() }
-    override suspend fun delete(userId: String, source: String, externalId: String) {
-        data.remove(source to externalId); deletes += externalId; duringDelete()
+    var upsertCalls = 0
+    override suspend fun upsertAll(dtos: List<ListEntryDto>) {
+        upsertCalls++
+        dtos.forEach { data[it.source to it.externalId] = it }
+        duringUpsert()
+    }
+    override suspend fun deleteAll(userId: String, keys: List<Pair<String, String>>) {
+        keys.forEach { (source, id) -> data.remove(source to id); deletes += id }
+        duringDelete()
     }
 }
 
@@ -191,5 +197,14 @@ class ListSyncerTest {
 
         val capped = fetchAllPages(pageSize = 1000) { from, _ -> all.drop(from.toInt()).take(400) }
         assertEquals(all, capped)
+    }
+
+    @Test fun `many edits go up in one request`() = runTest {
+        val dao = FakeDao().also { d -> (1..50).forEach { d.upsert(entity("$it", at = 1000L + it, dirty = true)) } }
+        val remote = FakeRemote()
+        ListSyncer(dao, remote).sync("u")
+        assertEquals(1, remote.upsertCalls)
+        assertEquals(50, remote.data.size)
+        assertTrue(dao.getDirty().isEmpty())
     }
 }

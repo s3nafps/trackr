@@ -34,14 +34,25 @@ class SupabaseListRemote @Inject constructor(private val supabase: SupabaseClien
         }.decodeList()
     }
 
-    override suspend fun upsert(dto: ListEntryDto) {
-        supabase.from("list_entries").upsert(dto.toRow()) { onConflict = "user_id,source,external_id" }
+    override suspend fun upsertAll(dtos: List<ListEntryDto>) {
+        dtos.chunked(BATCH).forEach { chunk ->
+            supabase.from("list_entries").upsert(chunk.map { it.toRow() }) { onConflict = "user_id,source,external_id" }
+        }
     }
 
-    override suspend fun delete(userId: String, source: String, externalId: String) {
-        supabase.from("list_entries").delete {
-            filter { eq("user_id", userId); eq("source", source); eq("external_id", externalId) }
+    override suspend fun deleteAll(userId: String, keys: List<Pair<String, String>>) {
+        keys.groupBy({ it.first }, { it.second }).forEach { (source, ids) ->
+            ids.chunked(BATCH).forEach { chunk ->
+                supabase.from("list_entries").delete {
+                    filter { eq("user_id", userId); eq("source", source); isIn("external_id", chunk) }
+                }
+            }
         }
+    }
+
+    private companion object {
+        /** Rows per request: big imports go up in a few requests, each well under request-size limits. */
+        const val BATCH = 200
     }
 }
 
