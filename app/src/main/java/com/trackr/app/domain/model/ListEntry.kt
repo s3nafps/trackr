@@ -18,6 +18,8 @@ data class ListEntry(
      * (then [updatedAt] is the best guess); [COMPLETED_DATE_UNKNOWN] when imported without a date.
      */
     val completedAt: Long? = null,
+    /** Times watched again after the first time; a rewatch in progress counts once it starts. */
+    val rewatchCount: Int = 0,
 ) {
     val key: String get() = "${source.key}:$externalId"
     val fraction: Float

@@ -2,6 +2,8 @@ package com.trackr.app.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.trackr.app.data.history.WatchHistoryRepository
+import com.trackr.app.data.meta.TitleMetaRepository
 import com.trackr.app.data.repository.ListRepository
 import com.trackr.app.domain.util.YearInReview
 import com.trackr.app.domain.util.YearInReviewCalculator
@@ -23,13 +25,17 @@ data class WrappedUiState(
 )
 
 @HiltViewModel
-class WrappedViewModel @Inject constructor(lists: ListRepository) : ViewModel() {
+class WrappedViewModel @Inject constructor(
+    lists: ListRepository,
+    history: WatchHistoryRepository,
+    titleMeta: TitleMetaRepository,
+) : ViewModel() {
     private val selected = MutableStateFlow<Int?>(null)
 
-    val state: StateFlow<WrappedUiState> = combine(lists.entries, selected) { entries, pick ->
+    val state: StateFlow<WrappedUiState> = combine(lists.entries, history.all, titleMeta.all, selected) { entries, events, meta, pick ->
         val current = Year.now().value
         val years = (YearInReviewCalculator.years(entries) + current).distinct().sortedDescending()
-        WrappedUiState(years, YearInReviewCalculator.compute(entries, pick ?: current))
+        WrappedUiState(years, YearInReviewCalculator.compute(entries, pick ?: current, history = events, meta = meta))
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WrappedUiState())
 
     fun select(year: Int) {

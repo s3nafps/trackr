@@ -25,4 +25,6 @@ data class ListEntryEntity(
     val notify: Boolean = false,
     /** See ListEntry.completedAt. */
     val completedAt: Long? = null,
+    /** See ListEntry.rewatchCount. */
+    val rewatchCount: Int = 0,
 )

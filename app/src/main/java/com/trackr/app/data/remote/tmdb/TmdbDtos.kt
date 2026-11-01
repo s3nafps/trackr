@@ -140,4 +140,5 @@ data class TmdbEpisodeStub(
     @SerialName("air_date") val airDate: String? = null,
     @SerialName("episode_number") val episodeNumber: Int? = null,
     @SerialName("season_number") val seasonNumber: Int? = null,
+    val runtime: Int? = null,
 )

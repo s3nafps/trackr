@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.trackr.app.data.local.UserPrefs
 import com.trackr.app.data.meta.TitleMetaRepository
+import com.trackr.app.data.history.WatchHistoryRepository
+import com.trackr.app.domain.util.WatchHistory
 import com.trackr.app.data.realtime.LiveFollower
 import com.trackr.app.data.realtime.LiveTables
 import com.trackr.app.data.realtime.LiveUpdates
@@ -37,6 +39,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -74,6 +77,7 @@ class DetailViewModel @Inject constructor(
     private val sharedLists: SharedListsRepository,
     live: LiveUpdates,
     private val titleMeta: TitleMetaRepository,
+    watchHistory: WatchHistoryRepository,
 ) : ViewModel() {
     private val liveFollower = LiveFollower(live, LiveTables.REACTIONS, LiveTables.COMMENTS)
 
@@ -89,6 +93,10 @@ class DetailViewModel @Inject constructor(
             ?.takeIf { e != null && (e.status == ListStatus.COMPLETED || e.status == ListStatus.WATCHING) }
         DetailUiState(d, e, f, nextSeason = next)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DetailUiState())
+
+    /** Your watch history for this title, newest first. */
+    val history: StateFlow<List<WatchHistory.Line>> = watchHistory.of(source.key, id).map { WatchHistory.lines(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val socialLocal = MutableStateFlow(DetailSocialState())
 
@@ -268,6 +276,17 @@ class DetailViewModel @Inject constructor(
             lists.save(d.item, status, rating, progress)
             runCatching { titleMeta.record(d.item, d.seasons, d.airedEpisodes) }
         }
+    }
+
+    /** "Watch again" on a finished title: back to Watching from the start, counted as a rewatch. */
+    fun startRewatch() {
+        val e = state.value.entry ?: return
+        viewModelScope.launch { lists.startRewatch(e) }
+    }
+
+    fun setRewatchCount(count: Int) {
+        val e = state.value.entry ?: return
+        viewModelScope.launch { lists.setRewatchCount(e, count) }
     }
 
     fun remove() {

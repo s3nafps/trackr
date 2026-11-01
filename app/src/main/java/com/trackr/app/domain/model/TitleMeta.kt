@@ -10,4 +10,6 @@ data class TitleMeta(
     val fetchedAt: Long,
     /** Episodes out when it was fetched (see MediaDetail.airedEpisodes); null when unknown. */
     val airedEpisodes: Int? = null,
+    /** Minutes per episode, or the movie's length; null when unknown. */
+    val runtimeMinutes: Int? = null,
 )

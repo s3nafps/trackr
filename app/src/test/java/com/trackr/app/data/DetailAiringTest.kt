@@ -86,7 +86,8 @@ class DetailAiringTest {
         every { prefs.airingEnabled } returns enabled
         val social = mockk<SocialRepository>(relaxed = true)
         val saved = SavedStateHandle(mapOf("source" to "anilist", "type" to "tv", "id" to "1"))
-        return DetailViewModel(saved, media, lists, social, prefs, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+        return DetailViewModel(saved, media, lists, social, prefs, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
+            mockk<com.trackr.app.data.history.WatchHistoryRepository> { every { of(any(), any()) } returns kotlinx.coroutines.flow.flowOf(emptyList()) })
     }
 
     private fun entry(status: ListStatus, notify: Boolean = false) =

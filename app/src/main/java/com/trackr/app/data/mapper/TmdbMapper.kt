@@ -103,7 +103,8 @@ object TmdbMapper {
 
     fun toDetail(d: TmdbDetail, type: MediaType, today: LocalDate = LocalDate.now(), region: String = "US"): MediaDetail {
         val isMovie = type == MediaType.MOVIE
-        val runtime = if (isMovie) d.runtime else d.episodeRunTime.firstOrNull()
+        // TMDB often leaves episode_run_time empty now; the last aired episode's length stands in.
+        val runtime = if (isMovie) d.runtime else d.episodeRunTime.firstOrNull() ?: d.lastEpisodeToAir?.runtime
         val seasons = d.seasons.filter { it.seasonNumber > 0 }.map {
             SeasonInfo(it.seasonNumber, it.name.ifBlank { "Season ${it.seasonNumber}" }, it.episodeCount, yearOf(it.airDate), poster(it.posterPath))
         }

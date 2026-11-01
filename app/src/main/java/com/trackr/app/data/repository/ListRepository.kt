@@ -1,6 +1,7 @@
 package com.trackr.app.data.repository
 
 import com.trackr.app.data.airing.AiringRefreshScheduler
+import com.trackr.app.data.history.WatchHistoryRepository
 import com.trackr.app.data.local.ListEntryDao
 import com.trackr.app.data.mapper.ListEntryMapper.toDomain
 import com.trackr.app.data.mapper.ListEntryMapper.toEntity
@@ -64,6 +65,8 @@ class ListRepository @Inject constructor(
     private val auth: AuthRepository,
     private val scheduler: SyncScheduler,
     private val airingRefresh: AiringRefreshScheduler,
+    /** Null in tests that don't look at history. */
+    private val history: WatchHistoryRepository? = null,
 ) {
     /** The worker, pull-to-refresh, "Sync now" and sign-out can all call [sync]; runs never overlap, nor with [clearLocal]. */
     private val syncLock = Mutex()
@@ -73,7 +76,8 @@ class ListRepository @Inject constructor(
     fun entry(item: MediaItem): Flow<ListEntry?> = dao.observe(item.source.key, item.externalId).map { it?.toDomain() }
     fun entry(source: String, id: String): Flow<ListEntry?> = dao.observe(source, id).map { it?.toDomain() }
 
-    private suspend fun write(entry: ListEntry) {
+    /** Saves [entry] and, unless [recordHistory] is off, logs what it watched (or takes back what it undid). */
+    private suspend fun write(entry: ListEntry, recordHistory: Boolean = true) {
         val now = System.currentTimeMillis()
         val previous = dao.get(entry.source.key, entry.externalId)?.takeIf { !it.deleted }
         // Becoming Completed stamps the date; staying Completed keeps the original one (pinning the old updatedAt
@@ -83,12 +87,16 @@ class ListRepository @Inject constructor(
             previous?.status == ListStatus.COMPLETED.key -> previous.completedAt ?: previous.updatedAt
             else -> now
         }
-        dao.upsert(entry.copy(updatedAt = now, completedAt = completedAt).toEntity(dirty = true))
+        val saved = entry.copy(updatedAt = now, completedAt = completedAt)
+        dao.upsert(saved.toEntity(dirty = true))
+        if (recordHistory) history?.onWrite(previous?.toDomain(), saved, now)
         scheduler.syncNow()
         airingRefresh.refreshNow()
     }
 
     suspend fun save(item: MediaItem, status: ListStatus, rating: Int?, progress: Int) {
+        // Saving from the sheet keeps what it doesn't show: the alert opt-in and the rewatch count.
+        val existing = dao.get(item.source.key, item.externalId)?.takeIf { !it.deleted }
         val total = item.totalEpisodes
         val fixedProgress = when {
             status == ListStatus.COMPLETED && total != null -> total
@@ -99,6 +107,7 @@ class ListRepository @Inject constructor(
             ListEntry(
                 item.source, item.externalId, item.type, item.title, item.posterUrl, item.backdropUrl,
                 status, rating?.coerceIn(1, 10), fixedProgress, total, 0L,
+                notify = existing?.notify ?: false, rewatchCount = existing?.rewatchCount ?: 0,
             ),
         )
     }
@@ -108,7 +117,17 @@ class ListRepository @Inject constructor(
         write(entry.copy(status = status, rating = rating?.coerceIn(1, 10), progress = p))
     }
 
-    suspend fun setNotify(entry: ListEntry, on: Boolean) = write(entry.copy(notify = on))
+    suspend fun setNotify(entry: ListEntry, on: Boolean) = write(entry.copy(notify = on), recordHistory = false)
+
+    /** "Watch again": a new watch-through from the start, counted as a rewatch and marked in the history. */
+    suspend fun startRewatch(entry: ListEntry) {
+        write(entry.copy(status = ListStatus.WATCHING, progress = 0, rewatchCount = entry.rewatchCount + 1), recordHistory = false)
+        history?.startRewatch(entry, System.currentTimeMillis())
+    }
+
+    /** Corrects how many times it was watched again. */
+    suspend fun setRewatchCount(entry: ListEntry, count: Int) =
+        write(entry.copy(rewatchCount = count.coerceIn(0, MAX_REWATCHES)), recordHistory = false)
 
     /**
      * Adds imported entries that aren't in the list yet (a removed entry counts as absent) and never touches existing
@@ -159,6 +178,7 @@ class ListRepository @Inject constructor(
     suspend fun remove(entry: ListEntry) {
         val existing = dao.get(entry.source.key, entry.externalId) ?: return
         dao.upsert(existing.copy(deleted = true, dirty = true, updatedAt = System.currentTimeMillis()))
+        history?.removeTitle(entry.source.key, entry.externalId)
         scheduler.syncNow()
         airingRefresh.refreshNow()
     }
@@ -167,6 +187,13 @@ class ListRepository @Inject constructor(
     suspend fun sync(): Boolean = syncLock.withLock {
         val uid = auth.currentUserId ?: return@withLock false
         ListSyncer(dao, remote).sync(uid)
+        // The history is extra: if it can't sync now (or the server doesn't have it yet), the list sync still counts.
+        try {
+            history?.sync(uid)
+        } catch (c: kotlinx.coroutines.CancellationException) {
+            throw c
+        } catch (_: Exception) {
+        }
         true
     }
 
@@ -174,5 +201,12 @@ class ListRepository @Inject constructor(
     suspend fun pendingChanges(): Int = dao.getDirty().size
 
     /** Waits for an in-flight sync, which could otherwise re-insert the pulled rows of the account being wiped. */
-    suspend fun clearLocal() = syncLock.withLock { dao.clear() }
+    suspend fun clearLocal() = syncLock.withLock {
+        dao.clear()
+        history?.clear()
+    }
+
+    companion object {
+        const val MAX_REWATCHES = 99
+    }
 }

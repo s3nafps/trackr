@@ -23,6 +23,8 @@ class TrackrApp : Application(), Configuration.Provider {
     @Inject lateinit var metaKeeper: MetaKeeper
     @Inject lateinit var updateNotifier: UpdateNotifier
     @Inject lateinit var updateCheck: UpdateCheckScheduler
+    @Inject lateinit var socialNotifier: com.trackr.app.data.social.SocialNotifier
+    @Inject lateinit var socialCheck: com.trackr.app.data.social.SocialCheckScheduler
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -36,5 +38,7 @@ class TrackrApp : Application(), Configuration.Provider {
         metaKeeper.start()
         updateNotifier.createChannel()
         updateCheck.schedulePeriodic()
+        socialNotifier.createChannel()
+        socialCheck.schedulePeriodic()
     }
 }

@@ -57,10 +57,15 @@ fun TrackrNavHost(
     deletion: AccountDeletion = AccountDeletion(),
     openTarget: DetailTarget? = null,
     onTargetOpened: () -> Unit = {},
+    openFriends: Boolean = false,
+    onFriendsOpened: () -> Unit = {},
 ) {
     val nav = rememberNavController()
     LaunchedEffect(openTarget) {
         openTarget?.let { nav.navigate(Routes.detail(it.source, it.type, it.id)); onTargetOpened() }
+    }
+    LaunchedEffect(openFriends) {
+        if (openFriends) { nav.goTop(Routes.FRIENDS); onFriendsOpened() }
     }
     val entry by nav.currentBackStackEntryAsState()
     val dest = entry?.destination

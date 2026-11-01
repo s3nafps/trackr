@@ -16,6 +16,8 @@ data class TitleMetaEntity(
     val seasonEpisodes: String,
     val fetchedAt: Long,
     val airedEpisodes: Int? = null,
+    /** Minutes per episode, or the movie's length; null when the source doesn't say. */
+    val runtimeMinutes: Int? = null,
 )
 
 @Dao

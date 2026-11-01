@@ -3,7 +3,8 @@ package com.trackr.app.domain.util
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaType
-import com.trackr.app.domain.model.StatsCalculator
+import com.trackr.app.domain.model.TitleMeta
+import com.trackr.app.domain.model.WatchEvent
 import java.time.Instant
 import java.time.ZoneId
 
@@ -44,14 +45,30 @@ object YearInReviewCalculator {
     fun years(entries: List<ListEntry>, zone: ZoneId = ZoneId.systemDefault()): List<Int> =
         entries.mapNotNull { e -> completedAt(e)?.let { Instant.ofEpochMilli(it).atZone(zone).year } }.distinct().sortedDescending()
 
-    fun compute(entries: List<ListEntry>, year: Int, zone: ZoneId = ZoneId.systemDefault()): YearInReview {
+    /**
+     * The year's numbers. Hours are the episodes and movies logged in the watch history that year, plus one full
+     * watch-through of each title finished that year that has no history (finished before it was kept). Real runtimes
+     * from [meta] where known, typical ones otherwise.
+     */
+    fun compute(
+        entries: List<ListEntry>, year: Int, zone: ZoneId = ZoneId.systemDefault(),
+        history: List<WatchEvent> = emptyList(), meta: Map<String, TitleMeta> = emptyMap(),
+    ): YearInReview {
         val done = entries.mapNotNull { e -> completedAt(e)?.let { e to Instant.ofEpochMilli(it).atZone(zone) } }
             .filter { (_, at) -> at.year == year }
         val movies = done.count { it.first.mediaType == MediaType.MOVIE }
         val tvEpisodes = done.filter { it.first.mediaType == MediaType.TV }.sumOf { it.first.progress }
         val animeEpisodes = done.filter { it.first.mediaType == MediaType.ANIME }.sumOf { it.first.progress }
-        val minutes = movies * StatsCalculator.MOVIE_MINUTES + tvEpisodes * StatsCalculator.TV_EPISODE_MINUTES +
-            animeEpisodes * StatsCalculator.ANIME_EPISODE_MINUTES
+        val start = java.time.LocalDate.of(year, 1, 1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val end = java.time.LocalDate.of(year + 1, 1, 1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val logged = WatchTime.inPeriod(history, meta, start, end)
+        // Titles with no history at all (finished before it was kept): their finish counts one full watch-through.
+        val withHistory = history.mapTo(HashSet()) { it.key }
+        val unlogged = done.filter { (e, _) -> e.key !in withHistory }.sumOf { (e, _) ->
+            val runtime = meta[e.key]?.runtimeMinutes ?: WatchTime.typicalRuntime(e.mediaType)
+            runtime.toLong() * if (e.mediaType == MediaType.MOVIE) 1 else e.progress
+        }
+        val minutes = logged + unlogged
         val ratings = done.mapNotNull { it.first.rating }
         return YearInReview(
             year = year,
@@ -60,7 +77,7 @@ object YearInReviewCalculator {
             shows = done.count { it.first.mediaType == MediaType.TV },
             anime = done.count { it.first.mediaType == MediaType.ANIME },
             episodes = tvEpisodes + animeEpisodes,
-            hours = minutes / 60,
+            hours = (minutes / 60).toInt(),
             averageRating = ratings.takeIf { it.isNotEmpty() }?.average(),
             topRated = done.filter { it.first.rating != null }
                 .sortedWith(compareByDescending<Pair<ListEntry, java.time.ZonedDateTime>> { it.first.rating }.thenBy { it.second })

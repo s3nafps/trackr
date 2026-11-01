@@ -22,6 +22,7 @@ data class ListEntryDto(
     @SerialName("updated_at") val updatedAt: String,
     val notify: Boolean = false,
     @SerialName("completed_at") val completedAt: String? = null,
+    @SerialName("rewatch_count") val rewatchCount: Int = 0,
 )
 
 private val rowJson = Json { encodeDefaults = true }

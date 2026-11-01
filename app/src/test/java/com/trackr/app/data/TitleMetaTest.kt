@@ -59,7 +59,9 @@ class TitleMetaTest {
     @Test fun `stored titles aren't fetched again, except watched TV shows after a week`() = runTest {
         coEvery { media.detail(any(), any(), any(), any(), any()) } answers {
             // 10 out, and the entries are at episode 0: behind, so the weekly refresh applies.
-            detail(secondArg(), thirdArg(), listOf("Drama"), listOf(season(1, 10))).copy(airedEpisodes = 10)
+            detail(secondArg(), thirdArg(), listOf("Drama"), listOf(season(1, 10))).let { d ->
+                d.copy(item = d.item.copy(runtimeMinutes = 45), airedEpisodes = 10)
+            }
         }
         val entries = listOf(entry("1", MediaType.TV, ListStatus.WATCHING), entry("2", MediaType.TV, ListStatus.COMPLETED))
         repo.backfill(entries, now = 0)
@@ -69,6 +71,22 @@ class TitleMetaTest {
         repo.backfill(entries, now = TitleMetaRepository.SEASON_REFRESH_MS + 1)
         coVerify(exactly = 2) { media.detail(MediaSource.TMDB, "1", any(), any(), any()) }
         coVerify(exactly = 1) { media.detail(MediaSource.TMDB, "2", any(), any(), any()) }
+    }
+
+    @Test fun `titles without a runtime are tried again weekly, and a runtime is stored`() = runTest {
+        var runtime: Int? = null
+        coEvery { media.detail(any(), any(), any(), any(), any()) } answers {
+            detail(secondArg(), thirdArg(), listOf("Drama")).let { d -> d.copy(item = d.item.copy(runtimeMinutes = runtime)) }
+        }
+        val entries = listOf(entry("1", MediaType.MOVIE, ListStatus.COMPLETED))
+        repo.backfill(entries, now = 0)
+        repo.backfill(entries, now = TitleMetaRepository.SEASON_REFRESH_MS - 1)
+        coVerify(exactly = 1) { media.detail(MediaSource.TMDB, "1", any(), any(), any()) }
+        runtime = 117
+        repo.backfill(entries, now = TitleMetaRepository.SEASON_REFRESH_MS + 1)
+        assertEquals(117, repo.all.first()["tmdb:1"]?.runtimeMinutes)
+        repo.backfill(entries, now = 10 * TitleMetaRepository.SEASON_REFRESH_MS)
+        coVerify(exactly = 2) { media.detail(MediaSource.TMDB, "1", any(), any(), any()) }
     }
 
     @Test fun `a long list is done in batches`() = runTest {
