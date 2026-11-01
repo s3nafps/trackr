@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -15,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.ui.ThemeViewModel
+import com.trackr.app.ui.UpdateViewModel
+import com.trackr.app.data.update.UpdateNotifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.trackr.app.data.airing.AiringNotifier
 import com.trackr.app.ui.AppRoot
@@ -26,6 +29,17 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var openTarget by mutableStateOf<DetailTarget?>(null)
+
+    /** The same activity-scoped instance AppRoot shows the update dialog from. */
+    private val updates: UpdateViewModel by viewModels()
+
+    /** A tap on the "update available" notification: check now, which opens the update dialog. */
+    private fun showUpdateIfAsked(intent: Intent?) {
+        if (intent != null && intent.getBooleanExtra(UpdateNotifier.EXTRA_SHOW_UPDATE, false)) {
+            intent.removeExtra(UpdateNotifier.EXTRA_SHOW_UPDATE)
+            updates.checkNow()
+        }
+    }
 
     /** Notification/widget extras, or a shared title link (trackr://, TMDB or AniList page). */
     private fun readTarget(intent: Intent?): DetailTarget? {
@@ -42,13 +56,17 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         readTarget(intent)?.let { openTarget = it }
+        showUpdateIfAsked(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (savedInstanceState == null) openTarget = readTarget(intent)
+        if (savedInstanceState == null) {
+            openTarget = readTarget(intent)
+            showUpdateIfAsked(intent)
+        }
         setContent {
             val theme: ThemeViewModel = hiltViewModel()
             val mode by theme.mode.collectAsStateWithLifecycle()

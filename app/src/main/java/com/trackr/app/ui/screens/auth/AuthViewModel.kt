@@ -66,7 +66,7 @@ class AuthViewModel @Inject constructor(
             return
         }
         val next = try {
-            val p = profiles.getProfile(userId)
+            val p = profiles.loadMe()
             if (p.usernameSet) AppState.Ready(p) else AppState.NeedsUsername(p)
         } catch (e: Exception) {
             AppState.Ready(null) // offline / transient: don't block the app

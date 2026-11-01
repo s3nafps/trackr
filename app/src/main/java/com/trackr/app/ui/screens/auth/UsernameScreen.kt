@@ -1,5 +1,6 @@
 package com.trackr.app.ui.screens.auth
 
+import com.trackr.app.domain.util.Usernames
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,11 +47,11 @@ fun UsernameScreen(state: AuthUiState, suggested: String, onSubmit: (String) -> 
         Spacer(Modifier.height(24.dp))
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it.filter { c -> c.isLetterOrDigit() || c == '_' || c == '.' }.take(24) },
+            onValueChange = { name = Usernames.clean(it) },
             label = { Text("Username") },
             singleLine = true,
             isError = state.error != null,
-            supportingText = { Text(state.error ?: "3–24 letters, numbers, . or _") },
+            supportingText = { Text(state.error ?: Usernames.HINT) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onSubmit(name) }),
             shape = RoundedCornerShape(16.dp),
@@ -59,7 +60,7 @@ fun UsernameScreen(state: AuthUiState, suggested: String, onSubmit: (String) -> 
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = { onSubmit(name) },
-            enabled = !state.busy && name.length >= 3,
+            enabled = !state.busy && Usernames.isValid(name),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth().height(48.dp),
         ) {

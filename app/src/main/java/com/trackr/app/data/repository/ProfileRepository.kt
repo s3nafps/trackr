@@ -1,6 +1,7 @@
 package com.trackr.app.data.repository
 
 import com.trackr.app.domain.model.Profile
+import com.trackr.app.domain.util.Usernames
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
@@ -15,12 +16,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 class UsernameTakenException : Exception("That username is already taken")
-class InvalidUsernameException : Exception("Use 3–24 letters, numbers, dots or underscores")
+class InvalidUsernameException : Exception("Use ${Usernames.HINT}")
 
 @Singleton
 class ProfileRepository @Inject constructor(private val supabase: SupabaseClient) {
-    private val usernameRegex = Regex("^[A-Za-z0-9_.]{3,24}$")
-
     /** What any signed-in user may read of a profile. The invite code is left out: only its owner reads it. */
     private val publicColumns = Columns.list("id", "username", "username_set", "avatar_url")
 
@@ -32,6 +31,9 @@ class ProfileRepository @Inject constructor(private val supabase: SupabaseClient
 
     /** The signed-in user's own profile, with their invite code. */
     private suspend fun ownProfile(): Profile = supabase.postgrest.rpc("my_profile").decodeSingle<Profile>()
+
+    /** Loads the signed-in user's own profile (the server knows who that is) and makes it [me]. */
+    suspend fun loadMe(): Profile = ownProfile().also { _me.value = it }
 
     suspend fun getProfile(userId: String): Profile =
         if (supabase.auth.currentUserOrNull()?.id == userId) ownProfile().also { _me.value = it }
@@ -55,7 +57,7 @@ class ProfileRepository @Inject constructor(private val supabase: SupabaseClient
 
     suspend fun setUsername(userId: String, username: String): Profile {
         val name = username.trim()
-        if (!usernameRegex.matches(name)) throw InvalidUsernameException()
+        if (!Usernames.isValid(name)) throw InvalidUsernameException()
         try {
             supabase.from("profiles").update(
                 buildJsonObject {

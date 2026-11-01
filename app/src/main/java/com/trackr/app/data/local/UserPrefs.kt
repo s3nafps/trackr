@@ -23,6 +23,7 @@ class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context
     private val updateCheckedKey = longPreferencesKey("update_last_check")
     private val updateDismissedKey = stringPreferencesKey("update_dismissed")
     private val notificationsAskedKey = booleanPreferencesKey("notifications_asked")
+    private val updateNotifiedKey = stringPreferencesKey("update_notified")
     private val sep = "\u001F"
 
     val recentSearches: Flow<List<String>> = ctx.dataStore.data.map { p ->
@@ -65,6 +66,11 @@ class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context
     val dismissedUpdate: Flow<String?> = ctx.dataStore.data.map { it[updateDismissedKey] }
 
     suspend fun setDismissedUpdate(version: String) = ctx.dataStore.edit { it[updateDismissedKey] = version }
+
+    /** The release version the background check last notified about, so each version notifies once. */
+    val notifiedUpdate: Flow<String?> = ctx.dataStore.data.map { it[updateNotifiedKey] }
+
+    suspend fun setNotifiedUpdate(version: String) = ctx.dataStore.edit { it[updateNotifiedKey] = version }
 
     /** Whether the first-launch notification prompt was shown (answered either way). */
     val notificationsAsked: Flow<Boolean> = ctx.dataStore.data.map { it[notificationsAskedKey] ?: false }

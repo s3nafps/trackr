@@ -65,10 +65,11 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun editUsername(name: String) {
-        val id = profiles.me.value?.id ?: return
         viewModelScope.launch {
             local.update { it.copy(editBusy = true, editError = null, editDone = false) }
             try {
+                // The own profile may not be loaded yet (offline at launch): load it rather than do nothing.
+                val id = profiles.me.value?.id ?: profiles.loadMe().id
                 profiles.setUsername(id, name)
                 local.update { it.copy(editBusy = false, editDone = true) }
             } catch (e: Exception) {

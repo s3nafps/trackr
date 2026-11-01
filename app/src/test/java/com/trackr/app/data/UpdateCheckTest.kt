@@ -75,6 +75,35 @@ class UpdateCheckTest {
         assertNull(UpdateRepository.toUpdate(apk("https://github.com/a.apk", "md5:abc"), "1.0.0")!!.apkUrl)
     }
 
+    @Test fun `skipped versions show all their changes, newest first, without drafts or pre-releases`() {
+        val notes = { v: String -> "## What's new\n- $v one\n- $v two\n- $v three\n- $v four\n- $v five" }
+        val info = UpdateRepository.toUpdate(
+            listOf(
+                release("v1.3.0", notes("1.3")),
+                release("v1.5.0", notes("1.5")),
+                release("v1.4.0", notes("1.4")),
+                release("v1.2.0", notes("1.2")),
+                release("v1.6.0", notes("1.6")).copy(draft = true),
+                release("v1.6.0-rc1", notes("rc")).copy(prerelease = true),
+                release("nightly", notes("n")),
+            ),
+            current = "1.2.0",
+        )!!
+        assertEquals("1.5.0", info.version)
+        assertEquals("https://github.com/s3nafps/trackr/releases/download/v1.5.0/trackr-v1.5.0.apk", info.apkUrl)
+        assertEquals(listOf("1.5.0", "1.4.0", "1.3.0"), info.changes.map { it.version })
+        assertEquals(5, info.highlights.size) // every bullet, not just the first few
+        assertEquals(info.highlights, info.changes.first().items)
+        assertNull(UpdateRepository.toUpdate(listOf(release("v1.2.0")), current = "1.2.0"))
+    }
+
+    @Test fun `the background check offers the newest release without touching the launch check`() = runTest {
+        coEvery { releases.recent() } returns listOf(release("v1.1.0"), release("v2.0.0"))
+        assertEquals("2.0.0", repo.available(current = "1.0.0")?.version)
+        assertNull(repo.available(current = "2.0.0"))
+        coVerify(exactly = 0) { prefs.setLastUpdateCheck(any()) }
+    }
+
     @Test fun `github's release json decodes`() {
         val json = Json { ignoreUnknownKeys = true }
         val r = json.decodeFromString(
@@ -87,10 +116,10 @@ class UpdateCheckTest {
     }
 
     @Test fun `automatic checks wait 12 hours and skip a version put off with Later`() = runTest {
-        coEvery { releases.latest() } returns release("v9.0.0")
+        coEvery { releases.recent() } returns listOf(release("v9.0.0"))
         every { prefs.lastUpdateCheck } returns flowOf(1_000L)
         assertEquals(UpdateCheck.Skipped, repo.check(manual = false, now = 1_000L + 60_000, current = "1.0.0"))
-        coVerify(exactly = 0) { releases.latest() }
+        coVerify(exactly = 0) { releases.recent() }
 
         val later = 1_000L + UpdateRepository.CHECK_INTERVAL_MS
         assertTrue(repo.check(manual = false, now = later, current = "1.0.0") is UpdateCheck.Available)
@@ -102,7 +131,7 @@ class UpdateCheckTest {
     }
 
     @Test fun `no release yet means up to date`() = runTest {
-        coEvery { releases.latest() } returns null
+        coEvery { releases.recent() } returns emptyList()
         assertEquals(UpdateCheck.UpToDate, repo.check(manual = true, current = "1.0.0"))
     }
 
