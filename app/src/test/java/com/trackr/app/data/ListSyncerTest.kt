@@ -5,6 +5,7 @@ import com.trackr.app.data.local.ListEntryEntity
 import com.trackr.app.data.remote.supabase.ListEntryDto
 import com.trackr.app.data.sync.ListRemote
 import com.trackr.app.data.sync.ListSyncer
+import com.trackr.app.data.sync.fetchAllPages
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -175,5 +176,20 @@ class ListSyncerTest {
         ListSyncer(dao, remote).sync("u")
         assertEquals("watching", dao.get("tmdb", "1")!!.status)
         assertTrue(dao.get("tmdb", "1")!!.dirty)
+    }
+
+    @Test fun `paged reads keep asking until a page is empty, even when the server caps pages lower`() = runTest {
+        val all = (1..2345).toList()
+        val asked = mutableListOf<LongRange>()
+        // The server returns at most 1000 rows, whatever range is asked for.
+        val rows = fetchAllPages(pageSize = 1000) { from, to ->
+            asked += from..to
+            all.drop(from.toInt()).take(minOf(1000, (to - from + 1).toInt()))
+        }
+        assertEquals(all, rows)
+        assertEquals(listOf(0L..999L, 1000L..1999L, 2000L..2999L, 2345L..3344L), asked)
+
+        val capped = fetchAllPages(pageSize = 1000) { from, _ -> all.drop(from.toInt()).take(400) }
+        assertEquals(all, capped)
     }
 }

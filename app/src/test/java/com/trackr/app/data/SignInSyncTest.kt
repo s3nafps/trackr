@@ -9,6 +9,7 @@ import com.trackr.app.ui.screens.auth.AuthViewModel
 import io.github.jan.supabase.auth.status.SessionSource
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserSession
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -21,6 +22,8 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -51,5 +54,21 @@ class SignInSyncTest {
         status.emit(SessionStatus.NotAuthenticated(true))
         status.emit(signedIn())
         coVerify(exactly = 2) { lists.sync() }
+    }
+
+    @Test fun `signing out with unsaved edits asks first and keeps everything`() = runTest {
+        coEvery { lists.pendingChanges() } returns 3
+        val vm = AuthViewModel(auth, profiles, lists, airing)
+        vm.signOut()
+        assertEquals(3, vm.state.value.unsyncedOnSignOut)
+        coVerify(exactly = 0) { auth.signOut() }
+        coVerify(exactly = 0) { lists.clearLocal() }
+
+        vm.keepSignedIn()
+        assertNull(vm.state.value.unsyncedOnSignOut)
+
+        vm.signOut(force = true)
+        coVerify { auth.signOut() }
+        coVerify { lists.clearLocal() }
     }
 }

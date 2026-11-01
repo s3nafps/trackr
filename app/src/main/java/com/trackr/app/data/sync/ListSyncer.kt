@@ -7,6 +7,20 @@ import com.trackr.app.data.mapper.ListEntryMapper.toEntity
 import com.trackr.app.data.remote.supabase.ListEntryDto
 import com.trackr.app.data.mapper.ListEntryMapper.parseInstant
 
+/**
+ * Every row of a paged read: asks for [pageSize] rows at a time until a page comes back empty. The server caps one
+ * response (Supabase's default is 1000 rows), and the syncer drops clean local rows that a fetch doesn't return, so a
+ * short read would remove titles from the device.
+ */
+suspend fun <T> fetchAllPages(pageSize: Int = 1000, fetch: suspend (from: Long, to: Long) -> List<T>): List<T> {
+    val rows = mutableListOf<T>()
+    while (true) {
+        val page = fetch(rows.size.toLong(), rows.size + pageSize - 1L)
+        if (page.isEmpty()) return rows
+        rows += page
+    }
+}
+
 /** Remote operations the syncer needs (kept tiny so the merge logic is unit-testable). */
 interface ListRemote {
     suspend fun fetchAll(userId: String): List<ListEntryDto>

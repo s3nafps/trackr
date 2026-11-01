@@ -8,6 +8,7 @@ import com.trackr.app.data.remote.supabase.ListEntryDto
 import com.trackr.app.data.remote.supabase.toRow
 import com.trackr.app.data.sync.ListRemote
 import com.trackr.app.data.sync.ListSyncer
+import com.trackr.app.data.sync.fetchAllPages
 import com.trackr.app.data.sync.SyncScheduler
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
@@ -15,6 +16,7 @@ import com.trackr.app.domain.util.AiredProgress
 import com.trackr.app.domain.model.MediaItem
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -24,8 +26,13 @@ import javax.inject.Singleton
 
 @Singleton
 class SupabaseListRemote @Inject constructor(private val supabase: SupabaseClient) : ListRemote {
-    override suspend fun fetchAll(userId: String): List<ListEntryDto> =
-        supabase.from("list_entries").select { filter { eq("user_id", userId) } }.decodeList()
+    override suspend fun fetchAll(userId: String): List<ListEntryDto> = fetchAllPages { from, to ->
+        supabase.from("list_entries").select {
+            filter { eq("user_id", userId) }
+            order("id", Order.ASCENDING)
+            range(from, to)
+        }.decodeList()
+    }
 
     override suspend fun upsert(dto: ListEntryDto) {
         supabase.from("list_entries").upsert(dto.toRow()) { onConflict = "user_id,source,external_id" }
@@ -151,6 +158,9 @@ class ListRepository @Inject constructor(
         ListSyncer(dao, remote).sync(uid)
         true
     }
+
+    /** Edits on this device that haven't reached the account yet. */
+    suspend fun pendingChanges(): Int = dao.getDirty().size
 
     /** Waits for an in-flight sync, which could otherwise re-insert the pulled rows of the account being wiped. */
     suspend fun clearLocal() = syncLock.withLock { dao.clear() }
