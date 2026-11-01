@@ -1,5 +1,6 @@
 package com.trackr.app.ui.screens.profile
 
+import com.trackr.app.domain.util.Usernames
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -193,12 +194,12 @@ fun ProfileContent(
             title = { Text("Edit username") },
             text = {
                 OutlinedTextField(
-                    name, { name = it.filter { c -> c.isLetterOrDigit() || c == '_' || c == '.' }.take(24) }, singleLine = true,
-                    isError = state.editError != null, supportingText = { Text(state.editError ?: "3–24 letters, numbers, . or _") },
+                    name, { name = Usernames.clean(it) }, singleLine = true,
+                    isError = state.editError != null, supportingText = { Text(state.editError ?: Usernames.HINT) },
                     shape = MaterialTheme.shapes.medium,
                 )
             },
-            confirmButton = { Button(onClick = { onEditUsername(name) }, enabled = !state.editBusy && name.length >= 3) { Text("Save") } },
+            confirmButton = { Button(onClick = { onEditUsername(name) }, enabled = !state.editBusy && Usernames.isValid(name)) { Text("Save") } },
             dismissButton = { TextButton(onClick = { editing = false; onResetEdit() }) { Text("Cancel") } },
         )
     }

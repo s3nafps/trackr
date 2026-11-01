@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.AlertDialog
@@ -12,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.trackr.app.BuildConfig
@@ -27,11 +30,16 @@ fun UpdateDialog(info: UpdateInfo, onDownload: () -> Unit, onLater: () -> Unit) 
         icon = { Icon(Icons.Outlined.SystemUpdate, null) },
         title = { Text("Trackr ${info.version} is available") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Every release since the installed one, newest first; scrolls when there's a lot.
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("You have version ${BuildConfig.VERSION_NAME}. The new version installs over it and keeps your list.")
-                if (info.highlights.isNotEmpty()) {
-                    Text("What's new", style = MaterialTheme.typography.titleSmall)
-                    info.highlights.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
+                val changes = info.changes.filter { it.items.isNotEmpty() }
+                changes.forEach { release ->
+                    Text(
+                        if (changes.size == 1) "What's new" else "What's new in ${release.version}",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    release.items.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
                 }
             }
         },

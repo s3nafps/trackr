@@ -8,6 +8,7 @@ import com.trackr.app.data.update.UpdateInfo
 import com.trackr.app.data.update.UpdateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,12 +32,19 @@ class UpdateViewModel @Inject constructor(private val updates: UpdateRepository)
 
     init { check(manual = false) }
 
+    private var job: Job? = null
+
+    /** From About, or a tap on the "update available" notification: always asks GitHub and shows the result. */
     fun checkNow() = check(manual = true)
 
     private fun check(manual: Boolean) {
-        if (_state.value.checking) return
+        // A manual check replaces a running automatic one (which may be throttled and show nothing).
+        if (job?.isActive == true) {
+            if (!manual) return
+            job?.cancel()
+        }
         _state.update { it.copy(checking = true, message = null) }
-        viewModelScope.launch {
+        job = viewModelScope.launch {
             val result = try {
                 updates.check(manual)
             } catch (e: CancellationException) {
