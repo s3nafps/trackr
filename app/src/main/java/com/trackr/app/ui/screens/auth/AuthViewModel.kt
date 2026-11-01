@@ -48,8 +48,15 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             auth.sessionStatus.collect { status ->
                 when (status) {
-                    is SessionStatus.Authenticated -> loadProfile(status.session.user?.id ?: auth.currentUserId)
-                    is SessionStatus.NotAuthenticated -> _state.update { it.copy(app = AppState.SignedOut) }
+                    is SessionStatus.Authenticated -> {
+                        val userId = status.session.user?.id ?: auth.currentUserId
+                        pullListOnce(userId)
+                        loadProfile(userId)
+                    }
+                    is SessionStatus.NotAuthenticated -> {
+                        pulledFor = null // signing back in pulls the list again
+                        _state.update { it.copy(app = AppState.SignedOut) }
+                    }
                     is SessionStatus.Initializing -> Unit
                     // Network trouble while refreshing: keep the user in the app (offline use).
                     else -> if (_state.value.app is AppState.Loading) {
@@ -58,6 +65,19 @@ class AuthViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /** The account whose list was last pulled; token refreshes re-emit Authenticated and shouldn't sync again. */
+    private var pulledFor: String? = null
+
+    /**
+     * Brings the account's list down from the server once per sign-in (and once per app start), so signing back in
+     * restores everything sign-out wiped from this device. Runs beside the profile load so the app opens at once.
+     */
+    private fun pullListOnce(userId: String?) {
+        if (userId == null || userId == pulledFor) return
+        pulledFor = userId
+        viewModelScope.launch { runCatching { lists.sync() }.onFailure { if (pulledFor == userId) pulledFor = null } }
     }
 
     private suspend fun loadProfile(userId: String?) {

@@ -30,7 +30,14 @@ class ProfileRepository @Inject constructor(private val supabase: SupabaseClient
     fun clearMe() { _me.value = null }
 
     /** The signed-in user's own profile, with their invite code. */
-    private suspend fun ownProfile(): Profile = supabase.postgrest.rpc("my_profile").decodeSingle<Profile>()
+    /**
+     * my_profile() as the server sends it: a one-row array (setof) or, from the first version of the function, a
+     * single object. Both are read so the app works whichever one the project has.
+     */
+    private suspend fun ownProfile(): Profile {
+        val result = supabase.postgrest.rpc("my_profile")
+        return if (result.data.trimStart().startsWith("[")) result.decodeSingle<Profile>() else result.decodeAs<Profile>()
+    }
 
     /** Loads the signed-in user's own profile (the server knows who that is) and makes it [me]. */
     suspend fun loadMe(): Profile = ownProfile().also { _me.value = it }
