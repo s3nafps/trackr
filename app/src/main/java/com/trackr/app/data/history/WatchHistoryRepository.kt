@@ -131,7 +131,8 @@ class WatchHistoryRepository @Inject constructor(private val dao: WatchEventDao,
 
     /** Records what the change from [previous] to [next] watched, or takes back what a correction undid. */
     suspend fun onWrite(previous: ListEntry?, next: ListEntry, now: Long) {
-        WatchHistory.onWrite(previous, next, now) { UUID.randomUUID().toString() }.forEach { dao.upsert(it.toEntity()) }
+        val at = nextTime(next, now)
+        WatchHistory.onWrite(previous, next, at) { UUID.randomUUID().toString() }.forEach { dao.upsert(it.toEntity()) }
         if (previous == null) return
         val trim = WatchHistory.onCorrection(previous, next, dao.getFor(next.source.key, next.externalId).map { it.toDomain() })
         // A shortened event goes out as a new one: events are never edited on the server.
@@ -144,9 +145,18 @@ class WatchHistoryRepository @Inject constructor(private val dao: WatchEventDao,
         dao.upsert(
             WatchEvent(
                 UUID.randomUUID().toString(), entry.source, entry.externalId, entry.mediaType, entry.title,
-                WatchEvent.Kind.REWATCH, null, null, now,
+                WatchEvent.Kind.REWATCH, null, null, nextTime(entry, now),
             ).toEntity(),
         )
+    }
+
+    /**
+     * [now], or just after the title's newest event: a title's events must be strictly ordered, since what belongs to
+     * the current watch-through is told by time (two quick taps can land in the same millisecond).
+     */
+    private suspend fun nextTime(entry: ListEntry, now: Long): Long {
+        val newest = dao.getFor(entry.source.key, entry.externalId).maxOfOrNull { it.watchedAt } ?: return now
+        return maxOf(now, newest + 1)
     }
 
     /** The title left the list: its history goes too. */
