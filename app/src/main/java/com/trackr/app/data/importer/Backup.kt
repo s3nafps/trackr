@@ -25,6 +25,7 @@ data class BackupEntry(
     val notify: Boolean = false,
     /** Added after v1 shipped; older backups simply lack it. */
     @SerialName("completed_at") val completedAt: String? = null,
+    @SerialName("rewatch_count") val rewatchCount: Int = 0,
 )
 
 @Serializable
@@ -52,7 +53,7 @@ object Backup {
                 BackupEntry(
                     it.source.key, it.externalId, it.mediaType.key, it.title, it.posterUrl, it.backdropUrl, it.status.key,
                     it.rating, it.progress, it.totalEpisodes, Instant.ofEpochMilli(it.updatedAt).toString(), it.notify,
-                    it.completedAt?.let { c -> Instant.ofEpochMilli(c).toString() },
+                    it.completedAt?.let { c -> Instant.ofEpochMilli(c).toString() }, it.rewatchCount,
                 )
             },
         ),
@@ -71,6 +72,7 @@ object Backup {
                 source, e.externalId, type, e.title, e.posterUrl, e.backdropUrl, status, e.rating, e.progress, e.totalEpisodes,
                 runCatching { Instant.parse(e.updatedAt).toEpochMilli() }.getOrDefault(0L), e.notify,
                 e.completedAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() },
+                rewatchCount = e.rewatchCount.coerceIn(0, 99),
             )
         }
     }

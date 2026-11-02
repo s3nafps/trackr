@@ -34,6 +34,7 @@ class TitleMetaRepository @Inject constructor(private val dao: TitleMetaDao, pri
                 seasonEpisodes = SeasonProgress.regular(seasons).joinToString(","),
                 fetchedAt = now,
                 airedEpisodes = airedEpisodes,
+                runtimeMinutes = item.runtimeMinutes,
             ),
         )
     }
@@ -47,7 +48,9 @@ class TitleMetaRepository @Inject constructor(private val dao: TitleMetaDao, pri
         val stored = dao.getAll().associateBy { it.source to it.externalId }
         val due = entries.filter { e ->
             val m = stored[e.source.key to e.externalId]
-            m == null || (e.mediaType != MediaType.MOVIE && e.status == ListStatus.WATCHING && now - m.fetchedAt > refreshAfter(e, m))
+            m == null || (e.mediaType != MediaType.MOVIE && e.status == ListStatus.WATCHING && now - m.fetchedAt > refreshAfter(e, m)) ||
+                // Stored before runtimes were (fetchedAt reset to 0 by MIGRATION_6_7), or the source had none: weekly.
+                (m.runtimeMinutes == null && now - m.fetchedAt > SEASON_REFRESH_MS)
         }
         for (e in due.take(max)) {
             try {
@@ -79,6 +82,7 @@ class TitleMetaRepository @Inject constructor(private val dao: TitleMetaDao, pri
             seasonEpisodes = seasonEpisodes.split(',').mapNotNull { it.trim().toIntOrNull() },
             fetchedAt = fetchedAt,
             airedEpisodes = airedEpisodes,
+            runtimeMinutes = runtimeMinutes,
         )
     }
 }

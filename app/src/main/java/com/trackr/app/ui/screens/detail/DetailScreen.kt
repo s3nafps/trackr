@@ -29,6 +29,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import com.trackr.app.domain.model.ListEntry
+import com.trackr.app.domain.util.WatchHistory
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.automirrored.outlined.Send
@@ -103,6 +109,7 @@ fun DetailScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val bell by vm.bellState.collectAsStateWithLifecycle()
     val social by vm.socialState.collectAsStateWithLifecycle()
+    val history by vm.history.collectAsStateWithLifecycle()
     FollowLiveUpdates { vm.followLiveUpdates() }
     val ensureNotifications = rememberNotificationPermission(vm::onPermissionResult)
     var showSheet by rememberSaveable { mutableStateOf(false) }
@@ -140,6 +147,9 @@ fun DetailScreen(
                     AddToCalendar.add(context, i.title, i.airingSeason, i.airingEpisode, (i.airingAtEpoch ?: 0L) * 1000, i.airingDateOnly)
                 },
                 onAddNextSeason = { state.nextSeason?.let(vm::openNextSeason) },
+                history = history,
+                onWatchAgain = vm::startRewatch,
+                onRewatchCount = vm::setRewatchCount,
             )
         }
         // Floating back button
@@ -189,6 +199,9 @@ fun DetailContent(
     onAddToShared: (() -> Unit)? = null,
     onAddToCalendar: (() -> Unit)? = null,
     onAddNextSeason: (() -> Unit)? = null,
+    history: List<WatchHistory.Line> = emptyList(),
+    onWatchAgain: (() -> Unit)? = null,
+    onRewatchCount: ((Int) -> Unit)? = null,
 ) {
     val item = detail.item
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -375,6 +388,8 @@ fun DetailContent(
             }
 
             ownSocial?.let { OwnEntrySocial(it, onOwnComments) }
+
+            if (entry != null) YourHistory(entry, history, nowMillis, onWatchAgain, onRewatchCount)
 
             if (detail.related.isNotEmpty()) PosterRow("Related", detail.related.map { it.item to it.relation }, onOpenItem)
 
@@ -586,4 +601,79 @@ private fun compactCount(n: Int): String = when {
     n >= 1_000_000 -> "%.1fM".format(n / 1_000_000.0)
     n >= 1_000 -> "${n / 1000}k"
     else -> n.toString()
+}
+
+/**
+ * Your watch history for the title: how many times you've watched it (correctable), "Watch again" once it's finished,
+ * and what you logged when. Hidden while there's nothing to show.
+ */
+@Composable
+private fun YourHistory(
+    entry: ListEntry, lines: List<WatchHistory.Line>, nowMillis: Long,
+    onWatchAgain: (() -> Unit)?, onRewatchCount: ((Int) -> Unit)?,
+) {
+    val finished = entry.status == ListStatus.COMPLETED
+    if (lines.isEmpty() && !finished && entry.rewatchCount == 0) return
+    var showAll by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Your history", style = MaterialTheme.typography.headlineSmall)
+        Column(
+            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            val times = entry.rewatchCount + if (finished || entry.rewatchCount > 0) 1 else 0
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    when (times) { 0 -> "Not finished yet"; 1 -> "Watched once"; else -> "Watched $times times" },
+                    style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f),
+                )
+                if (onRewatchCount != null && times > 0) {
+                    IconButton(onClick = { onRewatchCount(entry.rewatchCount - 1) }, enabled = entry.rewatchCount > 0) {
+                        Icon(Icons.Filled.Remove, "One fewer rewatch")
+                    }
+                    IconButton(onClick = { onRewatchCount(entry.rewatchCount + 1) }) { Icon(Icons.Filled.Add, "One more rewatch") }
+                }
+            }
+            if (finished && onWatchAgain != null) {
+                Row(
+                    Modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onWatchAgain).padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(Icons.Filled.Replay, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text("Watch again", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            val shown = if (showAll) lines else lines.take(HISTORY_PREVIEW)
+            shown.forEach { line ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(
+                        line.label, style = MaterialTheme.typography.bodyMedium,
+                        color = if (line.rewatch) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(historyDate(line.at, nowMillis), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (lines.size > HISTORY_PREVIEW) {
+                Text(
+                    if (showAll) "Show less" else "Show all ${lines.size}", Modifier.clickable { showAll = !showAll },
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+private const val HISTORY_PREVIEW = 5
+
+/** "Today", "Yesterday", "3 Nov", or "3 Nov 2025" for another year. */
+private fun historyDate(at: Long, now: Long): String {
+    val zone = java.time.ZoneId.systemDefault()
+    val day = java.time.Instant.ofEpochMilli(at).atZone(zone).toLocalDate()
+    val today = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    return when {
+        day == today -> "Today"
+        day == today.minusDays(1) -> "Yesterday"
+        day.year == today.year -> day.format(java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH))
+        else -> day.format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.ENGLISH))
+    }
 }

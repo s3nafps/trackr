@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.ui.ThemeViewModel
 import com.trackr.app.ui.UpdateViewModel
 import com.trackr.app.data.update.UpdateNotifier
+import com.trackr.app.data.social.SocialNotifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.trackr.app.data.airing.AiringNotifier
 import com.trackr.app.ui.AppRoot
@@ -29,6 +30,14 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var openTarget by mutableStateOf<DetailTarget?>(null)
+    private var openFriends by mutableStateOf(false)
+
+    /** A friend-activity notification that points at the Friends tab. */
+    private fun readOpenFriends(intent: Intent?): Boolean {
+        if (intent?.getBooleanExtra(SocialNotifier.EXTRA_OPEN_FRIENDS, false) != true) return false
+        intent.removeExtra(SocialNotifier.EXTRA_OPEN_FRIENDS)
+        return true
+    }
 
     /** The same activity-scoped instance AppRoot shows the update dialog from. */
     private val updates: UpdateViewModel by viewModels()
@@ -56,6 +65,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         readTarget(intent)?.let { openTarget = it }
+        if (readOpenFriends(intent)) openFriends = true
         showUpdateIfAsked(intent)
     }
 
@@ -65,13 +75,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         if (savedInstanceState == null) {
             openTarget = readTarget(intent)
+            openFriends = readOpenFriends(intent)
             showUpdateIfAsked(intent)
         }
         setContent {
             val theme: ThemeViewModel = hiltViewModel()
             val mode by theme.mode.collectAsStateWithLifecycle()
             TrackrTheme(mode) {
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { AppRoot(openTarget = openTarget, onTargetOpened = { openTarget = null }) }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { AppRoot(
+                        openTarget = openTarget, onTargetOpened = { openTarget = null },
+                        openFriends = openFriends, onFriendsOpened = { openFriends = false },
+                    ) }
             }
         }
     }

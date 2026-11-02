@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trackr.app.domain.model.ProfileStats
+import com.trackr.app.domain.util.WatchTime
 import com.trackr.app.ui.components.GenreChart
 import com.trackr.app.ui.components.RatingDistributionChart
 import com.trackr.app.ui.components.StatusBreakdown
@@ -140,7 +141,7 @@ fun ProfileContent(
                     Text("Media Vault", style = MaterialTheme.typography.headlineSmall)
                     Text("Lifetime Tracker", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
-                VaultGrid(state.stats)
+                VaultGrid(state.stats, state.watchTime)
             }
 
             Text("Analytics & Trends", style = MaterialTheme.typography.headlineSmall)
@@ -228,7 +229,7 @@ private fun MiniStat(value: String, label: String) {
 }
 
 @Composable
-private fun VaultGrid(s: ProfileStats) {
+private fun VaultGrid(s: ProfileStats, watch: WatchTime.Total) {
     @Composable
     fun Tile(value: String, label: String, tag: String, tagColor: Color, modifier: Modifier) {
         Column(modifier.clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -244,7 +245,11 @@ private fun VaultGrid(s: ProfileStats) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile(s.animeTitles.toString(), "Anime (${s.animeEpisodes} eps)", "TRACKED", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-            Tile("${s.hours}h", "Est. Screen Time", "ESTIMATE", RatingAmber, Modifier.weight(1f))
+            // Real runtimes; "ESTIMATE" while some watched titles still use a typical length.
+            Tile(
+                WatchTime.format(watch.minutes), WatchTime.days(watch.minutes)?.let { "Watch time · $it" } ?: "Watch time",
+                if (watch.estimated > 0) "ESTIMATE" else "WATCH TIME", RatingAmber, Modifier.weight(1f),
+            )
         }
     }
 }

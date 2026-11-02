@@ -11,6 +11,7 @@ import com.trackr.app.domain.model.ProfileStats
 import com.trackr.app.domain.model.StatsCalculator
 import com.trackr.app.domain.util.GenreBreakdown
 import com.trackr.app.domain.util.GenreStats
+import com.trackr.app.domain.util.WatchTime
 import com.trackr.app.data.meta.TitleMetaRepository
 import com.trackr.app.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,6 +33,9 @@ data class ProfileUiState(
     val editError: String? = null,
     val editDone: Boolean = false,
     val airingEnabled: Boolean = true,
+    val socialAlerts: Boolean = true,
+    /** Time spent watching, from each title's runtime (typical ones where unknown). */
+    val watchTime: WatchTime.Total = WatchTime.Total(0, 0),
     val syncing: Boolean = false,
     val syncMessage: String? = null,
 )
@@ -47,11 +51,12 @@ class ProfileViewModel @Inject constructor(
     private val local = MutableStateFlow(ProfileUiState())
 
     val state: StateFlow<ProfileUiState> = combine(
-        local, profiles.me, combine(lists.entries, titleMeta.all, ::Pair), prefs.themeMode, prefs.airingEnabled,
-    ) { l, me, (entries, meta), theme, airing ->
+        local, profiles.me, combine(lists.entries, titleMeta.all, ::Pair), prefs.themeMode,
+        combine(prefs.airingEnabled, prefs.socialAlerts, ::Pair),
+    ) { l, me, (entries, meta), theme, (airing, social) ->
         l.copy(
             me = me, stats = StatsCalculator.compute(entries), genres = GenreStats.breakdown(entries, meta),
-            theme = theme, airingEnabled = airing,
+            theme = theme, airingEnabled = airing, socialAlerts = social, watchTime = WatchTime.total(entries, meta),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileUiState())
 
@@ -63,6 +68,8 @@ class ProfileViewModel @Inject constructor(
             airingRefresh.refreshNow()
         }
     }
+
+    fun setSocialAlerts(on: Boolean) { viewModelScope.launch { prefs.setSocialAlerts(on) } }
 
     fun editUsername(name: String) {
         viewModelScope.launch {

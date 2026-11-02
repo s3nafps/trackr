@@ -5,11 +5,12 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [ListEntryEntity::class, AiringEntity::class, TitleMetaEntity::class], version = 6, exportSchema = false)
+@Database(entities = [ListEntryEntity::class, AiringEntity::class, TitleMetaEntity::class, WatchEventEntity::class], version = 7, exportSchema = false)
 abstract class TrackrDatabase : RoomDatabase() {
     abstract fun listEntryDao(): ListEntryDao
     abstract fun airingDao(): AiringDao
     abstract fun titleMetaDao(): TitleMetaDao
+    abstract fun watchEventDao(): WatchEventDao
 }
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -50,5 +51,24 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
 val MIGRATION_5_6 = object : Migration(5, 6) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE title_meta ADD COLUMN airedEpisodes INTEGER")
+    }
+}
+
+/**
+ * Rewatch counts, watch history, and runtimes for watch time. fetchedAt goes to 0 so every listed title's detail is
+ * fetched again (in batches) for its runtime.
+ */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE list_entries ADD COLUMN rewatchCount INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE title_meta ADD COLUMN runtimeMinutes INTEGER")
+        db.execSQL("UPDATE title_meta SET fetchedAt = 0")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS watch_events (id TEXT NOT NULL, source TEXT NOT NULL, externalId TEXT NOT NULL, " +
+                "mediaType TEXT NOT NULL, title TEXT NOT NULL, kind TEXT NOT NULL, fromEpisode INTEGER, toEpisode INTEGER, " +
+                "watchedAt INTEGER NOT NULL, synced INTEGER NOT NULL, deleted INTEGER NOT NULL, createdAt INTEGER, PRIMARY KEY(id))",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_watch_events_source_externalId ON watch_events (source, externalId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_watch_events_watchedAt ON watch_events (watchedAt)")
     }
 }

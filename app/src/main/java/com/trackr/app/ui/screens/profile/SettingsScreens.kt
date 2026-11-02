@@ -91,7 +91,7 @@ fun SettingsScreen(
             }
 
             Text("Notifications", style = MaterialTheme.typography.headlineSmall)
-            NotificationSettings(state.airingEnabled, vm::setAiringEnabled)
+            NotificationSettings(state.airingEnabled, vm::setAiringEnabled, state.socialAlerts, vm::setSocialAlerts)
 
             Text("Sync", style = MaterialTheme.typography.headlineSmall)
             Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -189,7 +189,7 @@ fun AboutScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun NotificationSettings(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+private fun NotificationSettings(enabled: Boolean, onToggle: (Boolean) -> Unit, social: Boolean, onSocial: (Boolean) -> Unit) {
     val context = LocalContext.current
     var canExact by remember { mutableStateOf(canScheduleExactAlarms(context)) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { canExact = canScheduleExactAlarms(context) }
@@ -200,6 +200,16 @@ private fun NotificationSettings(enabled: Boolean, onToggle: (Boolean) -> Unit) 
                 Text("Get notified when a title you're watching drops", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Switch(checked = enabled, onCheckedChange = onToggle)
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Friend activity", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "Friend requests, comments, reactions and recommendations, checked about every 15 minutes",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = social, onCheckedChange = onSocial)
         }
         SettingsLink("System notification settings") {
             context.startActivity(

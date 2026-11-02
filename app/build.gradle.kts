@@ -26,8 +26,8 @@ android {
         applicationId = "com.trackr.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "1.13.2"
+        versionCode = 19
+        versionName = "1.14.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "TMDB_READ_TOKEN", "\"${secret("TMDB_READ_TOKEN")}\"")

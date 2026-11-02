@@ -17,6 +17,12 @@ class AuthRepository @Inject constructor(private val supabase: SupabaseClient) {
 
     val currentUserId: String? get() = supabase.auth.currentUserOrNull()?.id
 
+    /**
+     * Waits for the saved session to load. Background work can start the app's process cold, before that has
+     * happened, and would otherwise see nobody signed in.
+     */
+    suspend fun awaitSession() = supabase.auth.awaitInitialization()
+
     suspend fun signInWithGoogle(result: GoogleIdResult) {
         supabase.auth.signInWith(IDToken) {
             idToken = result.idToken

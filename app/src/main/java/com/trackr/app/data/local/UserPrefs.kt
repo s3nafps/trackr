@@ -24,6 +24,8 @@ class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context
     private val updateDismissedKey = stringPreferencesKey("update_dismissed")
     private val notificationsAskedKey = booleanPreferencesKey("notifications_asked")
     private val updateNotifiedKey = stringPreferencesKey("update_notified")
+    private val socialAlertsKey = booleanPreferencesKey("social_alerts")
+    private val socialSinceKey = longPreferencesKey("social_alerts_since")
     private val sep = "\u001F"
 
     val recentSearches: Flow<List<String>> = ctx.dataStore.data.map { p ->
@@ -76,4 +78,14 @@ class UserPrefs @Inject constructor(@ApplicationContext private val ctx: Context
     val notificationsAsked: Flow<Boolean> = ctx.dataStore.data.map { it[notificationsAskedKey] ?: false }
 
     suspend fun setNotificationsAsked() = ctx.dataStore.edit { it[notificationsAskedKey] = true }
+
+    /** Friend activity notifications (requests, comments, reactions, recommendations). */
+    val socialAlerts: Flow<Boolean> = ctx.dataStore.data.map { it[socialAlertsKey] ?: true }
+
+    suspend fun setSocialAlerts(on: Boolean) = ctx.dataStore.edit { it[socialAlertsKey] = on }
+
+    /** Server time of the newest friend activity already notified (epoch millis); null before the first check. */
+    val socialSince: Flow<Long?> = ctx.dataStore.data.map { it[socialSinceKey] }
+
+    suspend fun setSocialSince(at: Long) = ctx.dataStore.edit { it[socialSinceKey] = at }
 }

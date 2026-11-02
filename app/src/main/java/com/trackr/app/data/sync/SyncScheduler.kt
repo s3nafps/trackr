@@ -12,6 +12,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.trackr.app.data.repository.AuthRepository
 import com.trackr.app.data.repository.ListRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -25,8 +26,10 @@ class SyncWorker @AssistedInject constructor(
     @Assisted ctx: Context,
     @Assisted params: WorkerParameters,
     private val repo: ListRepository,
+    private val auth: AuthRepository,
 ) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result = try {
+        auth.awaitSession()
         repo.sync()
         Result.success()
     } catch (e: Exception) {

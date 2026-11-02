@@ -28,6 +28,8 @@ import com.trackr.app.ui.screens.profile.AccountDeletion
 fun AppRoot(
     openTarget: DetailTarget? = null,
     onTargetOpened: () -> Unit = {},
+    openFriends: Boolean = false,
+    onFriendsOpened: () -> Unit = {},
     vm: AuthViewModel = hiltViewModel(),
     updates: UpdateViewModel = hiltViewModel(),
     onboarding: NotificationOnboardingViewModel = hiltViewModel(),
@@ -56,6 +58,8 @@ fun AppRoot(
                 deletion = AccountDeletion(state.deletingAccount, state.deleteError, vm::deleteAccount, vm::dismissDeleteError),
                 openTarget = openTarget,
                 onTargetOpened = onTargetOpened,
+                openFriends = openFriends,
+                onFriendsOpened = onFriendsOpened,
             )
         }
     }
