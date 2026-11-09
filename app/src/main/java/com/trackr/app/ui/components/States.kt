@@ -34,7 +34,7 @@ fun EmptyState(
         modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(icon, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline)
+        Icon(icon, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.outline)
         Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Text(
             message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -42,7 +42,7 @@ fun EmptyState(
         )
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(8.dp))
-            Button(onClick = onAction, shape = MaterialTheme.shapes.medium) { Text(actionLabel) }
+            Button(onClick = onAction, shape = MaterialTheme.shapes.small) { Text(actionLabel) }
         }
     }
 }
@@ -53,8 +53,8 @@ fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifi
         modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(Icons.Outlined.CloudOff, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.outline)
+        Icon(Icons.Outlined.CloudOff, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.outline)
         Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-        OutlinedButton(onClick = onRetry, shape = MaterialTheme.shapes.medium) { Text("Retry") }
+        OutlinedButton(onClick = onRetry, shape = MaterialTheme.shapes.small) { Text("Retry") }
     }
 }

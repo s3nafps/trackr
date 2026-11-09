@@ -10,38 +10,49 @@ import androidx.compose.ui.graphics.Color
 enum class ThemeMode { DARK, LIGHT, SYSTEM }
 
 internal val DarkScheme = darkColorScheme(
-    primary = StitchPrimary, onPrimary = StitchOnPrimary,
-    primaryContainer = StitchPrimaryContainer, onPrimaryContainer = StitchOnPrimaryContainer,
-    inversePrimary = StitchInversePrimary,
-    secondary = StitchSecondary, onSecondary = StitchOnSecondary,
-    secondaryContainer = StitchSecondaryContainer, onSecondaryContainer = StitchOnSecondaryContainer,
-    tertiary = StitchTertiary, onTertiary = StitchOnTertiary,
-    tertiaryContainer = StitchTertiaryContainer, onTertiaryContainer = StitchOnTertiaryContainer,
-    error = StitchError, onError = StitchOnError,
-    errorContainer = StitchErrorContainer, onErrorContainer = StitchOnErrorContainer,
-    background = StitchSurface, onBackground = StitchOnSurface,
-    surface = StitchSurface, onSurface = StitchOnSurface, onSurfaceVariant = StitchOnSurfaceVariant,
-    surfaceVariant = StitchSurfaceHighest, surfaceTint = StitchPrimary, surfaceBright = StitchSurfaceBright,
-    surfaceContainerLowest = StitchSurfaceLowest, surfaceContainerLow = StitchSurfaceLow,
-    surfaceContainer = StitchSurfaceContainer, surfaceContainerHigh = StitchSurfaceHigh,
-    surfaceContainerHighest = StitchSurfaceHighest,
-    outline = StitchOutline, outlineVariant = StitchOutlineVariant,
+    primary = AccentDark, onPrimary = Color.White,
+    primaryContainer = AccentSurfaceDark, onPrimaryContainer = TextDark,
+    inversePrimary = AccentLight,
+    secondary = TextMutedDark, onSecondary = CanvasDark,
+    secondaryContainer = SurfaceOverlayDark, onSecondaryContainer = TextDark,
+    tertiary = TextMutedDark, onTertiary = CanvasDark,
+    tertiaryContainer = SurfaceOverlayDark, onTertiaryContainer = TextDark,
+    error = ErrorDark, onError = Color.White,
+    errorContainer = ErrorSurfaceDark, onErrorContainer = Color(0xFFFFD2D4),
+    background = CanvasDark, onBackground = TextDark,
+    surface = CanvasDark, onSurface = TextDark, onSurfaceVariant = TextMutedDark,
+    surfaceVariant = SurfaceOverlayDark, surfaceTint = Color.Transparent, surfaceBright = SurfaceHighDark,
+    surfaceContainerLowest = CanvasDark, surfaceContainerLow = SurfaceDark,
+    surfaceContainer = SurfaceRaisedDark, surfaceContainerHigh = SurfaceOverlayDark,
+    surfaceContainerHighest = SurfaceHighDark,
+    outline = BorderDark, outlineVariant = BorderSubtleDark,
+    scrim = Color.Black,
 )
 
 internal val LightScheme = lightColorScheme(
-    primary = LightPrimary, onPrimary = Color.White,
-    primaryContainer = LightPrimaryContainer, onPrimaryContainer = LightOnPrimaryContainer,
-    secondary = LightSecondary, onSecondary = Color.White,
-    tertiary = LightTertiary, onTertiary = Color.White,
-    background = LightSurface, onBackground = LightOnSurface,
-    surface = LightSurface, onSurface = LightOnSurface, onSurfaceVariant = LightOnSurfaceVariant,
-    surfaceVariant = LightSurfaceHighest,
-    surfaceContainerLowest = LightSurfaceLowest, surfaceContainerLow = LightSurfaceLow,
-    surfaceContainer = LightSurfaceContainer, surfaceContainerHigh = LightSurfaceHigh,
-    surfaceContainerHighest = LightSurfaceHighest,
-    outline = LightOutline, outlineVariant = LightOutlineVariant,
+    primary = AccentLight, onPrimary = Color.White,
+    primaryContainer = AccentSurfaceLight, onPrimaryContainer = TextLight,
+    inversePrimary = AccentDark,
+    secondary = TextMutedLight, onSecondary = Color.White,
+    secondaryContainer = SurfaceOverlayLight, onSecondaryContainer = TextLight,
+    tertiary = TextMutedLight, onTertiary = Color.White,
+    tertiaryContainer = SurfaceOverlayLight, onTertiaryContainer = TextLight,
+    error = ErrorLight, onError = Color.White,
+    errorContainer = ErrorSurfaceLight, onErrorContainer = ErrorLight,
+    background = CanvasLight, onBackground = TextLight,
+    surface = CanvasLight, onSurface = TextLight, onSurfaceVariant = TextMutedLight,
+    surfaceVariant = SurfaceOverlayLight, surfaceTint = Color.Transparent, surfaceBright = SurfaceLight,
+    surfaceContainerLowest = SurfaceLight, surfaceContainerLow = SurfaceRaisedLight,
+    surfaceContainer = SurfaceRaisedLight, surfaceContainerHigh = SurfaceOverlayLight,
+    surfaceContainerHighest = SurfaceHighLight,
+    outline = BorderLight, outlineVariant = BorderSubtleLight,
+    scrim = Color.Black,
 )
 
+/**
+ * Always the Trackr schemes. Android 12+ wallpaper / Material You dynamic color is not applied,
+ * including when the system appearance is followed.
+ */
 @Composable
 fun TrackrTheme(mode: ThemeMode = ThemeMode.DARK, content: @Composable () -> Unit) {
     val dark = when (mode) {
@@ -49,8 +60,9 @@ fun TrackrTheme(mode: ThemeMode = ThemeMode.DARK, content: @Composable () -> Uni
         ThemeMode.LIGHT -> false
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
+    val scheme = if (dark) DarkScheme else LightScheme
     MaterialTheme(
-        colorScheme = if (dark) DarkScheme else LightScheme,
+        colorScheme = scheme,
         typography = TrackrTypography,
         shapes = TrackrShapes,
         content = content,

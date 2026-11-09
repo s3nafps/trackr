@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.MediaTypePill
 import com.trackr.app.ui.components.PosterImage
 import com.trackr.app.ui.components.TrackrTopBar
+import com.trackr.app.ui.components.trackrPressClick
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -140,8 +142,9 @@ fun CalendarContent(
 private fun EpisodeRow(ep: UpcomingEpisode, zone: ZoneId, onClick: () -> Unit) {
     val context = LocalContext.current
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick).padding(10.dp),
+        Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+            .trackrPressClick(onClick).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
         PosterImage(ep.posterUrl, Modifier.width(44.dp), shape = MaterialTheme.shapes.small, contentDescription = ep.title)

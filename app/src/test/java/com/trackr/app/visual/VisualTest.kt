@@ -1,10 +1,30 @@
 package com.trackr.app.visual
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.trackr.app.R
+import com.trackr.app.ui.components.ListRowSkeleton
+import com.trackr.app.ui.components.PosterCarouselSkeleton
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -69,6 +89,7 @@ import com.trackr.app.ui.screens.mylist.MyListUiState
 import com.trackr.app.ui.screens.search.SearchActions
 import com.trackr.app.ui.screens.search.SearchContent
 import com.trackr.app.ui.screens.search.SearchUiState
+import com.trackr.app.ui.theme.ThemeMode
 import com.trackr.app.ui.theme.TrackrTheme
 import org.junit.Rule
 import org.junit.Test
@@ -84,10 +105,16 @@ class VisualTest {
     @get:Rule val rule = createComposeRule()
 
     private fun shot(name: String, content: @Composable () -> Unit) {
+        val mode = mutableStateOf(ThemeMode.DARK)
         rule.setContent {
-            TrackrTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() } }
+            TrackrTheme(mode.value) {
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
+            }
         }
-        rule.onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
+        rule.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_dark.png")
+        mode.value = ThemeMode.LIGHT
+        rule.waitForIdle()
+        rule.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_light.png")
     }
 
     private fun item(id: String, title: String, type: MediaType, year: Int, score: Double, genre: String, eps: Int? = null, sub: String? = null) =
@@ -300,5 +327,38 @@ class VisualTest {
             ),
             {}, {}, {}, {}, {},
         )
+    }
+
+    @Test fun loading() = shot("loading") {
+        Column(Modifier.fillMaxSize().padding(top = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            PosterCarouselSkeleton()
+            ListRowSkeleton()
+            ListRowSkeleton()
+            ListRowSkeleton()
+        }
+    }
+
+    @Test fun icon() = shot("icon") {
+        Column(
+            Modifier.fillMaxSize().padding(48.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("Adaptive", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(
+                Modifier.size(108.dp).clip(RoundedCornerShape(24.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp)),
+            ) {
+                Image(painterResource(R.drawable.ic_launcher_background), null, Modifier.matchParentSize(), contentScale = ContentScale.FillBounds)
+                Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.matchParentSize(), contentScale = ContentScale.FillBounds)
+            }
+            Text("Monochrome", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(
+                Modifier.size(108.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xFF0A0A0A))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp)),
+            ) {
+                Image(painterResource(R.drawable.ic_launcher_monochrome), null, Modifier.matchParentSize(), contentScale = ContentScale.Fit)
+            }
+        }
     }
 }

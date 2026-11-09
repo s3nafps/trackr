@@ -1,8 +1,13 @@
 package com.trackr.app.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -15,7 +20,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -76,27 +82,39 @@ fun TrackrNavHost(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (showBar) NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest, tonalElevation = Dp.Hairline) {
-                TopLevel.entries.forEach { item ->
-                    val selected = dest?.hierarchy?.any { it.route == item.pattern } == true
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { nav.goTop(item.route) },
-                        icon = { Icon(item.icon, item.label) },
-                        label = { Text(item.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
+            if (showBar) Column {
+                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
+                NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
+                    TopLevel.entries.forEach { item ->
+                        val selected = dest?.hierarchy?.any { it.route == item.pattern } == true
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = { nav.goTop(item.route) },
+                            icon = { Icon(item.icon, item.label) },
+                            label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
+                            colors = NavigationBarItemDefaults.colors(
+                                indicatorColor = Color.Transparent,
+                                selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
                 }
             }
         },
     ) { padding ->
-        NavHost(nav, startDestination = Routes.HOME, modifier = Modifier.padding(padding)) {
+        val fade = tween<Float>(180)
+        NavHost(
+            nav,
+            startDestination = Routes.HOME,
+            modifier = Modifier.padding(padding),
+            enterTransition = { fadeIn(fade) },
+            exitTransition = { fadeOut(fade) },
+            popEnterTransition = { fadeIn(fade) },
+            popExitTransition = { fadeOut(fade) },
+        ) {
             composable(Routes.HOME) {
                 HomeScreen(
                     onOpenDetail = ::openDetail,

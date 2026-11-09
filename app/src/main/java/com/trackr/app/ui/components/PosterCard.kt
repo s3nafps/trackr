@@ -1,6 +1,5 @@
 package com.trackr.app.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
@@ -24,8 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,7 +43,7 @@ fun PosterImage(
     Box(
         modifier.aspectRatio(aspect).clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), shape),
+            .border(1.dp, MaterialTheme.colorScheme.outline, shape),
         contentAlignment = Alignment.Center,
     ) {
         if (url.isNullOrBlank()) {
@@ -74,8 +70,9 @@ fun TonalIconButtonSmall(
     content: @Composable () -> Unit,
 ) {
     Box(
-        modifier.size(size).clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.7f))
+        modifier.size(size).clip(MaterialTheme.shapes.extraSmall)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { content() }
@@ -98,17 +95,9 @@ fun PosterCard(
     onToggleList: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    Column(modifier.width(width).clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.width(width).trackrPressClick(onClick), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box {
             PosterImage(posterUrl, Modifier.fillMaxWidth(), contentDescription = title)
-            Box(
-                Modifier.matchParentSize().clip(MaterialTheme.shapes.large).background(
-                    Brush.verticalGradient(
-                        0.55f to Color.Transparent,
-                        1f to MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
-                    ),
-                ),
-            )
             if (score != null && score > 0) RatingBadge(score, Modifier.align(Alignment.TopStart).padding(8.dp))
             if (onToggleList != null) {
                 TonalIconButtonSmall(onToggleList, Modifier.align(Alignment.TopEnd).padding(6.dp), size = 28.dp) {
@@ -116,13 +105,17 @@ fun PosterCard(
                         if (inList) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                         if (inList) "In your list" else "Add to list",
                         Modifier.size(16.dp),
-                        tint = if (inList) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
             if (!overlayLabel.isNullOrBlank()) {
                 Text(
-                    overlayLabel.uppercase(), Modifier.align(Alignment.BottomStart).padding(10.dp),
+                    overlayLabel.uppercase(),
+                    Modifier.align(Alignment.BottomStart).padding(8.dp)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )

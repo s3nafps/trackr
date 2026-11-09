@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- forceDarkAllowed is API 29. Higher folders replace this style, so they repeat the pin. -->
+    <style name="Theme.Trackr" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/trackr_canvas</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:colorPrimary">@color/trackr_accent</item>
+        <item name="android:colorPrimaryDark">@color/trackr_canvas</item>
+        <item name="android:colorAccent">@color/trackr_accent</item>
+        <item name="android:colorBackground">@color/trackr_canvas</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>

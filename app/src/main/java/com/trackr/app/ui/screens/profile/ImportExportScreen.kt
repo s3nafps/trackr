@@ -89,7 +89,7 @@ fun ImportExportContent(
                     userName, { userName = it }, Modifier.weight(1f), singleLine = true, enabled = !state.busy,
                     placeholder = { Text("Username") },
                 )
-                Button(onClick = { onImportAniList(userName) }, enabled = userName.isNotBlank() && !state.busy) { Text("Import") }
+                Button(onClick = { onImportAniList(userName) }, enabled = userName.isNotBlank() && !state.busy, shape = MaterialTheme.shapes.small) { Text("Import") }
             }
         }
         SourceCard(
@@ -110,8 +110,8 @@ fun ImportExportContent(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { onExport(ExportFormat.JSON) }, enabled = !state.busy, modifier = Modifier.weight(1f)) { Text("Backup (JSON)") }
-            OutlinedButton(onClick = { onExport(ExportFormat.CSV) }, enabled = !state.busy, modifier = Modifier.weight(1f)) { Text("Spreadsheet (CSV)") }
+            OutlinedButton(onClick = { onExport(ExportFormat.JSON) }, enabled = !state.busy, modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.small) { Text("Backup (JSON)") }
+            OutlinedButton(onClick = { onExport(ExportFormat.CSV) }, enabled = !state.busy, modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.small) { Text("Spreadsheet (CSV)") }
         }
     }
 }
@@ -130,7 +130,7 @@ private fun SourceCard(title: String, description: String, content: @Composable 
 
 @Composable
 private fun ChooseFile(busy: Boolean, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, enabled = !busy) { Text("Choose file") }
+    OutlinedButton(onClick = onClick, enabled = !busy, shape = MaterialTheme.shapes.small) { Text("Choose file") }
 }
 
 /** Progress, the last import's summary, or an error; nothing when idle. */

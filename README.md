@@ -7,7 +7,7 @@ Trackr is an Android app for keeping track of the movies, TV shows and anime you
 friends. Log what you're watching, rate it, tick off episodes, and see what your friends are up to. Movies and TV come from
 TMDB, anime from AniList, and everything syncs through Supabase, so your list works offline and follows you across devices.
 
-Kotlin · Jetpack Compose (Material 3, "Cinematic Dark" from the Stitch design) · Hilt · Room · WorkManager ·
+Kotlin · Jetpack Compose (Material 3, near-monochrome) · Hilt · Room · WorkManager ·
 Supabase (Auth + Postgres/RLS) · TMDB (REST) · AniList (GraphQL).
 
 ## Download

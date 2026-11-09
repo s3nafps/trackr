@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 31+ would otherwise tint framework colors from the wallpaper. Trackr pins its own. -->
+    <style name="Theme.Trackr" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/trackr_canvas</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:colorPrimary">@color/trackr_accent</item>
+        <item name="android:colorPrimaryDark">@color/trackr_canvas</item>
+        <item name="android:colorAccent">@color/trackr_accent</item>
+        <item name="android:colorBackground">@color/trackr_canvas</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowSplashScreenBackground">@color/trackr_canvas</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

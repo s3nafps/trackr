@@ -1,6 +1,7 @@
 package com.trackr.app.ui.screens.friends
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,8 +61,6 @@ import com.trackr.app.ui.components.StatTile
 import com.trackr.app.ui.components.TrackrChip
 import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.components.UserAvatar
-import com.trackr.app.ui.theme.PillShape
-import com.trackr.app.ui.theme.RatingAmber
 import com.trackr.app.ui.theme.color
 
 @Composable
@@ -87,7 +87,7 @@ fun FriendProfileContent(
             "Friend Profile", null, {}, onBack = onBack,
             trailing = {
                 Box {
-                    Icon(Icons.Filled.MoreVert, "More", Modifier.size(40.dp).clip(PillShape).clickable { menu = true }.padding(8.dp))
+                    Icon(Icons.Filled.MoreVert, "More", Modifier.size(36.dp).clickable { menu = true }.padding(6.dp))
                     DropdownMenu(menu, { menu = false }) {
                         DropdownMenuItem(text = { Text("Remove friend", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; confirm = true })
                     }
@@ -96,7 +96,7 @@ fun FriendProfileContent(
         )
         when (val d = state.data) {
             Load.Loading -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ShimmerBox(Modifier.size(96.dp), PillShape); ShimmerBox(Modifier.fillMaxWidth().padding(end = 100.dp).size(width = 200.dp, height = 28.dp))
+                ShimmerBox(Modifier.size(96.dp), CircleShape); ShimmerBox(Modifier.fillMaxWidth().padding(end = 100.dp).size(width = 200.dp, height = 28.dp))
                 ShimmerBox(Modifier.fillMaxWidth().size(width = 300.dp, height = 120.dp))
             }
             is Load.Failure -> ErrorState(d.message, onRetry)
@@ -159,7 +159,7 @@ private fun StatGrid(s: ProfileStats) {
             StatTile("Time logged", s.hours.toString(), Modifier.weight(1f), unit = if (s.hours == 1) "hour" else "hours")
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile("Avg score", s.averageRating?.let { "%.1f".format(it) } ?: "–", Modifier.weight(1f), unit = "/ 10", valueColor = RatingAmber)
+            StatTile("Avg score", s.averageRating?.let { "%.1f".format(it) } ?: "–", Modifier.weight(1f), unit = "/ 10")
             StatTile("Completion", "$completion%", Modifier.weight(1f), unit = "of list")
         }
     }
@@ -169,7 +169,7 @@ private fun StatGrid(s: ProfileStats) {
 private fun WatchTogether(shared: List<ListEntry>, onOpen: (ListEntry) -> Unit) {
     var pick by remember { mutableStateOf<ListEntry?>(null) }
     Column(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

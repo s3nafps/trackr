@@ -2,6 +2,7 @@ package com.trackr.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,9 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,7 +26,7 @@ import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.color
 import com.trackr.app.ui.theme.shortLabel
 
-/** Filter chip: selected = primary fill + check, unselected = surface-container-high. */
+/** Filter chip. Selected inverts to the foreground; idle is a hairline. */
 @Composable
 fun TrackrChip(
     label: String,
@@ -37,24 +35,26 @@ fun TrackrChip(
     modifier: Modifier = Modifier,
     count: Int? = null,
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh
-    val fg = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val bg = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent
+    val fg = if (selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
+    val line = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
     Row(
-        modifier.height(36.dp).clip(PillShape).background(bg).clickable(onClick = onClick).padding(horizontal = 16.dp),
+        modifier.height(30.dp).clip(PillShape).background(bg).border(1.dp, line, PillShape)
+            .clickable(onClick = onClick).padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (selected) Icon(Icons.Filled.Check, null, Modifier.size(16.dp), tint = fg)
-        Text(label + (count?.let { " ($it)" } ?: ""), style = MaterialTheme.typography.labelLarge, color = fg)
+        Text(label + (count?.let { "  $it" } ?: ""), style = MaterialTheme.typography.labelMedium, color = fg)
     }
 }
 
-/** Small uppercase pill for Movie / TV / Anime. */
+/** Small uppercase label for Movie / TV / Anime. */
 @Composable
 fun MediaTypePill(type: MediaType, modifier: Modifier = Modifier) {
     Surface(
         modifier, shape = MaterialTheme.shapes.extraSmall,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Text(
             type.shortLabel().uppercase(), modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -63,23 +63,29 @@ fun MediaTypePill(type: MediaType, modifier: Modifier = Modifier) {
     }
 }
 
-/** Status badge: 15% tint of the status colour, solid text and a leading dot. */
+/** Status as a hairline label with a single colored dot. */
 @Composable
 fun StatusBadge(status: ListStatus, modifier: Modifier = Modifier, suffix: String? = null) {
     val c = status.color()
     Row(
-        modifier.height(26.dp).clip(PillShape).background(c.copy(alpha = 0.15f)).padding(horizontal = 10.dp),
+        modifier.height(24.dp).clip(PillShape)
+            .border(1.dp, MaterialTheme.colorScheme.outline, PillShape)
+            .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(Modifier.size(6.dp).clip(CircleShape).background(c))
-        Text(status.label + (suffix?.let { " ($it)" } ?: ""), style = MaterialTheme.typography.labelMedium, color = c)
+        Box(Modifier.size(5.dp).clip(CircleShape).background(c))
+        Text(status.label + (suffix?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
 @Composable
-fun CountBadge(count: Int, modifier: Modifier = Modifier, container: Color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-    Box(modifier.clip(PillShape).background(container).padding(horizontal = 8.dp, vertical = 2.dp)) {
+fun CountBadge(count: Int, modifier: Modifier = Modifier, container: Color = Color.Transparent) {
+    Box(
+        modifier.clip(PillShape).background(container)
+            .border(1.dp, MaterialTheme.colorScheme.outline, PillShape)
+            .padding(horizontal = 6.dp, vertical = 1.dp),
+    ) {
         Text(count.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -87,9 +93,12 @@ fun CountBadge(count: Int, modifier: Modifier = Modifier, container: Color = Mat
 @Composable
 fun OutlinedPill(text: String, modifier: Modifier = Modifier) {
     Surface(
-        modifier, shape = PillShape, color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier, shape = PillShape, color = Color.Transparent,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Text(text, Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
+        Text(
+            text, Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

@@ -63,12 +63,11 @@ import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.TrackrChip
 import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.components.metaLine
-import com.trackr.app.ui.theme.PillShape
-import com.trackr.app.ui.theme.RatingAmber
+import androidx.compose.foundation.border
 import java.util.Calendar
 
 private val CarouselPadding = PaddingValues(horizontal = 16.dp)
-private val SectionGap = 24.dp
+private val SectionGap = 20.dp
 /** A 148dp-wide poster at 2:3, the height of carousel cards without their captions. */
 private val PosterHeight = 222.dp
 
@@ -141,20 +140,20 @@ fun HomeContent(
                 item("greeting") {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("WELCOME BACK", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("WELCOME BACK", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                buildString { append(greeting()); username?.let { append(", $it") }; append(" 👋") },
+                                buildString { append(greeting()); username?.let { append(", $it") } },
                                 style = MaterialTheme.typography.headlineMedium, maxLines = 1,
                             )
                         }
                         if (state.streak > 0) {
-                            Row(
-                                Modifier.clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                Text("🔥")
-                                Text("${state.streak} day${if (state.streak == 1) "" else "s"}", style = MaterialTheme.typography.labelMedium, color = RatingAmber)
-                            }
+                            Text(
+                                "${state.streak} day${if (state.streak == 1) "" else "s"}",
+                                Modifier.border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraSmall)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                 }
@@ -217,7 +216,7 @@ fun HomeContent(
                         Row(Modifier.fillMaxWidth().padding(end = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             SectionHeader("Airing This Week", icon = Icons.Outlined.CalendarMonth, modifier = Modifier.weight(1f))
                             Text(
-                                "Local time", Modifier.clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 4.dp),
+                                "Local time", Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).padding(horizontal = 8.dp, vertical = 3.dp),
                                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }

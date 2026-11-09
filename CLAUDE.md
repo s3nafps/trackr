@@ -17,7 +17,7 @@ Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-k
 `app/src/main/java/com/trackr/app/{data(remote,local,repository),domain,ui(theme,navigation,components,screens)}`
 
 ## Decisions
-- Dark default (Cinematic Dark palette), light + system supported via `ThemeMode`.
+- Dark default, light + system supported via `ThemeMode`. The palette is near-monochrome (T3 Code's unthemed canvas, one blue accent, hairline borders, 4–8dp radii). Posters carry the color.
 - Inter variable font bundled in res/font (no GMS font provider).
 - Release APK renamed to `trackr-release.apk`.
 
@@ -31,8 +31,8 @@ Compose + M3, single activity, MVVM + Hilt, Flow, Navigation Compose, supabase-k
 - Shared lists (migration 20261005000003, test supabase/tests/shared_lists_test.sql → SHARED_LISTS_TESTS_PASSED): shared_lists / shared_list_members / shared_list_items. `is_list_member(list)` security-definer helper (caller-only) avoids policy recursion; a trigger makes the owner the first member; the lists SELECT policy also allows owner_id = caller because INSERT … RETURNING is checked before that AFTER trigger. Only the owner adds members (friends only) or removes others; members leave; owner deletes. Only `name` is updatable.
 - `delete_account()` (security definer, authenticated only) deletes the caller's auth user; cascades remove profile, list_entries, friendships. Settings → Delete account calls it, then wipes the device like sign-out.
 
-## Design system (Stitch = visual source of truth)
-- Tokens: the real design uses the **frontmatter/Tailwind M3 tokens** (surface #111317, primary #CABEFF, primary-container #947DFF, ...) in `ui/theme/Color.kt`; DESIGN.md prose gives status colours (watching sky, completed emerald, plan violet, dropped rose), rating amber #FFB547 and brand violet #7C5CFF. Type = Inter (`Type.kt`), radii in `Shape.kt` (cards 16, sheets 24, pills full). Screens never hardcode colours.
+## Design system
+- Tokens live in `ui/theme`: `Color.kt` (dark canvas `#0A0A0A` / light `#FCFCFC`, accent `#366FFB` / `#1B4ED8`, zinc text, hairline borders), `Type.kt` (Inter, medium weights), `Shape.kt` (4–8dp, sheets 12), `Spacing.kt` (`TrackrSpace`). Status hues are muted. Screens use `MaterialTheme` and hairline borders; no gradients, glass, or decorative emoji. Stitch export is historical reference only.
 - Reusable components in `ui/components`: TrackrChip, MediaTypePill, StatusBadge, RatingBadge/ScorePill, TrackrProgressBar, PosterImage/PosterCard, ShimmerBox + skeletons, EmptyState/ErrorState, TrackrTopBar, UserAvatar, SectionHeader, SegmentedControl, StatTile, BrandLogo.
 - Bottom nav: container surface-container-lowest, 20% primary indicator pill.
 

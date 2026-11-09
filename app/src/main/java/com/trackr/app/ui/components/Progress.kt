@@ -8,20 +8,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.trackr.app.ui.theme.PillShape
-import com.trackr.app.ui.theme.StatusWatching
-
-/** 4dp track in outline-variant with a coloured fill. */
+/** 2dp track. Monochrome unless a caller passes the accent. */
 @Composable
 fun TrackrProgressBar(
     fraction: Float,
     modifier: Modifier = Modifier,
-    color: Color = StatusWatching,
+    color: Color = MaterialTheme.colorScheme.onSurface,
 ) {
-    Box(modifier.fillMaxWidth().height(4.dp).clip(PillShape).background(MaterialTheme.colorScheme.outlineVariant)) {
-        Box(Modifier.fillMaxHeight().fillMaxWidth(fraction.coerceIn(0f, 1f)).clip(PillShape).background(color))
+    Box(modifier.fillMaxWidth().height(2.dp).background(MaterialTheme.colorScheme.outline)) {
+        Box(Modifier.fillMaxHeight().fillMaxWidth(fraction.coerceIn(0f, 1f)).background(color))
     }
 }
