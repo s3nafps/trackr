@@ -12,6 +12,5 @@
         <item name="android:colorPrimaryDark">@color/trackr_canvas</item>
         <item name="android:colorAccent">@color/trackr_accent</item>
         <item name="android:colorBackground">@color/trackr_canvas</item>
-        <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>
