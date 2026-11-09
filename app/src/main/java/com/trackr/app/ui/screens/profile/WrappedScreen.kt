@@ -33,7 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -135,7 +135,7 @@ fun WrappedContent(
             )
             else -> {
                 WrappedCard(review, username, cardModifier)
-                Button(onClick = onShare, enabled = !sharing, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = onShare, enabled = !sharing, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
                     Text(if (sharing) "Preparing image…" else "Share image")
                 }
                 if (review.usesEstimatedDates) {
@@ -154,14 +154,15 @@ fun WrappedContent(
 private fun WrappedCard(review: YearInReview, username: String?, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
     Column(
-        modifier.fillMaxWidth().clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.verticalGradient(listOf(colors.primaryContainer, colors.surfaceContainerLowest)))
-            .padding(20.dp),
+        modifier.fillMaxWidth()
+            .border(1.dp, colors.outline, MaterialTheme.shapes.small)
+            .background(colors.surface)
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("TRACKR · ${review.year} IN REVIEW", style = MaterialTheme.typography.labelLarge, color = colors.onPrimaryContainer)
-            username?.let { Text("@$it", style = MaterialTheme.typography.bodyMedium, color = colors.onPrimaryContainer) }
+            Text("TRACKR · ${review.year}", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+            username?.let { Text("@$it", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant) }
         }
         Column {
             Text(review.completed.toString(), style = MaterialTheme.typography.displayLarge, color = colors.onSurface)
@@ -194,7 +195,7 @@ private fun WrappedCard(review: YearInReview, username: String?, modifier: Modif
                                 contentScale = ContentScale.Crop,
                             )
                             Text(e.title, style = MaterialTheme.typography.labelMedium, color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${e.rating}/10", style = MaterialTheme.typography.labelSmall, color = colors.primary)
+                            Text("${e.rating}/10", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
                         }
                     }
                     repeat(3 - review.topRated.take(3).size) { Spacer(Modifier.weight(1f)) }
@@ -216,7 +217,7 @@ private fun WrappedCard(review: YearInReview, username: String?, modifier: Modif
 @Composable
 private fun Figure(value: String, label: String, modifier: Modifier) {
     Column(
-        modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.7f)).padding(10.dp),
+        modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(value, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
@@ -234,7 +235,7 @@ private fun MonthBars(perMonth: List<Int>) {
                 Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.BottomCenter) {
                     Box(
                         Modifier.fillMaxWidth().fillMaxHeight((n.toFloat() / max).coerceAtLeast(0.04f)).clip(MaterialTheme.shapes.extraSmall)
-                            .background(if (n == max && n > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                            .background(if (n == max && n > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline),
                     )
                 }
             }

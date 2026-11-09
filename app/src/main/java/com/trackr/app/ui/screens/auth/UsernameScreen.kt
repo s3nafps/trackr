@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -54,14 +53,14 @@ fun UsernameScreen(state: AuthUiState, suggested: String, onSubmit: (String) -> 
             supportingText = { Text(state.error ?: Usernames.HINT) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onSubmit(name) }),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.small,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = { onSubmit(name) },
             enabled = !state.busy && Usernames.isValid(name),
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.small,
             modifier = Modifier.fillMaxWidth().height(48.dp),
         ) {
             if (state.busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)

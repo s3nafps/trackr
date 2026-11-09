@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
@@ -69,6 +70,7 @@ import com.trackr.app.ui.screens.mylist.MyListUiState
 import com.trackr.app.ui.screens.search.SearchActions
 import com.trackr.app.ui.screens.search.SearchContent
 import com.trackr.app.ui.screens.search.SearchUiState
+import com.trackr.app.ui.theme.ThemeMode
 import com.trackr.app.ui.theme.TrackrTheme
 import org.junit.Rule
 import org.junit.Test
@@ -84,10 +86,16 @@ class VisualTest {
     @get:Rule val rule = createComposeRule()
 
     private fun shot(name: String, content: @Composable () -> Unit) {
+        val mode = mutableStateOf(ThemeMode.DARK)
         rule.setContent {
-            TrackrTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() } }
+            TrackrTheme(mode.value) {
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
+            }
         }
-        rule.onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
+        rule.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_dark.png")
+        mode.value = ThemeMode.LIGHT
+        rule.waitForIdle()
+        rule.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_light.png")
     }
 
     private fun item(id: String, title: String, type: MediaType, year: Int, score: Double, genre: String, eps: Int? = null, sub: String? = null) =

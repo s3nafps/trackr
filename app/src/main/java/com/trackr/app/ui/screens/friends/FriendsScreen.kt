@@ -1,6 +1,7 @@
 package com.trackr.app.ui.screens.friends
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -81,8 +82,6 @@ import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.components.UserAvatar
 import com.trackr.app.ui.components.relativeTime
 import com.trackr.app.ui.components.FollowLiveUpdates
-import com.trackr.app.ui.theme.PillShape
-import com.trackr.app.ui.theme.RatingAmber
 
 enum class FriendsTab(val label: String) { ACTIVITY("Activity Feed"), FRIENDS("Friends List") }
 
@@ -159,16 +158,17 @@ fun FriendsContent(
                     item {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Column(Modifier.weight(1f)) {
-                                Text("Community", style = MaterialTheme.typography.displayMedium)
-                                Text("See what your cinephile circle is tracking", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Friends", style = MaterialTheme.typography.headlineMedium)
+                                Text("What your circle is tracking", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Row(
-                                Modifier.padding(start = 8.dp).height(44.dp).clip(PillShape).background(MaterialTheme.colorScheme.primaryContainer)
-                                    .clickable(onClick = actions.openAdd).padding(horizontal = 16.dp),
+                                Modifier.padding(start = 8.dp).height(32.dp)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                                    .clickable(onClick = actions.openAdd).padding(horizontal = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
-                                Icon(Icons.Filled.PersonAdd, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                                Text("Add", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                Icon(Icons.Filled.PersonAdd, null, Modifier.size(16.dp))
+                                Text("Add", style = MaterialTheme.typography.labelMedium)
                             }
                         }
                     }
@@ -204,10 +204,10 @@ fun FriendsContent(
 @Composable
 private fun SharedListsEntry(onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick).padding(14.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onClick).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, null, tint = MaterialTheme.colorScheme.primary)
+        Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.weight(1f)) {
             Text("Shared watchlists", style = MaterialTheme.typography.titleSmall)
             Text("Build lists with friends and let Trackr pick", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -239,14 +239,14 @@ private fun PendingCard(
     onOpenFriend: (String) -> Unit,
 ) {
     Column(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onToggle), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.size(10.dp).clip(CircleShape).background(RatingAmber))
-                Text("Pending Friend Requests", style = MaterialTheme.typography.titleSmall)
-                CountBadge(pending.size, container = RatingAmber)
+                Box(Modifier.size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                Text("Requests", style = MaterialTheme.typography.titleSmall)
+                CountBadge(pending.size)
             }
             Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, if (open) "Collapse" else "Expand")
         }
@@ -260,8 +260,8 @@ private fun PendingCard(
                     Text(r.from.username, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("wants to be friends", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                CircleButton(Icons.Filled.Close, "Decline", MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface) { onRespond(r, false) }
-                CircleButton(Icons.Filled.Check, "Accept", MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary) { onRespond(r, true) }
+                CircleButton(Icons.Filled.Close, "Decline", androidx.compose.ui.graphics.Color.Transparent, MaterialTheme.colorScheme.onSurface) { onRespond(r, false) }
+                CircleButton(Icons.Filled.Check, "Accept", MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.surface) { onRespond(r, true) }
             }
         }
     }
@@ -269,8 +269,13 @@ private fun PendingCard(
 
 @Composable
 private fun CircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
-    Box(Modifier.size(40.dp).clip(CircleShape).background(bg).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(icon, desc, Modifier.size(20.dp), tint = fg)
+    Box(
+        Modifier.size(32.dp).clip(MaterialTheme.shapes.extraSmall).background(bg)
+            .border(1.dp, if (bg == androidx.compose.ui.graphics.Color.Transparent) MaterialTheme.colorScheme.outline else bg, MaterialTheme.shapes.extraSmall)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, desc, Modifier.size(16.dp), tint = fg)
     }
 }
 
@@ -304,7 +309,7 @@ fun ActivityCard(
     social: EntrySocial = EntrySocial(), onReact: (String) -> Unit = {}, onComments: () -> Unit = {},
 ) {
     Column(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -325,7 +330,7 @@ fun ActivityCard(
             PosterImage(e.posterUrl, Modifier.width(64.dp), shape = MaterialTheme.shapes.small, contentDescription = e.title)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 MediaTypePill(e.mediaType)
-                Text(e.title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(e.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 e.rating?.let { RatingBadge(it.toDouble(), outOfTen = true, scrim = false) }
                 if (e.status == ListStatus.WATCHING && e.totalEpisodes != null) {
                     TrackrProgressBar((e.progress.toFloat() / e.totalEpisodes).coerceIn(0f, 1f))
@@ -339,11 +344,11 @@ fun ActivityCard(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             if (inMyList) Text("In your list", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
             else Row(
-                Modifier.height(40.dp).clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onPlan).padding(horizontal = 14.dp),
+                Modifier.height(32.dp).border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).clickable(onClick = onPlan).padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Icon(Icons.Outlined.BookmarkAdd, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                Text(if (e.status == ListStatus.WATCHING) "Watch along" else "Plan to Watch", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Outlined.BookmarkAdd, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurface)
+                Text(if (e.status == ListStatus.WATCHING) "Watch along" else "Plan to Watch", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
@@ -366,7 +371,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.friendItems(
 @Composable
 fun FriendRow(friend: Friend, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick).padding(14.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onClick).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         UserAvatar(friend.profile.avatarUrl, size = 52.dp)

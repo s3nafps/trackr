@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.annotation.RequiresApi
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -78,8 +79,8 @@ fun SettingsScreen(
         TrackrTopBar("Settings", LocalProfile.current?.avatarUrl, {}, onBack = onBack)
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Text("Appearance", style = MaterialTheme.typography.headlineSmall)
-            Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)) {
-                listOf(ThemeMode.DARK to "Dark (Cinematic)", ThemeMode.LIGHT to "Light", ThemeMode.SYSTEM to "Follow system").forEach { (mode, label) ->
+            Column(Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)) {
+                listOf(ThemeMode.DARK to "Dark", ThemeMode.LIGHT to "Light", ThemeMode.SYSTEM to "Follow system").forEach { (mode, label) ->
                     Row(
                         Modifier.fillMaxWidth().clickable { vm.setTheme(mode) }.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -94,24 +95,24 @@ fun SettingsScreen(
             NotificationSettings(state.airingEnabled, vm::setAiringEnabled, state.socialAlerts, vm::setSocialAlerts)
 
             Text("Sync", style = MaterialTheme.typography.headlineSmall)
-            Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Your list works offline and syncs to the cloud automatically.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedButton(onClick = vm::syncNow, enabled = !state.syncing) { Text(if (state.syncing) "Syncing…" else "Sync now") }
+                OutlinedButton(onClick = vm::syncNow, enabled = !state.syncing, shape = MaterialTheme.shapes.small) { Text(if (state.syncing) "Syncing…" else "Sync now") }
                 state.syncMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
 
             Text("Your data", style = MaterialTheme.typography.headlineSmall)
-            OutlinedButton(onClick = onOpenImportExport, modifier = Modifier.fillMaxWidth()) { Text("Import & export") }
+            OutlinedButton(onClick = onOpenImportExport, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) { Text("Import & export") }
 
             if (Build.VERSION.SDK_INT >= 31) OpenLinksSetting()
 
             DebugSection()
 
             Text("About", style = MaterialTheme.typography.headlineSmall)
-            OutlinedButton(onClick = onOpenAbout, modifier = Modifier.fillMaxWidth()) { Text("About & attribution") }
+            OutlinedButton(onClick = onOpenAbout, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) { Text("About & attribution") }
 
             Button(
-                onClick = { confirm = true }, modifier = Modifier.fillMaxWidth(),
+                onClick = { confirm = true }, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small,
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
             ) { Text("Sign out") }
             TextButton(
@@ -175,7 +176,7 @@ fun AboutScreen(onBack: () -> Unit) {
             update.message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Text("Track movies, TV shows and anime with your friends.", style = MaterialTheme.typography.bodyMedium)
 
-            Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Data sources", style = MaterialTheme.typography.titleMedium)
                 Text(TMDB_ATTRIBUTION, style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = { open("https://www.themoviedb.org") }) { Text("themoviedb.org") }
@@ -193,7 +194,7 @@ private fun NotificationSettings(enabled: Boolean, onToggle: (Boolean) -> Unit, 
     val context = LocalContext.current
     var canExact by remember { mutableStateOf(canScheduleExactAlarms(context)) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { canExact = canScheduleExactAlarms(context) }
-    Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)) {
+    Column(Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("New episode alerts", style = MaterialTheme.typography.bodyLarge)
@@ -225,7 +226,7 @@ private fun NotificationSettings(enabled: Boolean, onToggle: (Boolean) -> Unit, 
 @Composable
 private fun OpenLinksSetting() {
     val context = LocalContext.current
-    Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)) {
+    Column(Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)) {
         Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
             Text("Open links in Trackr", style = MaterialTheme.typography.bodyLarge)
             Text(

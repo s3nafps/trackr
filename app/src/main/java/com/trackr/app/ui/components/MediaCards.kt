@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -33,9 +32,6 @@ import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.util.SeasonProgress
 import com.trackr.app.ui.theme.PillShape
-import com.trackr.app.ui.theme.StatusCompleted
-import com.trackr.app.ui.theme.StatusDropped
-import com.trackr.app.ui.theme.StatusWatching
 import java.text.DateFormat
 import java.util.Date
 
@@ -62,8 +58,10 @@ fun MediaResultCard(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)
-            .clickable(onClick = onClick).padding(12.dp),
+        modifier.fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box {
@@ -76,7 +74,7 @@ fun MediaResultCard(
                     MediaTypePill(item.type)
                     Text(item.metaLine(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
                 }
-                Text(item.title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
                     item.overview ?: item.genres.joinToString(" / "),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -91,12 +89,14 @@ fun MediaResultCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                     Row(
-                        Modifier.height(36.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.primaryContainer)
-                            .clickable(onClick = onTrack).padding(horizontal = 12.dp),
+                        Modifier.height(30.dp)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                            .clip(MaterialTheme.shapes.extraSmall)
+                            .clickable(onClick = onTrack).padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Icon(Icons.Outlined.BookmarkAdd, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Text("Add to List", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Icon(Icons.Outlined.BookmarkAdd, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurface)
+                        Text("Add", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
                     }
                 } else {
                     StatusBadge(
@@ -107,9 +107,12 @@ fun MediaResultCard(
                     )
                     if (entry.status != ListStatus.COMPLETED) {
                         Box(
-                            Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary).clickable(onClick = onMarkCompleted),
+                            Modifier.size(30.dp)
+                                .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .clickable(onClick = onMarkCompleted),
                             contentAlignment = Alignment.Center,
-                        ) { Icon(Icons.Filled.Check, "Mark completed", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onPrimary) }
+                        ) { Icon(Icons.Filled.Check, "Mark completed", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurface) }
                     }
                 }
             }
@@ -128,8 +131,9 @@ fun ContinueWatchingCard(
     seasons: List<Int> = emptyList(),
 ) {
     Column(
-        modifier.width(width).clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), MaterialTheme.shapes.large)
+        modifier.width(width)
+            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+            .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onClick),
     ) {
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -137,7 +141,7 @@ fun ContinueWatchingCard(
             Column(Modifier.weight(1f).height(96.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 Column {
                     MediaTypePill(entry.mediaType)
-                    Text(entry.title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                    Text(entry.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                     Text(
                         SeasonProgress.label(entry.progress, entry.totalEpisodes, seasons),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -146,7 +150,7 @@ fun ContinueWatchingCard(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         if (entry.totalEpisodes != null) "${(entry.fraction * 100).toInt()}% done" else "",
-                        style = MaterialTheme.typography.labelMedium, color = StatusWatching,
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     PlusOneButton(onPlusOne)
                 }
@@ -159,12 +163,14 @@ fun ContinueWatchingCard(
 @Composable
 fun PlusOneButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier.height(32.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClick = onClick).padding(horizontal = 12.dp),
+        modifier.height(28.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+            .clip(MaterialTheme.shapes.extraSmall)
+            .clickable(onClick = onClick).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Icon(Icons.Filled.Add, null, Modifier.size(16.dp))
-        Text("1 Ep", style = MaterialTheme.typography.labelLarge)
+        Text("1 Ep", style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -188,22 +194,21 @@ fun airingLabel(airingAtEpoch: Long?, nowMillis: Long = System.currentTimeMillis
 fun AiringCard(item: MediaItem, onClick: () -> Unit, modifier: Modifier = Modifier, width: Dp = 250.dp) {
     val label = airingLabel(item.airingAtEpoch)
     Row(
-        modifier.width(width).clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)
-            .clickable(onClick = onClick).padding(12.dp),
+        modifier.width(width)
+            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
         PosterImage(item.posterUrl, Modifier.width(56.dp), shape = MaterialTheme.shapes.small, contentDescription = item.title)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (label != null) {
                 val soon = label.second
-                Row(
-                    Modifier.clip(PillShape).background((if (soon) StatusDropped else MaterialTheme.colorScheme.outline).copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    if (soon) Box(Modifier.size(6.dp).clip(CircleShape).background(StatusDropped))
-                    Text(label.first, style = MaterialTheme.typography.labelSmall, color = if (soon) StatusDropped else MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(
+                    label.first,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (soon) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Text(item.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             SeasonProgress.upcoming(item.airingSeason, item.airingEpisode)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }

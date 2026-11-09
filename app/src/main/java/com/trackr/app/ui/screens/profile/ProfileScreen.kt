@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,9 +59,6 @@ import com.trackr.app.ui.components.RatingDistributionChart
 import com.trackr.app.ui.components.StatusBreakdown
 import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.components.UserAvatar
-import com.trackr.app.ui.theme.PillShape
-import com.trackr.app.ui.theme.RatingAmber
-import com.trackr.app.ui.theme.StatusWatching
 import java.util.Locale
 
 fun copyToClipboard(context: Context, label: String, text: String) {
@@ -104,7 +102,7 @@ fun ProfileContent(
         TrackrTopBar("Profile", me?.avatarUrl, {})
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(me?.username ?: "Your profile", style = MaterialTheme.typography.displayMedium, maxLines = 1, modifier = Modifier.weight(1f))
+                Text(me?.username ?: "Your profile", style = MaterialTheme.typography.headlineMedium, maxLines = 1, modifier = Modifier.weight(1f))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RoundIcon(Icons.Filled.Share, "Share invite") { me?.let { shareInvite(context, it.username, it.inviteCode) } }
                     RoundIcon(Icons.Filled.Settings, "Settings", onClick = onOpenSettings)
@@ -112,7 +110,7 @@ fun ProfileContent(
             }
 
             Column(
-                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
+                Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -125,7 +123,7 @@ fun ProfileContent(
                     }
                 }
                 Row(
-                    Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerLow).padding(vertical = 12.dp),
+                    Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
                     MiniStat(state.stats.total.toString(), "Logs")
@@ -139,7 +137,7 @@ fun ProfileContent(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Media Vault", style = MaterialTheme.typography.headlineSmall)
-                    Text("Lifetime Tracker", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("Lifetime", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 VaultGrid(state.stats, state.watchTime)
             }
@@ -161,7 +159,7 @@ fun ProfileContent(
 
             Text("Account & Preferences", style = MaterialTheme.typography.headlineSmall)
             Column(
-                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer),
+                Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small),
             ) {
                 PrefRow(Icons.Outlined.Edit, "Edit Username", me?.username ?: "", onClick = { editing = true })
                 PrefRow(Icons.Outlined.DarkMode, "Theme & Appearance", state.theme.name.lowercase().replaceFirstChar { it.uppercase() }, onClick = onOpenSettings)
@@ -174,8 +172,8 @@ fun ProfileContent(
                         Text("Friends add you with this code or your username", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Row(
-                        Modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                            .clickable { me?.let { copyToClipboard(context, "Invite code", it.inviteCode) } }.padding(horizontal = 12.dp, vertical = 10.dp),
+                        Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                            .clickable { me?.let { copyToClipboard(context, "Invite code", it.inviteCode) } }.padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(me?.inviteCode ?: "–", style = MaterialTheme.typography.labelLarge)
@@ -215,7 +213,7 @@ fun ProfileContent(
 
 @Composable
 private fun RoundIcon(icon: ImageVector, desc: String, onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(36.dp).border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(icon, desc, Modifier.size(20.dp))
     }
 }
@@ -232,23 +230,26 @@ private fun MiniStat(value: String, label: String) {
 private fun VaultGrid(s: ProfileStats, watch: WatchTime.Total) {
     @Composable
     fun Tile(value: String, label: String, tag: String, tagColor: Color, modifier: Modifier) {
-        Column(modifier.clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(
+            modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             Text(tag, style = MaterialTheme.typography.labelSmall, color = tagColor)
-            Text(value, style = MaterialTheme.typography.displayMedium)
+            Text(value, style = MaterialTheme.typography.headlineMedium)
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile(s.moviesWatched.toString(), "Movies Watched", "COMPLETED", StatusWatching, Modifier.weight(1f))
+            Tile(s.moviesWatched.toString(), "Movies Watched", "COMPLETED", MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
             Tile(s.tvShows.toString(), "TV Shows (${s.tvEpisodes} eps)", "TRACKED", MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile(s.animeTitles.toString(), "Anime (${s.animeEpisodes} eps)", "TRACKED", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+            Tile(s.animeTitles.toString(), "Anime (${s.animeEpisodes} eps)", "TRACKED", MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
             // Real runtimes; "ESTIMATE" while some watched titles still use a typical length.
             Tile(
                 WatchTime.format(watch.minutes), WatchTime.days(watch.minutes)?.let { "Watch time · $it" } ?: "Watch time",
-                if (watch.estimated > 0) "ESTIMATE" else "WATCH TIME", RatingAmber, Modifier.weight(1f),
+                if (watch.estimated > 0) "ESTIMATE" else "WATCH TIME", MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f),
             )
         }
     }
@@ -257,7 +258,7 @@ private fun VaultGrid(s: ProfileStats, watch: WatchTime.Total) {
 @Composable
 private fun Card(title: String, subtitle: String, content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -270,7 +271,7 @@ private fun Card(title: String, subtitle: String, content: @Composable () -> Uni
 
 @Composable
 private fun IconBadge(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
-    Box(Modifier.size(44.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = tint)
     }
 }
@@ -292,13 +293,13 @@ private fun PrefRow(icon: ImageVector, title: String, subtitle: String, tint: Co
 
 @Composable
 private fun WrappedBanner(onClick: () -> Unit) {
-    val on = MaterialTheme.colorScheme.onPrimaryContainer
+    val on = MaterialTheme.colorScheme.onSurface
     Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.primaryContainer)
-            .clickable(onClick = onClick).padding(16.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+            .clickable(onClick = onClick).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = on)
+        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.weight(1f)) {
             Text("Your ${java.time.Year.now().value} in review", style = MaterialTheme.typography.titleMedium, color = on)
             Text("What you finished, your top rated and more, ready to share.", style = MaterialTheme.typography.bodySmall, color = on)

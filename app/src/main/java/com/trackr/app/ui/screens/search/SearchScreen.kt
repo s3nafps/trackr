@@ -65,7 +65,6 @@ import com.trackr.app.ui.components.rememberNotificationPermission
 import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.TrackrChip
 import com.trackr.app.ui.components.TrackrTopBar
-import com.trackr.app.ui.theme.PillShape
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -126,13 +125,13 @@ fun SearchContent(
         TrackrTopBar("Search", avatarUrl, onOpenProfile)
         TextField(
             value = state.query, onValueChange = vm.setQuery,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(PillShape)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, PillShape),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(MaterialTheme.shapes.small)
+                .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small),
             placeholder = { Text("Search movies, shows, anime") }, singleLine = true,
-            leadingIcon = { Icon(Icons.Filled.Search, null, tint = MaterialTheme.colorScheme.primary) },
+            leadingIcon = { Icon(Icons.Filled.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             trailingIcon = {
                 if (state.query.isNotEmpty()) {
-                    Icon(Icons.Filled.Close, "Clear", Modifier.clip(PillShape).clickable { vm.setQuery("") }.padding(8.dp))
+                    Icon(Icons.Filled.Close, "Clear", Modifier.clickable { vm.setQuery("") }.padding(8.dp))
                 }
             },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -149,11 +148,13 @@ fun SearchContent(
 
         val blank = state.query.trim().length < 2
         if ((if (blank) state.suggestions else state.results).stale) OfflineNote(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (blank) {
                 if (state.recents.isNotEmpty()) item("recents") {
                     Column(
-                        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
+                        Modifier.fillMaxWidth()
+                            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+                            .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -161,12 +162,13 @@ fun SearchContent(
                                 Icon(Icons.Filled.History, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text("Recent Searches", style = MaterialTheme.typography.titleSmall)
                             }
-                            Text("Clear all", Modifier.clickable { vm.clearRecents() }, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Text("Clear all", Modifier.clickable { vm.clearRecents() }, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             state.recents.forEach { r ->
                                 Row(
-                                    Modifier.clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable { vm.applyRecent(r) }.padding(start = 14.dp, top = 6.dp, bottom = 6.dp, end = 8.dp),
+                                    Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                                        .clickable { vm.applyRecent(r) }.padding(start = 8.dp, top = 4.dp, bottom = 4.dp, end = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
                                     Text(r, style = MaterialTheme.typography.labelLarge)

@@ -1,6 +1,7 @@
 package com.trackr.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +43,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
@@ -73,8 +75,9 @@ fun ReactionBar(social: EntrySocial, onToggle: (String) -> Unit, onComments: () 
             val mine = emoji in social.myReactions
             val count = social.reactions[emoji] ?: 0
             Row(
-                Modifier.height(32.dp).clip(PillShape)
-                    .background(if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                Modifier.height(30.dp).clip(PillShape)
+                    .background(if (mine) MaterialTheme.colorScheme.onSurface else Color.Transparent)
+                    .border(1.dp, if (mine) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline, PillShape)
                     .clickable { onToggle(emoji) }
                     .semantics {
                         contentDescription = "React $emoji" + if (count > 0) ", $count" else ""
@@ -87,13 +90,14 @@ fun ReactionBar(social: EntrySocial, onToggle: (String) -> Unit, onComments: () 
                 if (count > 0) {
                     Text(
                         count.toString(), style = MaterialTheme.typography.labelMedium,
-                        color = if (mine) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (mine) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
         Row(
-            Modifier.height(32.dp).clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            Modifier.height(30.dp).clip(PillShape)
+                .border(1.dp, MaterialTheme.colorScheme.outline, PillShape)
                 .clickable(onClick = onComments).padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {

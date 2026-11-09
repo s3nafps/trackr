@@ -5,6 +5,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -93,7 +94,6 @@ import com.trackr.app.ui.components.formatRuntime
 import com.trackr.app.ui.components.metaLine
 import com.trackr.app.ui.components.FollowLiveUpdates
 import com.trackr.app.ui.navigation.DeepLinks
-import com.trackr.app.ui.theme.PillShape
 import com.trackr.app.ui.theme.color
 import com.trackr.app.domain.util.SeasonProgress
 import java.util.Locale
@@ -216,7 +216,7 @@ fun DetailContent(
             )
             Box(
                 Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background.copy(alpha = 0.4f), Color.Transparent, MaterialTheme.colorScheme.background)),
+                    Brush.verticalGradient(0f to Color.Transparent, 0.5f to Color.Transparent, 1f to MaterialTheme.colorScheme.background),
                 ),
             )
         }
@@ -228,7 +228,7 @@ fun DetailContent(
                 Column(Modifier.weight(1f).padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         detail.certification?.let {
-                            Text(it, Modifier.clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(it, Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         val meta = listOfNotNull(
                             item.runtimeMinutes?.let { if (item.type == MediaType.MOVIE) formatRuntime(it) else "${it}m/ep" },
@@ -244,8 +244,8 @@ fun DetailContent(
                         }
                         Text(
                             if (item.source == MediaSource.TMDB) "TMDB" else "ANILIST",
-                            Modifier.clip(MaterialTheme.shapes.extraSmall).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)).padding(horizontal = 6.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary,
+                            Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -254,48 +254,49 @@ fun DetailContent(
             if (item.genres.isNotEmpty()) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     item.genres.forEach {
-                        Text(it, Modifier.clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
+                        Text(it, Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).padding(horizontal = 8.dp, vertical = 3.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(
-                    Modifier.weight(1f).height(48.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.primaryContainer)
-                        .clickable(onClick = showSheetClick).padding(horizontal = 16.dp),
+                    Modifier.weight(1f).height(44.dp)
+                        .background(MaterialTheme.colorScheme.onSurface, MaterialTheme.shapes.small)
+                        .clickable(onClick = showSheetClick).padding(horizontal = 14.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Filled.Bookmark, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Icon(Icons.Filled.Bookmark, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.surface)
                         Text(
                             entry?.let { it.status.label + (it.rating?.let { r -> " · $r/10" } ?: "") } ?: "Add to List",
-                            style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.surface,
                         )
                     }
-                    Icon(Icons.Filled.ExpandMore, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Icon(Icons.Filled.ExpandMore, null, tint = MaterialTheme.colorScheme.surface)
                 }
                 Box(
-                    Modifier.size(48.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onShare),
+                    Modifier.size(44.dp).border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onShare),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Filled.Share, "Share", Modifier.size(20.dp)) }
+                ) { Icon(Icons.Filled.Share, "Share", Modifier.size(18.dp)) }
                 if (onRecommend != null) {
                     Box(
-                        Modifier.size(48.dp).clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onRecommend),
+                        Modifier.size(44.dp).border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onRecommend),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.AutoMirrored.Outlined.Send, "Recommend to a friend", Modifier.size(20.dp)) }
+                    ) { Icon(Icons.AutoMirrored.Outlined.Send, "Recommend to a friend", Modifier.size(18.dp)) }
                 }
                 if (bell != BellState.Hidden) {
                     val on = bell == BellState.On
                     Box(
-                        Modifier.size(48.dp).clip(MaterialTheme.shapes.medium)
-                            .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceContainerHigh)
+                        Modifier.size(44.dp)
+                            .border(1.dp, if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
                             .clickable(onClick = onBell),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             if (on) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone,
                             if (on) "Notifications on" else "Notify me",
-                            Modifier.size(20.dp), tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -453,16 +454,16 @@ private fun OwnEntrySocial(social: EntrySocial, onComments: () -> Unit) {
     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Friends on your entry", style = MaterialTheme.typography.headlineSmall)
         Row(
-            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer)
-                .clickable(onClick = onComments).padding(14.dp),
+            Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+                .clickable(onClick = onComments).padding(12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             REACTIONS.forEach { e -> social.reactions[e]?.let { n -> Text("$e $n", style = MaterialTheme.typography.labelLarge) } }
             Spacer(Modifier.weight(1f))
-            Icon(Icons.Outlined.ChatBubbleOutline, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Outlined.ChatBubbleOutline, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 when (social.commentCount) { 0 -> "Comments"; 1 -> "1 comment"; else -> "${social.commentCount} comments" },
-                style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -471,18 +472,19 @@ private fun OwnEntrySocial(social: EntrySocial, onComments: () -> Unit) {
 @Composable
 private fun TrailerCard(trailer: Trailer, onOpenUrl: (String) -> Unit) {
     Box(
-        Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large)
+        Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.small)
+            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceContainer).clickable { onOpenUrl(trailer.url) },
         contentAlignment = Alignment.Center,
     ) {
         trailer.thumbnailUrl?.let { AsyncImage(it, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
         Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f)))
         Row(
-            Modifier.clip(PillShape).background(MaterialTheme.colorScheme.primary).padding(horizontal = 16.dp, vertical = 10.dp),
+            Modifier.background(MaterialTheme.colorScheme.onSurface, MaterialTheme.shapes.small).padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
-            Text("Watch trailer", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary)
+            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.surface)
+            Text("Watch trailer", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.surface)
         }
     }
 }

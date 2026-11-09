@@ -22,8 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.util.GenreBreakdown
-import com.trackr.app.ui.theme.PillShape
-import com.trackr.app.ui.theme.RatingAmber
 import com.trackr.app.ui.theme.color
 
 /** 10 bars (rating 1..10); the most common rating is highlighted in amber, a 10 in primary. */
@@ -35,16 +33,13 @@ fun RatingDistributionChart(counts: List<Int>, modifier: Modifier = Modifier) {
         Row(Modifier.fillMaxWidth().height(120.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
             counts.forEachIndexed { i, c ->
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (c > 0 && i == peak) Text(c.toString(), style = MaterialTheme.typography.labelSmall, color = RatingAmber)
+                    if (c > 0 && i == peak) Text(c.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
                     Box(
                         Modifier.fillMaxWidth().fillMaxHeight(if (c == 0) 0.04f else (c.toFloat() / max) * 0.8f)
-                            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                            .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
                             .background(
-                                when {
-                                    c > 0 && i == peak -> RatingAmber
-                                    i == 9 && c > 0 -> MaterialTheme.colorScheme.primary
-                                    else -> MaterialTheme.colorScheme.surfaceContainerHighest
-                                },
+                                if (c > 0 && i == peak) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.surfaceContainerHighest,
                             ),
                     )
                 }
@@ -61,7 +56,7 @@ fun RatingDistributionChart(counts: List<Int>, modifier: Modifier = Modifier) {
 fun StatusBreakdown(counts: Map<ListStatus, Int>, modifier: Modifier = Modifier) {
     val total = counts.values.sum().coerceAtLeast(1)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth().height(10.dp).clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
+        Row(Modifier.fillMaxWidth().height(6.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
             ListStatus.entries.forEach { s ->
                 val c = counts[s] ?: 0
                 if (c > 0) Box(Modifier.weight(c.toFloat()).fillMaxHeight().background(s.color()))
@@ -76,7 +71,7 @@ fun StatusBreakdown(counts: Map<ListStatus, Int>, modifier: Modifier = Modifier)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (c == 1) "1 title" else "$c titles", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${c * 100 / total}%", style = MaterialTheme.typography.labelLarge, color = s.color(), modifier = Modifier.padding(start = 4.dp))
+                    Text("${c * 100 / total}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
                 }
             }
         }
@@ -95,10 +90,10 @@ fun GenreChart(breakdown: GenreBreakdown, modifier: Modifier = Modifier) {
                     Text(g.genre, style = MaterialTheme.typography.bodyMedium)
                     Text("${g.titles * 100 / counted}%", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
+                Box(Modifier.fillMaxWidth().height(4.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
                     Box(
-                        Modifier.fillMaxWidth(g.titles.toFloat() / max).fillMaxHeight().clip(PillShape)
-                            .background(if (i == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
+                        Modifier.fillMaxWidth(g.titles.toFloat() / max).fillMaxHeight()
+                            .background(if (i == 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline),
                     )
                 }
             }

@@ -1,6 +1,7 @@
 package com.trackr.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -41,13 +41,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.trackr.app.domain.model.ListEntry
 import com.trackr.app.domain.model.ListStatus
 import com.trackr.app.domain.model.MediaType
 import com.trackr.app.domain.model.MediaItem
 import com.trackr.app.domain.util.SeasonProgress
-import com.trackr.app.ui.theme.RatingAmber
 import com.trackr.app.ui.theme.SheetShape
 import com.trackr.app.ui.theme.color
 
@@ -79,7 +79,7 @@ fun TrackSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss, sheetState = sheetState, shape = SheetShape,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).navigationBarsPadding(),
@@ -87,11 +87,13 @@ fun TrackSheet(
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
-                    Text("TRACK STATUS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("STATUS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(title, style = MaterialTheme.typography.headlineMedium, maxLines = 2)
                 }
                 Box(
-                    Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onDismiss),
+                    Modifier.size(32.dp).clip(MaterialTheme.shapes.extraSmall)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                        .clickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.Close, "Close", Modifier.size(20.dp)) }
             }
@@ -113,31 +115,35 @@ fun TrackSheet(
             }
 
             Column(
-                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(16.dp),
+                Modifier.fillMaxWidth()
+                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+                    .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Outlined.StarBorder, null, tint = RatingAmber)
+                        Icon(Icons.Outlined.StarBorder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Your Rating", style = MaterialTheme.typography.titleSmall)
                     }
                     Text(
                         if (rating == 0) "Not rated" else "$rating / 10 (${RatingLabels[rating - 1]})",
-                        style = MaterialTheme.typography.labelLarge, color = RatingAmber,
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     (1..10).forEach { n ->
                         val on = n <= rating
                         Box(
-                            Modifier.weight(1f).aspectRatio(0.8f).clip(MaterialTheme.shapes.small)
-                                .background(if (on) RatingAmber.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceContainerHighest)
+                            Modifier.weight(1f).aspectRatio(0.8f).clip(MaterialTheme.shapes.extraSmall)
+                                .background(if (on) MaterialTheme.colorScheme.onSurface else Color.Transparent)
+                                .border(1.dp, if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
                                 .clickable { rating = if (rating == n) 0 else n },
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 if (on) Icons.Filled.Star else Icons.Outlined.StarBorder, "$n",
-                                Modifier.size(16.dp), tint = if (on) RatingAmber else MaterialTheme.colorScheme.onSurfaceVariant,
+                                Modifier.size(14.dp),
+                                tint = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -148,7 +154,9 @@ fun TrackSheet(
                 SeasonEpisodePicker(progress, seasons) { progress = it }
             } else if (showProgress) {
                 Row(
-                    Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(16.dp),
+                    Modifier.fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+                        .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Column {
@@ -169,7 +177,7 @@ fun TrackSheet(
                 onClick = {
                     onSave(status, rating.takeIf { it > 0 }, progress)
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp), shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth().height(44.dp), shape = MaterialTheme.shapes.small,
             ) {
                 Icon(Icons.Filled.Check, null, Modifier.size(20.dp))
                 Spacer(Modifier.size(8.dp))
@@ -208,7 +216,7 @@ private fun SeasonEpisodePicker(progress: Int, seasons: List<Int>, onChange: (In
     val done = SeasonProgress.finished(progress, seasons)
     val current = SeasonProgress.inProgress(progress, seasons)
     Column(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(16.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column {
@@ -249,7 +257,7 @@ private fun SeasonEpisodePicker(progress: Int, seasons: List<Int>, onChange: (In
 @Composable
 fun Stepper(value: Int, onMinus: () -> Unit, onPlus: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(44.dp).clickable(onClick = onMinus), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Remove, "Decrease") }

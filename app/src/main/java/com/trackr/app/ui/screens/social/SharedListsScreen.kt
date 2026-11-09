@@ -1,6 +1,7 @@
 package com.trackr.app.ui.screens.social
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -132,7 +133,7 @@ fun SharedListsContent(
 @Composable
 private fun SharedListCard(list: SharedList, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick).padding(12.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onClick).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         PosterImage(list.posters.firstOrNull(), Modifier.width(64.dp), shape = MaterialTheme.shapes.medium)
@@ -322,7 +323,7 @@ fun SharedListContent(state: SharedListUiState, onBack: () -> Unit, onOpenTitle:
 @Composable
 private fun SharedItemRow(item: SharedListItem, onOpen: () -> Unit, onRemove: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onOpen).padding(10.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onOpen).padding(10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         PosterImage(item.item.posterUrl, Modifier.width(52.dp), shape = MaterialTheme.shapes.small, contentDescription = item.item.title)
