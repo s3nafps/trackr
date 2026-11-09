@@ -64,6 +64,7 @@ import com.trackr.app.ui.components.RatingBadge
 import com.trackr.app.ui.components.StatusBadge
 import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.TrackrChip
+import com.trackr.app.ui.components.trackrPressClick
 import com.trackr.app.ui.components.TrackrProgressBar
 import com.trackr.app.ui.components.TrackrTopBar
 import com.trackr.app.ui.theme.color
@@ -192,7 +193,7 @@ fun MyListContent(
                     }
                     items(state.items, key = { it.key }) { e ->
                         Column(
-                            Modifier.padding(horizontal = 0.dp).clickable { onOpenEntry(e) }.padding(start = 0.dp),
+                            Modifier.padding(horizontal = 0.dp).trackrPressClick(onClick = { onOpenEntry(e) }).padding(start = 0.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Box(Modifier.padding(horizontal = 5.dp)) {
@@ -270,7 +271,7 @@ fun ListEntryCard(
         modifier.fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
             .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onClick).padding(10.dp),
+            .trackrPressClick(onClick).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box {

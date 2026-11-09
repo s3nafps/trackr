@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -23,6 +24,11 @@ fun BrandLogo(size: Dp = 96.dp, modifier: Modifier = Modifier) {
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .border(1.dp, MaterialTheme.colorScheme.outline, shape),
     ) {
-        Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.size(size))
+        Image(
+            painterResource(R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = Modifier.size(size),
+            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
+        )
     }
 }

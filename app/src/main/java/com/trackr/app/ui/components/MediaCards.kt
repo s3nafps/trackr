@@ -61,7 +61,7 @@ fun MediaResultCard(
         modifier.fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
             .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onClick).padding(10.dp),
+            .trackrPressClick(onClick).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box {
@@ -134,7 +134,7 @@ fun ContinueWatchingCard(
         modifier.width(width)
             .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
             .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onClick),
+            .trackrPressClick(onClick),
     ) {
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PosterImage(entry.posterUrl, Modifier.width(64.dp), shape = MaterialTheme.shapes.small, contentDescription = entry.title)
@@ -156,7 +156,7 @@ fun ContinueWatchingCard(
                 }
             }
         }
-        TrackrProgressBar(entry.fraction, Modifier.padding(horizontal = 0.dp))
+        TrackrProgressBar(entry.fraction, Modifier.padding(horizontal = 0.dp), color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -197,7 +197,7 @@ fun AiringCard(item: MediaItem, onClick: () -> Unit, modifier: Modifier = Modifi
         modifier.width(width)
             .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
             .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onClick).padding(10.dp),
+            .trackrPressClick(onClick).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
         PosterImage(item.posterUrl, Modifier.width(56.dp), shape = MaterialTheme.shapes.small, contentDescription = item.title)

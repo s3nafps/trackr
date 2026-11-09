@@ -52,6 +52,7 @@ import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.MediaTypePill
 import com.trackr.app.ui.components.PosterImage
 import com.trackr.app.ui.components.TrackrTopBar
+import com.trackr.app.ui.components.trackrPressClick
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -143,7 +144,7 @@ private fun EpisodeRow(ep: UpcomingEpisode, zone: ZoneId, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 4.dp)
             .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
-            .clickable(onClick = onClick).padding(10.dp),
+            .trackrPressClick(onClick).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
         PosterImage(ep.posterUrl, Modifier.width(44.dp), shape = MaterialTheme.shapes.small, contentDescription = ep.title)

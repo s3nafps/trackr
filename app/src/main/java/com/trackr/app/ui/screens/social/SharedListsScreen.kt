@@ -71,6 +71,7 @@ import com.trackr.app.ui.components.ListRowSkeleton
 import com.trackr.app.ui.components.LocalProfile
 import com.trackr.app.ui.components.PosterImage
 import com.trackr.app.ui.components.TrackrTopBar
+import com.trackr.app.ui.components.trackrPressClick
 import com.trackr.app.ui.components.UserAvatar
 import com.trackr.app.ui.components.FollowLiveUpdates
 
@@ -133,7 +134,7 @@ fun SharedListsContent(
 @Composable
 private fun SharedListCard(list: SharedList, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onClick).padding(12.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).trackrPressClick(onClick).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         PosterImage(list.posters.firstOrNull(), Modifier.width(64.dp), shape = MaterialTheme.shapes.medium)
@@ -323,7 +324,7 @@ fun SharedListContent(state: SharedListUiState, onBack: () -> Unit, onOpenTitle:
 @Composable
 private fun SharedItemRow(item: SharedListItem, onOpen: () -> Unit, onRemove: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onOpen).padding(10.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).trackrPressClick(onOpen).padding(10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         PosterImage(item.item.posterUrl, Modifier.width(52.dp), shape = MaterialTheme.shapes.small, contentDescription = item.item.title)

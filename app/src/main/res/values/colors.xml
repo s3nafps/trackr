@@ -1,4 +1,5 @@
 <resources>
-    <color name="trackr_canvas">#0F1115</color>
-    <color name="trackr_icon_bg">#1A1D24</color>
+    <color name="trackr_canvas">#0A0A0A</color>
+    <color name="trackr_accent">#366FFB</color>
+    <color name="trackr_icon_bg">#0A0A0A</color>
 </resources>

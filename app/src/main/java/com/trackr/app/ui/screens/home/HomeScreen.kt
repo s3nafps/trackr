@@ -149,9 +149,10 @@ fun HomeContent(
                         if (state.streak > 0) {
                             Text(
                                 "${state.streak} day${if (state.streak == 1) "" else "s"}",
-                                Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                                Modifier.border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraSmall)
                                     .padding(horizontal = 8.dp, vertical = 4.dp),
                                 style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }

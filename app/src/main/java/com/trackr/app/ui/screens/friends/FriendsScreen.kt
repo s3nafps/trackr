@@ -79,6 +79,7 @@ import com.trackr.app.ui.components.SegmentedControl
 import com.trackr.app.ui.components.StatusBadge
 import com.trackr.app.ui.components.TrackrProgressBar
 import com.trackr.app.ui.components.TrackrTopBar
+import com.trackr.app.ui.components.trackrPressClick
 import com.trackr.app.ui.components.UserAvatar
 import com.trackr.app.ui.components.relativeTime
 import com.trackr.app.ui.components.FollowLiveUpdates
@@ -204,7 +205,7 @@ fun FriendsContent(
 @Composable
 private fun SharedListsEntry(onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onClick).padding(14.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).trackrPressClick(onClick).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -324,7 +325,7 @@ fun ActivityCard(
             if (e.status == ListStatus.WATCHING) StatusBadge(ListStatus.WATCHING)
         }
         Row(
-            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onClick).padding(12.dp),
+            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainerHigh).trackrPressClick(onClick).padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             PosterImage(e.posterUrl, Modifier.width(64.dp), shape = MaterialTheme.shapes.small, contentDescription = e.title)
@@ -371,7 +372,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.friendItems(
 @Composable
 fun FriendRow(friend: Friend, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).clickable(onClick = onClick).padding(14.dp),
+        Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).trackrPressClick(onClick).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         UserAvatar(friend.profile.avatarUrl, size = 52.dp)

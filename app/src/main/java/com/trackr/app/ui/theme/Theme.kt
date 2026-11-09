@@ -49,6 +49,10 @@ internal val LightScheme = lightColorScheme(
     scrim = Color.Black,
 )
 
+/**
+ * Always the Trackr schemes. Android 12+ wallpaper / Material You dynamic color is not applied,
+ * including when the system appearance is followed.
+ */
 @Composable
 fun TrackrTheme(mode: ThemeMode = ThemeMode.DARK, content: @Composable () -> Unit) {
     val dark = when (mode) {
@@ -56,8 +60,9 @@ fun TrackrTheme(mode: ThemeMode = ThemeMode.DARK, content: @Composable () -> Uni
         ThemeMode.LIGHT -> false
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
+    val scheme = if (dark) DarkScheme else LightScheme
     MaterialTheme(
-        colorScheme = if (dark) DarkScheme else LightScheme,
+        colorScheme = scheme,
         typography = TrackrTypography,
         shapes = TrackrShapes,
         content = content,

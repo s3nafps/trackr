@@ -10,12 +10,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-/** 2dp track. The fill uses the accent unless a caller passes another color. */
+/** 2dp track. Monochrome unless a caller passes the accent. */
 @Composable
 fun TrackrProgressBar(
     fraction: Float,
     modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.primary,
+    color: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Box(modifier.fillMaxWidth().height(2.dp).background(MaterialTheme.colorScheme.outline)) {
         Box(Modifier.fillMaxHeight().fillMaxWidth(fraction.coerceIn(0f, 1f)).background(color))

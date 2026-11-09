@@ -95,7 +95,7 @@ fun PosterCard(
     onToggleList: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    Column(modifier.width(width).clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.width(width).trackrPressClick(onClick), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box {
             PosterImage(posterUrl, Modifier.fillMaxWidth(), contentDescription = title)
             if (score != null && score > 0) RatingBadge(score, Modifier.align(Alignment.TopStart).padding(8.dp))

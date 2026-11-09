@@ -1,5 +1,8 @@
 package com.trackr.app.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -102,7 +105,16 @@ fun TrackrNavHost(
             }
         },
     ) { padding ->
-        NavHost(nav, startDestination = Routes.HOME, modifier = Modifier.padding(padding)) {
+        val fade = tween<Float>(180)
+        NavHost(
+            nav,
+            startDestination = Routes.HOME,
+            modifier = Modifier.padding(padding),
+            enterTransition = { fadeIn(fade) },
+            exitTransition = { fadeOut(fade) },
+            popEnterTransition = { fadeIn(fade) },
+            popExitTransition = { fadeOut(fade) },
+        ) {
             composable(Routes.HOME) {
                 HomeScreen(
                     onOpenDetail = ::openDetail,
