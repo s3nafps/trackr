@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
@@ -40,6 +41,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
@@ -64,7 +69,9 @@ import com.trackr.app.ui.components.PagingFooter
 import com.trackr.app.ui.components.rememberNotificationPermission
 import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.TrackrChip
-import com.trackr.app.ui.components.TrackrTopBar
+import com.trackr.app.ui.components.CollapsedTitleBar
+import com.trackr.app.ui.components.PageHeader
+import com.trackr.app.ui.components.rememberHeaderCollapse
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -117,13 +124,23 @@ fun SearchContent(
     onOpenDetail: (MediaItem) -> Unit,
     onOpenProfile: () -> Unit,
     avatarUrl: String? = LocalProfile.current?.avatarUrl,
+    collapsed: Boolean = false,
 ) {
     val focus = LocalFocusManager.current
     // The title whose status sheet is open.
     var tracking by remember { mutableStateOf<MediaItem?>(null) }
-    Column(Modifier.fillMaxSize().imePadding()) {
-        TrackrTopBar("Search", avatarUrl, onOpenProfile)
-        TextField(
+    val collapse = rememberHeaderCollapse(64.dp, collapsed)
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().nestedScroll(collapse.connection).imePadding()) {
+            Box(Modifier.fillMaxWidth().height(lerp(64.dp, 48.dp, collapse.fraction)).clipToBounds()) {
+                PageHeader(
+                    "Search",
+                    Modifier.graphicsLayer { alpha = 1f - collapse.fraction },
+                    avatarUrl = avatarUrl,
+                    onAvatarClick = onOpenProfile,
+                )
+            }
+            TextField(
             value = state.query, onValueChange = vm.setQuery,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(MaterialTheme.shapes.small)
                 .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small),
@@ -193,6 +210,8 @@ fun SearchContent(
                 resultItems(state.results, state, onOpenDetail, { tracking = it }, vm, vm.loadMoreResults, emptyText = "No results for \"${state.query.trim()}\".")
             }
         }
+        }
+        CollapsedTitleBar(collapse.fraction, "Search", avatarUrl, onOpenProfile)
     }
     tracking?.let { item ->
         // The title's seasons arrive a moment after the sheet opens; until then it just counts episodes.

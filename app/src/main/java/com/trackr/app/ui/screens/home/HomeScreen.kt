@@ -1,7 +1,8 @@
 package com.trackr.app.ui.screens.home
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,11 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -36,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,9 +65,10 @@ import com.trackr.app.ui.components.rememberNotificationPermission
 import com.trackr.app.ui.components.SectionHeader
 import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.TrackrChip
-import com.trackr.app.ui.components.TrackrTopBar
+import com.trackr.app.ui.components.CollapsedTitleBar
+import com.trackr.app.ui.components.PageHeader
+import com.trackr.app.ui.components.barCollapse
 import com.trackr.app.ui.components.metaLine
-import androidx.compose.foundation.border
 import java.util.Calendar
 
 private val CarouselPadding = PaddingValues(horizontal = 16.dp)
@@ -125,6 +130,8 @@ fun HomeContent(
     onSeeAllWatching: () -> Unit,
     onExplore: (MediaType?) -> Unit,
     onOpenProfile: () -> Unit,
+    /** When true, the list starts scrolled so previews can show the compact title. */
+    collapsed: Boolean = false,
     /** Season sizes of a TV show, to pick progress by season in the status sheet. */
     seasonsFor: suspend (MediaItem) -> List<Int> = { emptyList() },
 ) {
@@ -133,29 +140,31 @@ fun HomeContent(
     // The title whose status sheet is open; the bookmark on a poster that isn't in the list opens it.
     var tracking by remember { mutableStateOf<MediaItem?>(null) }
     val onAdd: (MediaItem) -> Unit = { tracking = it }
-    Column(Modifier.fillMaxSize()) {
-        TrackrTopBar("Home", avatarUrl, onOpenProfile)
-        PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+    val listState = rememberLazyListState(if (collapsed) 4 else 0)
+    val collapse = listState.barCollapse()
+    val greet = buildString { append(greeting()); username?.let { append(", $it") } }
+    Box(Modifier.fillMaxSize()) {
+        PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+            LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 24.dp)) {
                 item("greeting") {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("WELCOME BACK", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                buildString { append(greeting()); username?.let { append(", $it") } },
-                                style = MaterialTheme.typography.headlineMedium, maxLines = 1,
-                            )
-                        }
-                        if (state.streak > 0) {
-                            Text(
-                                "${state.streak} day${if (state.streak == 1) "" else "s"}",
-                                Modifier.border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraSmall)
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
+                    PageHeader(
+                        greet,
+                        Modifier.graphicsLayer { alpha = 1f - collapse },
+                        eyebrow = "WELCOME BACK",
+                        avatarUrl = avatarUrl,
+                        onAvatarClick = onOpenProfile,
+                        actions = {
+                            if (state.streak > 0) {
+                                Text(
+                                    "${state.streak} day${if (state.streak == 1) "" else "s"}",
+                                    Modifier.border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraSmall)
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        },
+                    )
                 }
 
                 if (state.offline) item("offline") { OfflineNote(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) }
@@ -235,6 +244,7 @@ fun HomeContent(
                 discoverFeed(state, discoverRows, columns, onDiscoverFilter, onDiscoverGenre, onDiscoverMore, onDiscoverRetry, onOpenDetail, onAdd)
             }
         }
+        CollapsedTitleBar(collapse, greet, avatarUrl, onOpenProfile)
     }
     tracking?.let { item ->
         // The title's seasons arrive a moment after the sheet opens; until then it just counts episodes.
