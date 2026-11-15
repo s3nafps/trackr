@@ -12,11 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -50,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -78,7 +81,9 @@ import com.trackr.app.ui.components.RecommendationCard
 import com.trackr.app.ui.components.SegmentedControl
 import com.trackr.app.ui.components.StatusBadge
 import com.trackr.app.ui.components.TrackrProgressBar
-import com.trackr.app.ui.components.TrackrTopBar
+import com.trackr.app.ui.components.CollapsedTitleBar
+import com.trackr.app.ui.components.PageHeader
+import com.trackr.app.ui.components.barCollapse
 import com.trackr.app.ui.components.trackrPressClick
 import com.trackr.app.ui.components.UserAvatar
 import com.trackr.app.ui.components.relativeTime
@@ -140,38 +145,44 @@ fun FriendsContent(
     actions: FriendsActions,
     onOpenTitle: (MediaItem) -> Unit = {},
     onOpenSharedLists: () -> Unit = {},
+    collapsed: Boolean = false,
 ) {
     var tab by rememberSaveable { mutableStateOf(FriendsTab.ACTIVITY) }
     var pendingOpen by rememberSaveable { mutableStateOf(true) }
     val snackbar = remember { SnackbarHostState() }
+    val listState = rememberLazyListState(if (collapsed) 3 else 0)
+    val collapse = listState.barCollapse()
     LaunchedEffect(state.toast) {
         state.toast?.let { snackbar.showSnackbar(it); actions.toastShown() }
     }
 
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            TrackrTopBar("Friends", avatarUrl, onOpenProfile)
-            PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = actions.refresh, modifier = Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize()) {
+            PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = actions.refresh, modifier = Modifier.fillMaxSize().statusBarsPadding()) {
                 LazyColumn(
-                    Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                    Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     item {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Friends", style = MaterialTheme.typography.headlineMedium)
-                                Text("What your circle is tracking", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Row(
-                                Modifier.padding(start = 8.dp).height(32.dp)
-                                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
-                                    .clickable(onClick = actions.openAdd).padding(horizontal = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                Icon(Icons.Filled.PersonAdd, null, Modifier.size(16.dp))
-                                Text("Add", style = MaterialTheme.typography.labelMedium)
-                            }
-                        }
+                        PageHeader(
+                            "Friends",
+                            Modifier.graphicsLayer { alpha = 1f - collapse },
+                            subtitle = "What your circle is tracking",
+                            avatarUrl = avatarUrl,
+                            onAvatarClick = onOpenProfile,
+                            horizontalPadding = 0.dp,
+                            actions = {
+                                Row(
+                                    Modifier.height(32.dp)
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                                        .clickable(onClick = actions.openAdd).padding(horizontal = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    Icon(Icons.Filled.PersonAdd, null, Modifier.size(16.dp))
+                                    Text("Add", style = MaterialTheme.typography.labelMedium)
+                                }
+                            },
+                        )
                     }
                     item {
                         val friendCount = (state.friends as? Load.Success)?.data?.size
@@ -193,6 +204,17 @@ fun FriendsContent(
                         FriendsTab.FRIENDS -> friendItems(state, actions, onOpenFriend)
                     }
                 }
+            }
+        }
+        CollapsedTitleBar(collapse, "Friends", avatarUrl, onOpenProfile) {
+            Row(
+                Modifier.height(32.dp)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                    .clickable(onClick = actions.openAdd).padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(Icons.Filled.PersonAdd, null, Modifier.size(16.dp))
+                Text("Add", style = MaterialTheme.typography.labelMedium)
             }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp))

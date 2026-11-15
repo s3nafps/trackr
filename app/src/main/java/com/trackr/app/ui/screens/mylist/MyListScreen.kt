@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -45,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +70,9 @@ import com.trackr.app.ui.components.TrackSheet
 import com.trackr.app.ui.components.TrackrChip
 import com.trackr.app.ui.components.trackrPressClick
 import com.trackr.app.ui.components.TrackrProgressBar
-import com.trackr.app.ui.components.TrackrTopBar
+import com.trackr.app.ui.components.CollapsedTitleBar
+import com.trackr.app.ui.components.PageHeader
+import com.trackr.app.ui.components.barCollapse
 import com.trackr.app.ui.theme.color
 import com.trackr.app.domain.util.SeasonProgress
 
@@ -103,30 +109,35 @@ fun MyListContent(
     onRemove: (ListEntry) -> Unit,
     onSave: (ListEntry, ListStatus, Int?, Int) -> Unit,
     onOpenCalendar: () -> Unit = {},
+    collapsed: Boolean = false,
 ) {
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
     val editEntry = state.items.firstOrNull { it.key == editing }
+    val listState = rememberLazyListState(if (!state.grid && collapsed) 3 else 0)
+    val gridState = rememberLazyGridState(if (state.grid && collapsed) 3 else 0)
+    val collapse = if (state.grid) gridState.barCollapse() else listState.barCollapse()
 
-    Column(Modifier.fillMaxSize()) {
-        TrackrTopBar("My List", avatarUrl, onOpenProfile) {
-            IconButton(onClick = onOpenCalendar) {
-                Icon(Icons.Outlined.CalendarMonth, "Upcoming episodes", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize()) {
+        PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             val header: @Composable () -> Unit = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Library", style = MaterialTheme.typography.headlineMedium)
-                            Text("${state.total} titles", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        SortMenu(state.sort, onSort)
-                        Box(
-                            Modifier.size(36.dp).border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).clickable(onClick = onToggleGrid),
-                            contentAlignment = Alignment.Center,
-                        ) { Icon(if (state.grid) Icons.Outlined.ViewAgenda else Icons.Outlined.GridView, if (state.grid) "List view" else "Grid view", Modifier.size(18.dp)) }
-                    }
+                    PageHeader(
+                        "Library",
+                        Modifier.graphicsLayer { alpha = 1f - collapse },
+                        subtitle = "${state.total} titles",
+                        avatarUrl = avatarUrl,
+                        onAvatarClick = onOpenProfile,
+                        actions = {
+                            SortMenu(state.sort, onSort)
+                            Box(
+                                Modifier.size(36.dp).border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall).clickable(onClick = onToggleGrid),
+                                contentAlignment = Alignment.Center,
+                            ) { Icon(if (state.grid) Icons.Outlined.ViewAgenda else Icons.Outlined.GridView, if (state.grid) "List view" else "Grid view", Modifier.size(18.dp)) }
+                            IconButton(onClick = onOpenCalendar) {
+                                Icon(Icons.Outlined.CalendarMonth, "Upcoming episodes", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        },
+                    )
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(ListStatus.entries) { s ->
                             val sel = s == state.status
@@ -178,7 +189,7 @@ fun MyListContent(
                 }
             } else if (state.grid) {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3), modifier = Modifier.fillMaxSize(),
+                    columns = GridCells.Fixed(3), state = gridState, modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 11.dp, end = 11.dp, bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(0.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
@@ -208,7 +219,7 @@ fun MyListContent(
                     }
                 }
             } else {
-                LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+                LazyColumn(Modifier.fillMaxSize(), state = listState, verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
                     item { header() }
                     items(state.items, key = { it.key }) { e ->
                         ListEntryCard(
@@ -218,6 +229,11 @@ fun MyListContent(
                         )
                     }
                 }
+            }
+        }
+        CollapsedTitleBar(collapse, "My List", avatarUrl, onOpenProfile) {
+            IconButton(onClick = onOpenCalendar) {
+                Icon(Icons.Outlined.CalendarMonth, "Upcoming episodes", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

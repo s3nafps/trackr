@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -46,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -57,8 +60,10 @@ import com.trackr.app.domain.util.WatchTime
 import com.trackr.app.ui.components.GenreChart
 import com.trackr.app.ui.components.RatingDistributionChart
 import com.trackr.app.ui.components.StatusBreakdown
-import com.trackr.app.ui.components.TrackrTopBar
+import com.trackr.app.ui.components.CollapsedTitleBar
+import com.trackr.app.ui.components.PageHeader
 import com.trackr.app.ui.components.UserAvatar
+import com.trackr.app.ui.components.barCollapse
 import java.util.Locale
 
 fun copyToClipboard(context: Context, label: String, text: String) {
@@ -91,23 +96,32 @@ fun ProfileContent(
     onEditUsername: (String) -> Unit,
     onResetEdit: () -> Unit,
     onOpenWrapped: () -> Unit = {},
+    collapsed: Boolean = false,
 ) {
     val context = LocalContext.current
     var editing by rememberSaveable { mutableStateOf(false) }
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     val me = state.me
+    val scroll = rememberScrollState(if (collapsed) 800 else 0)
+    val collapse = scroll.barCollapse()
     LaunchedEffect(state.editDone) { if (state.editDone) { editing = false; onResetEdit() } }
 
-    Column(Modifier.fillMaxSize()) {
-        TrackrTopBar("Profile", me?.avatarUrl, {})
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(me?.username ?: "Your profile", style = MaterialTheme.typography.headlineMedium, maxLines = 1, modifier = Modifier.weight(1f))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier.fillMaxSize().statusBarsPadding().verticalScroll(scroll).padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            PageHeader(
+                me?.username ?: "Your profile",
+                Modifier.graphicsLayer { alpha = 1f - collapse },
+                avatarUrl = me?.avatarUrl,
+                onAvatarClick = {},
+                horizontalPadding = 0.dp,
+                actions = {
                     RoundIcon(Icons.Filled.Share, "Share invite") { me?.let { shareInvite(context, it.username, it.inviteCode) } }
                     RoundIcon(Icons.Filled.Settings, "Settings", onClick = onOpenSettings)
-                }
-            }
+                },
+            )
 
             Column(
                 Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small).padding(16.dp),
@@ -183,6 +197,9 @@ fun ProfileContent(
                 PrefRow(Icons.Outlined.Dataset, "Data Sources & Attribution", "TMDB · AniList", onClick = onOpenAbout)
                 PrefRow(Icons.AutoMirrored.Filled.Logout, "Sign Out", "Your list stays safe in the cloud", tint = MaterialTheme.colorScheme.error, onClick = { confirmSignOut = true })
             }
+        }
+        CollapsedTitleBar(collapse, me?.username ?: "Profile", me?.avatarUrl, {}) {
+            RoundIcon(Icons.Filled.Settings, "Settings", onClick = onOpenSettings)
         }
     }
 

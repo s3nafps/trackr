@@ -25,8 +25,10 @@ import androidx.compose.ui.unit.dp
 import com.trackr.app.R
 import com.trackr.app.ui.components.ListRowSkeleton
 import com.trackr.app.ui.components.PosterCarouselSkeleton
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.trackr.app.data.importer.ImportSummary
@@ -104,17 +106,30 @@ import org.robolectric.annotation.GraphicsMode
 class VisualTest {
     @get:Rule val rule = createComposeRule()
 
-    private fun shot(name: String, content: @Composable () -> Unit) {
+    private fun shot(name: String, scrollTo: Int? = null, content: @Composable () -> Unit) {
         val mode = mutableStateOf(ThemeMode.DARK)
         rule.setContent {
             TrackrTheme(mode.value) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
             }
         }
+        if (scrollTo != null) scrollToIndex(scrollTo)
         rule.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_dark.png")
         mode.value = ThemeMode.LIGHT
         rule.waitForIdle()
+        if (scrollTo != null) scrollToIndex(scrollTo)
         rule.onRoot().captureRoboImage("build/outputs/roborazzi/${name}_light.png")
+    }
+
+    /** Scrolls the tallest list, which is the page, not a chip row. */
+    private fun scrollToIndex(index: Int) {
+        rule.waitForIdle()
+        val nodes = rule.onAllNodes(hasScrollToIndexAction(), useUnmergedTree = true)
+        val count = nodes.fetchSemanticsNodes().size
+        if (count == 0) return
+        val target = (0 until count).maxBy { nodes[it].fetchSemanticsNode().boundsInRoot.height }
+        nodes[target].performScrollToIndex(index)
+        rule.waitForIdle()
     }
 
     private fun item(id: String, title: String, type: MediaType, year: Int, score: Double, genre: String, eps: Int? = null, sub: String? = null) =
@@ -133,6 +148,10 @@ class VisualTest {
     @Test fun login() = shot("login") { LoginScreen(AuthUiState(), onGoogle = {}) }
 
     @Test fun home() = shot("home") { HomeSample() }
+
+    @Test fun topbarHomeRest() = shot("topbar_home_rest") { HomeSample() }
+
+    @Test fun topbarHomeScrolled() = shot("topbar_home_scrolled", scrollTo = 4) { HomeSample() }
 
     /** Tall enough to reach the endless "Discover More" grid under the carousels. */
     @Config(qualifiers = "w411dp-h2000dp-xxhdpi")
@@ -225,12 +244,14 @@ class VisualTest {
         )
     }
 
-    private fun myList(grid: Boolean, status: ListStatus = ListStatus.WATCHING) {
-        val items = listOf(
+    private fun myList(grid: Boolean, status: ListStatus = ListStatus.WATCHING, name: String? = null, scrollTo: Int? = null) {
+        val base = listOf(
             entry("1", "Arcane", MediaType.TV, ListStatus.WATCHING, 4, 9), entry("2", "Severance", MediaType.TV, ListStatus.WATCHING, 4, 10),
             entry("3", "Frieren: Beyond Journey's End", MediaType.ANIME, ListStatus.WATCHING, 22, 28), entry("4", "Dune: Prophecy", MediaType.TV, ListStatus.WATCHING, 5, 6),
         )
-        shot(if (grid) "mylist_grid" else "mylist") {
+        // The scrolled shot needs the page to actually overflow, or the list never moves.
+        val items = if (scrollTo == null) base else base + base.map { it.copy(externalId = it.externalId + "b") }
+        shot(name ?: if (grid) "mylist_grid" else "mylist", scrollTo = scrollTo) {
             MyListContent(
                 MyListUiState(status = status, grid = grid, items = items, total = 142, sort = ListSort.RECENT,
                     airsIn = mapOf("tmdb:2" to "Airs in 5h", "tmdb:3" to "Airs in 2d"),
@@ -242,6 +263,8 @@ class VisualTest {
     }
 
     @Test fun myListList() = myList(false)
+    @Test fun topbarMyListRest() = myList(false, name = "topbar_mylist_rest")
+    @Test fun topbarMyListScrolled() = myList(false, name = "topbar_mylist_scrolled", scrollTo = 3)
     @Test fun myListGrid() = myList(true)
     @Test fun myListEmpty() = shot("mylist_empty") {
         MyListContent(MyListUiState(status = ListStatus.DROPPED, total = 0), null, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, { _, _, _, _ -> })
